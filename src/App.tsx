@@ -14,6 +14,7 @@ function App() {
         <Route path="/entrevista" element={<Entrevista />} />
         {/* Puedes agregar más rutas después */}
       </Routes>
+      
     </BrowserRouter>
   );
 }
