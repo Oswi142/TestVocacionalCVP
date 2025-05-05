@@ -3,9 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-import { ThemeProvider, CssBaseline, createTheme } from '@mui/material';
-
-const theme = createTheme();
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import theme from './theme'; // <- Importa el tema que creaste
 
 const rootElement = document.getElementById('root')!;
 const root = ReactDOM.createRoot(rootElement);
@@ -13,7 +12,7 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Normaliza estilos */}
+      <CssBaseline />
       <App />
     </ThemeProvider>
   </React.StrictMode>

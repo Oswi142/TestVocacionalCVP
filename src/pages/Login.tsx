@@ -109,7 +109,14 @@ const Login: React.FC = () => {
             type="submit"
             variant="contained"
             fullWidth
-            sx={{ mt: 2, backgroundColor: '#FF6F00', '&:hover': { backgroundColor: '#EF6C00' } }}
+            sx={{
+              mt: 2,
+              py: 1,
+              fontWeight: 'bold',
+              fontSize: '1.1rem',
+              backgroundColor: '#FF6F00',
+              '&:hover': { backgroundColor: '#EF6C00' },
+            }}
           >
             Entrar
           </Button>

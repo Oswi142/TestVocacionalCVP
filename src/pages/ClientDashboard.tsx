@@ -24,12 +24,25 @@ const ClientDashboard: React.FC = () => {
     }
   }, []);
 
+  const buttonStyle = (gradient: string) => ({
+    background: gradient,
+    color: '#fff',
+    fontWeight: 600,
+    paddingY: 2,
+    borderRadius: 2,
+    textTransform: 'none',
+    fontSize: '1rem',
+    '&:hover': {
+      opacity: 0.9,
+    },
+  });
+
   return (
     <Box
       sx={{
         width: '100vw',
         height: '100vh',
-        backgroundColor: '#ffffff',
+        background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -43,92 +56,52 @@ const ClientDashboard: React.FC = () => {
           width: '100%',
           maxWidth: 420,
           textAlign: 'center',
-          backgroundColor: '#fff',
-          boxShadow: 3,
+          backgroundColor: '#ffffff',
+          boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.1)',
         }}
       >
         <Typography
           variant={isMobile ? 'h6' : 'h5'}
-          fontWeight={600}
-          color="#2E7D32"
+          fontWeight={700}
+          color="green"
           gutterBottom
         >
           Bienvenido, {name} 👋
         </Typography>
 
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          gutterBottom
-        >
-          Es hora de iniciar a realizar los tests! ;)
+        <Typography variant="body1" color="text.secondary" gutterBottom>
+          Es hora de iniciar a realizar los tests! 😄
         </Typography>
 
         <Box display="flex" flexDirection="column" gap={2} mt={4}>
-          <Box>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => navigate('/entrevista')}
-              sx={{
-                color: '#000',
-                borderColor: '#ccc',
-                backgroundColor: '#fff',
-                '&:hover': { backgroundColor: '#f0f0f0' },
-                paddingY: 2
-              }}
-            >
-              📝 Entrevista
-            </Button>
-          </Box>
-          <Box>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => navigate('/ippr')}
-              sx={{
-                color: '#000',
-                borderColor: '#ccc',
-                backgroundColor: '#fff',
-                '&:hover': { backgroundColor: '#f0f0f0' },
-                paddingY: 2
-              }}
-            >
-              🧠 IPPR
-            </Button>
-          </Box>
-          <Box>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => navigate('/chaside')}
-              sx={{
-                color: '#000',
-                borderColor: '#ccc',
-                backgroundColor: '#fff',
-                '&:hover': { backgroundColor: '#f0f0f0' },
-                paddingY: 2
-              }}
-            >
-              🎨 CHASIDE
-            </Button>
-          </Box>
-          <Box>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => navigate('/dat')}
-              sx={{
-                color: '#000',
-                borderColor: '#ccc',
-                backgroundColor: '#fff',
-                '&:hover': { backgroundColor: '#f0f0f0' },
-                paddingY: 2
-              }}
-            >
-              🔧 DAT
-            </Button>
-          </Box>
+          <Button
+            fullWidth
+            onClick={() => navigate('/entrevista')}
+            sx={buttonStyle('linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)')}
+          >
+            📄 ENTREVISTA
+          </Button>
+          <Button
+            fullWidth
+            onClick={() => navigate('/ippr')}
+            sx={buttonStyle('linear-gradient(90deg, #ff758c, #ff7eb3)')}
+          >
+            🧠 IPPR
+          </Button>
+          <Button
+            fullWidth
+            onClick={() => navigate('/chaside')}
+            sx={buttonStyle('linear-gradient(90deg, #ff6a00, #ee0979)')}
+          >
+            🍥 CHASIDE
+          </Button>
+          <Button
+            fullWidth
+            onClick={() => navigate('/dat')}
+            sx={buttonStyle('linear-gradient(90deg, #43cea2, #185a9d)')}
+          >
+            🛠️ DAT
+          </Button>
         </Box>
       </Box>
     </Box>
