@@ -13,6 +13,10 @@ import {
   InputLabel,
   FormControl,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 
 interface Question {
   id: number;
@@ -24,12 +28,25 @@ interface School {
   schoolname: string;
 }
 
+const departamentos = [
+  'La Paz',
+  'Cochabamba',
+  'Santa Cruz',
+  'Oruro',
+  'Potosí',
+  'Chuquisaca',
+  'Tarija',
+  'Beni',
+  'Pando'
+];
+
 const Entrevista: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
   const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(null);
+  const [birthdayDate, setBirthdayDate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
@@ -71,7 +88,7 @@ const Entrevista: React.FC = () => {
     try {
       const mapped = {
         gender: answers[questions[0]?.id] || '',
-        birthday: answers[questions[1]?.id] || '',
+        birthday: birthdayDate ? birthdayDate.format('YYYY-MM-DD') : '',
         birthplace: answers[questions[2]?.id] || '',
         address: answers[questions[3]?.id] || '',
         grade: answers[questions[5]?.id] || '',
@@ -113,42 +130,79 @@ const Entrevista: React.FC = () => {
         Test: Entrevista
       </Typography>
       <form onSubmit={handleSubmit}>
-        {questions.map((q, index) => (
-          <Box key={q.id} mb={3}>
-            <Typography variant="body1" fontWeight={500} gutterBottom>
-              {q.question}
-            </Typography>
-            {index === 4 ? (
-              <FormControl fullWidth>
-                <InputLabel id="school-select-label">Selecciona tu colegio</InputLabel>
-                <Select
-                  labelId="school-select-label"
-                  value={selectedSchoolId !== null ? String(selectedSchoolId) : ''}
-                  label="Selecciona tu colegio"
-                  onChange={(e) => setSelectedSchoolId(Number(e.target.value))}
-                >
-                  <MenuItem value="" disabled>
-                    Selecciona un colegio
-                  </MenuItem>
-                  {schools.map((school) => (
-                    <MenuItem key={school.id} value={school.id}>
-                      {school.schoolname}
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          {questions.map((q, index) => (
+            <Box key={q.id} mb={3}>
+              <Typography variant="body1" fontWeight={500} gutterBottom>
+                {q.question}
+              </Typography>
+
+              {index === 0 ? (
+                <FormControl fullWidth variant="outlined">
+                  <Select
+                    displayEmpty
+                    value={answers[q.id] || ''}
+                    onChange={(e) => handleChange(q.id, e.target.value)}
+                    inputProps={{ 'aria-label': 'Selecciona tu género' }}
+                  >
+                    <MenuItem value="" disabled>
+                      Selecciona tu género
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            ) : (
-              <TextField
-                multiline
-                fullWidth
-                rows={3}
-                variant="outlined"
-                value={answers[q.id] || ''}
-                onChange={(e) => handleChange(q.id, e.target.value)}
-              />
-            )}
-          </Box>
-        ))}
+                    <MenuItem value="Masculino">Masculino</MenuItem>
+                    <MenuItem value="Femenino">Femenino</MenuItem>
+                  </Select>
+                </FormControl>
+              ) : index === 1 ? (
+                <DatePicker
+                  value={birthdayDate}
+                  onChange={(newValue) => setBirthdayDate(newValue)}
+                  format="DD/MM/YYYY"
+                />
+              ) : index === 2 ? (
+                <FormControl fullWidth variant="outlined">
+                  <Select
+                    displayEmpty
+                    value={answers[q.id] || ''}
+                    onChange={(e) => handleChange(q.id, e.target.value)}
+                    inputProps={{ 'aria-label': 'Departamento' }}
+                  >
+                    <MenuItem value="" disabled>
+                      Departamento
+                    </MenuItem>
+                    {departamentos.map((dep) => (
+                      <MenuItem key={dep} value={dep}>{dep}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : index === 4 ? (
+                <FormControl fullWidth variant="outlined">
+                  <Select
+                    displayEmpty
+                    value={selectedSchoolId !== null ? String(selectedSchoolId) : ''}
+                    onChange={(e) => setSelectedSchoolId(Number(e.target.value))}
+                    inputProps={{ 'aria-label': 'Selecciona tu colegio' }}
+                  >
+                    <MenuItem value="" disabled>
+                      Selecciona tu colegio
+                    </MenuItem>
+                    {schools.map((school) => (
+                      <MenuItem key={school.id} value={school.id}>
+                        {school.schoolname}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : (
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  value={answers[q.id] || ''}
+                  onChange={(e) => handleChange(q.id, e.target.value)}
+                />
+              )}
+            </Box>
+          ))}
+        </LocalizationProvider>
         <Button
           type="submit"
           variant="contained"
