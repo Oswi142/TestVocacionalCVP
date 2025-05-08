@@ -7,6 +7,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import Header from '../components/Header'; // Asegúrate de que la ruta sea correcta
 
 const ClientDashboard: React.FC = () => {
   const [name, setName] = useState('');
@@ -41,23 +42,24 @@ const ClientDashboard: React.FC = () => {
     <Box
       sx={{
         width: '100vw',
-        height: '100vh',
+        minHeight: '100vh',
         background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 2,
+        paddingBottom: 6,
       }}
     >
+      <Header />
+
       <Box
         sx={{
           padding: 4,
           borderRadius: 4,
           width: '100%',
           maxWidth: 420,
+          margin: '0 auto',
           textAlign: 'center',
           backgroundColor: '#ffffff',
           boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.1)',
+          mt: 6,
         }}
       >
         <Typography
