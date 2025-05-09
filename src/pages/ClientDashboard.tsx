@@ -141,7 +141,7 @@ const ClientDashboard: React.FC = () => {
                 Bienvenido, {name} 👋
               </Typography>
 
-              <Typography variant="body1" color="text.secondary" gutterBottom>
+              <Typography variant="body1" gutterBottom>
                 Es hora de iniciar a realizar los tests! 😄
               </Typography>
 
