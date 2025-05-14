@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 interface Question {
   id: number;
   question: string;
+  section: number;
 }
 
 interface School {
@@ -28,23 +29,25 @@ interface School {
   schoolname: string;
 }
 
+interface AnswerOption {
+  id: number;
+  questionid: number;
+  answer: string;
+}
+
 const departamentos = [
-  'La Paz',
-  'Cochabamba',
-  'Santa Cruz',
-  'Oruro',
-  'Potosí',
-  'Chuquisaca',
-  'Tarija',
-  'Beni',
-  'Pando'
+  'La Paz', 'Cochabamba', 'Santa Cruz', 'Oruro', 'Potosí',
+  'Chuquisaca', 'Tarija', 'Beni', 'Pando'
 ];
 
 const Entrevista: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
-  const [questions, setQuestions] = useState<Question[]>([]);
+
+  const [allQuestions, setAllQuestions] = useState<Question[]>([]);
+  const [answerOptions, setAnswerOptions] = useState<AnswerOption[]>([]);
   const [schools, setSchools] = useState<School[]>([]);
+  const [currentSection, setCurrentSection] = useState(1);
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
   const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(null);
   const [birthdayDate, setBirthdayDate] = useState<any>(null);
@@ -52,24 +55,28 @@ const Entrevista: React.FC = () => {
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const groupedQuestions = allQuestions.reduce((acc: { [key: number]: Question[] }, q) => {
+    if (!acc[q.section]) acc[q.section] = [];
+    acc[q.section].push(q);
+    return acc;
+  }, {});
+
+  const questions = groupedQuestions[currentSection] || [];
+
+  const getOptionsForQuestion = (questionId: number) =>
+    answerOptions.filter(opt => opt.questionid === questionId);
+
   useEffect(() => {
     const fetchData = async () => {
-      const [questionsRes, schoolsRes] = await Promise.all([
-        supabase.from('questions').select('id, question').eq('testid', 1).order('id', { ascending: true }),
-        supabase.from('schools').select('id, schoolname').order('schoolname', { ascending: true }),
+      const [questionsRes, schoolsRes, optionsRes] = await Promise.all([
+        supabase.from('questions').select('id, question, section').eq('testid', 1).order('section').order('id'),
+        supabase.from('schools').select('id, schoolname').order('schoolname'),
+        supabase.from('answeroptions').select('id, questionid, answer').order('id')
       ]);
 
-      if (questionsRes.error) {
-        console.error('Error al obtener preguntas:', questionsRes.error.message);
-      } else {
-        setQuestions(questionsRes.data || []);
-      }
-
-      if (schoolsRes.error) {
-        console.error('Error al obtener colegios:', schoolsRes.error.message);
-      } else {
-        setSchools(schoolsRes.data || []);
-      }
+      if (!questionsRes.error) setAllQuestions(questionsRes.data || []);
+      if (!schoolsRes.error) setSchools(schoolsRes.data || []);
+      if (!optionsRes.error) setAnswerOptions(optionsRes.data || []);
 
       setLoading(false);
     };
@@ -81,22 +88,32 @@ const Entrevista: React.FC = () => {
     setAnswers(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleNext = () => {
+    setCurrentSection(prev => prev + 1);
+  };
+
+  const handlePrevious = () => {
+    if (currentSection > 1) {
+      setCurrentSection(prev => prev - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
     setSaving(true);
     setMessage('');
 
     try {
+      const section1 = groupedQuestions[1] || [];
       const mapped = {
-        gender: answers[questions[0]?.id] || '',
+        gender: answers[section1[0]?.id] || '',
         birthday: birthdayDate ? birthdayDate.format('YYYY-MM-DD') : '',
-        birthplace: answers[questions[2]?.id] || '',
-        address: answers[questions[3]?.id] || '',
-        grade: answers[questions[5]?.id] || '',
-        hobbies: answers[questions[6]?.id] || '',
+        birthplace: answers[section1[2]?.id] || '',
+        address: answers[section1[3]?.id] || '',
+        grade: answers[section1[5]?.id] || '',
+        hobbies: answers[section1[6]?.id] || '',
       };
 
-      const { error } = await supabase.from('clientsinfo').upsert({
+      const { error: infoError } = await supabase.from('clientsinfo').upsert({
         userid: user.id,
         gender: mapped.gender,
         birthday: mapped.birthday,
@@ -107,11 +124,49 @@ const Entrevista: React.FC = () => {
         hobbies: mapped.hobbies,
       });
 
-      if (error) throw error;
+      if (infoError) throw infoError;
 
-      setMessage('Datos guardados correctamente.');
+      const section2 = groupedQuestions[2] || [];
+      for (const q of section2) {
+        const detail = answers[q.id];
+        if (detail && detail.trim() !== '') {
+          const { error: insertError } = await supabase.from('testsanswers').insert({
+            clientid: user.id,
+            testid: 1,
+            questionid: q.id,
+            details: detail,
+          });
+          if (insertError) throw insertError;
+        }
+      }
+
+      const section3 = groupedQuestions[3] || [];
+      for (const q of section3) {
+        const value = answers[q.id];
+        if (!value || String(value).trim() === '') continue;
+
+        const options = getOptionsForQuestion(q.id);
+        if (options.length > 0) {
+          const answerId = parseInt(value);
+          await supabase.from('testsanswers').insert({
+            clientid: user.id,
+            testid: 1,
+            questionid: q.id,
+            answerid: answerId
+          });
+        } else {
+          await supabase.from('testsanswers').insert({
+            clientid: user.id,
+            testid: 1,
+            questionid: q.id,
+            details: value
+          });
+        }
+      }
+
+      setMessage('Respuestas guardadas correctamente.');
     } catch (err: any) {
-      setMessage('Error al guardar datos: ' + err.message);
+      setMessage('Error al guardar respuestas: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -119,61 +174,57 @@ const Entrevista: React.FC = () => {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          width: '100vw',
-          height: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
-        }}
-      >
+      <Box sx={{ width: '100vw', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box
-      sx={{
-        width: '100vw',
-        minHeight: '100vh',
-        background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 2,
-      }}
-    >
-      <Box
-        sx={{
-          width: '100%',
-          maxWidth: 600,
-          backgroundColor: '#ffffff',
-          borderRadius: 4,
-          boxShadow: 3,
-          padding: 4,
-          overflowY: 'auto',
-        }}
-      >
+    <Box sx={{ width: '100vw', minHeight: '100vh', background: 'linear-gradient(to right, #f9c9a4, #cafacc)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 2 }}>
+      <Box sx={{ width: '100%', maxWidth: 600, backgroundColor: '#ffffff', borderRadius: 4, boxShadow: 3, padding: 4 }}>
         <IconButton onClick={() => navigate(-1)} sx={{ mb: 2 }}>
           <ArrowBackIcon />
         </IconButton>
 
-        <Typography variant="h5" gutterBottom color="primary">
-          Test: Entrevista
-        </Typography>
+        <Typography variant="h5" gutterBottom color="primary">Test: Entrevista</Typography>
 
-        <form onSubmit={handleSubmit}>
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            {questions.map((q, index) => (
+        {currentSection === 2 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Profundizar en la relación y ocupación de cada uno de sus familiares y otras personas significativas.
+            Incluir datos como convivencia, estudios, ocupación y lugar de nacimiento.
+          </Alert>
+        )}
+
+        {currentSection === 3 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Responde con sinceridad a las siguientes preguntas relacionadas con tu etapa escolar. Algunas requieren respuestas abiertas y otras selección.
+          </Alert>
+        )}
+
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          {questions.map((q) => {
+            const options = getOptionsForQuestion(q.id);
+            const isSelect = currentSection === 3 && options.length > 0;
+
+            return (
               <Box key={q.id} mb={3}>
-                <Typography variant="body1" fontWeight={500} gutterBottom>
-                  {q.question}
-                </Typography>
+                <Typography variant="body1" fontWeight={500} gutterBottom>{q.question}</Typography>
 
-                {index === 0 ? (
+                {isSelect ? (
+                  <FormControl fullWidth variant="outlined">
+                    <Select
+                      displayEmpty
+                      value={answers[q.id] || ''}
+                      onChange={(e) => handleChange(q.id, e.target.value)}
+                    >
+                      <MenuItem value="" disabled>Selecciona una opción</MenuItem>
+                      {options.map((opt) => (
+                        <MenuItem key={opt.id} value={opt.id}>{opt.answer}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : q.question.toLowerCase().includes('sexo') ? (
                   <FormControl fullWidth variant="outlined">
                     <Select
                       displayEmpty
@@ -181,20 +232,18 @@ const Entrevista: React.FC = () => {
                       onChange={(e) => handleChange(q.id, e.target.value)}
                       inputProps={{ 'aria-label': 'Selecciona tu género' }}
                     >
-                      <MenuItem value="" disabled>
-                        Selecciona tu género
-                      </MenuItem>
+                      <MenuItem value="" disabled>Selecciona tu género</MenuItem>
                       <MenuItem value="Masculino">Masculino</MenuItem>
                       <MenuItem value="Femenino">Femenino</MenuItem>
                     </Select>
                   </FormControl>
-                ) : index === 1 ? (
+                ) : q.question.toLowerCase().includes('fecha') ? (
                   <DatePicker
                     value={birthdayDate}
                     onChange={(newValue) => setBirthdayDate(newValue)}
                     format="DD/MM/YYYY"
                   />
-                ) : index === 2 ? (
+                ) : q.question.toLowerCase().includes('departamento') ? (
                   <FormControl fullWidth variant="outlined">
                     <Select
                       displayEmpty
@@ -202,15 +251,13 @@ const Entrevista: React.FC = () => {
                       onChange={(e) => handleChange(q.id, e.target.value)}
                       inputProps={{ 'aria-label': 'Departamento' }}
                     >
-                      <MenuItem value="" disabled>
-                        Departamento
-                      </MenuItem>
+                      <MenuItem value="" disabled>Departamento</MenuItem>
                       {departamentos.map((dep) => (
                         <MenuItem key={dep} value={dep}>{dep}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
-                ) : index === 4 ? (
+                ) : q.question.toLowerCase().includes('colegio') ? (
                   <FormControl fullWidth variant="outlined">
                     <Select
                       displayEmpty
@@ -218,13 +265,9 @@ const Entrevista: React.FC = () => {
                       onChange={(e) => setSelectedSchoolId(Number(e.target.value))}
                       inputProps={{ 'aria-label': 'Selecciona tu colegio' }}
                     >
-                      <MenuItem value="" disabled>
-                        Selecciona tu colegio
-                      </MenuItem>
+                      <MenuItem value="" disabled>Selecciona tu colegio</MenuItem>
                       {schools.map((school) => (
-                        <MenuItem key={school.id} value={school.id}>
-                          {school.schoolname}
-                        </MenuItem>
+                        <MenuItem key={school.id} value={school.id}>{school.schoolname}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -237,24 +280,30 @@ const Entrevista: React.FC = () => {
                   />
                 )}
               </Box>
-            ))}
-          </LocalizationProvider>
+            );
+          })}
+        </LocalizationProvider>
 
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            fullWidth
-            disabled={saving}
-          >
-            {saving ? 'Guardando...' : 'Guardar'}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="outlined" color="secondary" fullWidth disabled={currentSection === 1} onClick={handlePrevious}>
+            Anterior
           </Button>
-          {message && (
-            <Alert severity={message.includes('Error') ? 'error' : 'success'} sx={{ mt: 2 }}>
-              {message}
-            </Alert>
+          {currentSection < Object.keys(groupedQuestions).length ? (
+            <Button variant="contained" color="primary" fullWidth onClick={handleNext}>
+              Siguiente
+            </Button>
+          ) : (
+            <Button variant="contained" color="success" fullWidth disabled={saving} onClick={handleSubmit}>
+              {saving ? 'Guardando...' : 'Finalizar'}
+            </Button>
           )}
-        </form>
+        </Box>
+
+        {message && (
+          <Alert severity={message.includes('Error') ? 'error' : 'success'} sx={{ mt: 2 }}>
+            {message}
+          </Alert>
+        )}
       </Box>
     </Box>
   );
