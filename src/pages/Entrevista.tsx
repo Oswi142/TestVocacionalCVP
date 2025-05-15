@@ -164,6 +164,94 @@ const Entrevista: React.FC = () => {
         }
       }
 
+      const section4 = groupedQuestions[4] || [];
+      for (const q of section4) {
+        const value = answers[q.id];
+        if (!value || String(value).trim() === '') continue;
+
+        const options = getOptionsForQuestion(q.id);
+        if (options.length > 0) {
+          const answerId = parseInt(value);
+          await supabase.from('testsanswers').insert({
+            clientid: user.id,
+            testid: 1,
+            questionid: q.id,
+            answerid: answerId
+          });
+        } else {
+          await supabase.from('testsanswers').insert({
+            clientid: user.id,
+            testid: 1,
+            questionid: q.id,
+            details: value
+          });
+        }
+      }
+
+      const section5 = groupedQuestions[5] || [];
+        for (const q of section5) {
+          const value = answers[q.id];
+          if (!value || String(value).trim() === '') continue;
+
+          await supabase.from('testsanswers').insert({
+            clientid: user.id,
+            testid: 1,
+            questionid: q.id,
+            details: value
+          });
+        }
+
+      const section6 = groupedQuestions[6] || [];
+        for (const q of section6) {
+          const value = answers[q.id];
+          if (!value || String(value).trim() === '') continue;
+
+          const options = getOptionsForQuestion(q.id);
+          if (options.length > 0) {
+            const answerId = parseInt(value);
+            await supabase.from('testsanswers').insert({
+              clientid: user.id,
+              testid: 1,
+              questionid: q.id,
+              answerid: answerId
+            });
+          }
+        }
+
+        const section7 = groupedQuestions[7] || [];
+          for (const q of section7) {
+            const value = answers[q.id];
+            if (!value || String(value).trim() === '') continue;
+
+            const options = getOptionsForQuestion(q.id);
+            if (options.length > 0) {
+              const answerId = parseInt(value);
+              await supabase.from('testsanswers').insert({
+                clientid: user.id,
+                testid: 1,
+                questionid: q.id,
+                answerid: answerId
+              });
+            }
+          }
+
+          const section8 = groupedQuestions[8] || [];
+            for (const q of section8) {
+              const value = answers[q.id];
+              if (!value || String(value).trim() === '') continue;
+
+              const options = getOptionsForQuestion(q.id);
+              if (options.length > 0) {
+                const answerId = parseInt(value);
+                await supabase.from('testsanswers').insert({
+                  clientid: user.id,
+                  testid: 1,
+                  questionid: q.id,
+                  answerid: answerId
+                });
+              }
+            }
+
       setMessage('Respuestas guardadas correctamente.');
     } catch (err: any) {
       setMessage('Error al guardar respuestas: ' + err.message);
@@ -202,10 +290,41 @@ const Entrevista: React.FC = () => {
           </Alert>
         )}
 
+        {currentSection === 4 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Indica cuánto piensas que ha influido cada factor en tu elección vocacional. Selecciona una opción por cada uno.
+          </Alert>
+        )}
+
+        {currentSection === 5 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Comparte tus reflexiones personales. Responde con sinceridad a las siguientes preguntas abiertas.
+          </Alert>
+        )}
+
+        {currentSection === 6 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Responde si las siguientes afirmaciones son verdaderas o falsas respecto a tus planes de carrera.
+          </Alert>
+        )}
+
+        {currentSection === 7 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Por favor indica si necesitas la siguiente información relacionada con tus decisiones vocacionales. Marca “Sí” o “No”.
+          </Alert>
+        )}
+
+        {currentSection === 8 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Indica si presentas alguna de las siguientes dificultades relacionadas con tu elección vocacional.
+          </Alert>
+        )}
+
+
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           {questions.map((q) => {
             const options = getOptionsForQuestion(q.id);
-            const isSelect = currentSection === 3 && options.length > 0;
+            const isSelect = (currentSection === 3 || currentSection === 4|| currentSection === 6|| currentSection === 7|| currentSection === 8) && options.length > 0;
 
             return (
               <Box key={q.id} mb={3}>
@@ -288,6 +407,7 @@ const Entrevista: React.FC = () => {
           <Button variant="outlined" color="secondary" fullWidth disabled={currentSection === 1} onClick={handlePrevious}>
             Anterior
           </Button>
+
           {currentSection < Object.keys(groupedQuestions).length ? (
             <Button variant="contained" color="primary" fullWidth onClick={handleNext}>
               Siguiente
