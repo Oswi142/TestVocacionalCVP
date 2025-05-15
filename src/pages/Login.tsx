@@ -10,12 +10,17 @@ import {
   Paper,
   useMediaQuery,
   useTheme,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
 import logo from '../assets/logo-cvp.png';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const theme = useTheme();
@@ -68,8 +73,7 @@ const Login: React.FC = () => {
         <img
           src={logo}
           alt="Club Vida Plena"
-          style={{ width: isMobile ? 120 : 180, marginBottom: 0
-           }}
+          style={{ width: isMobile ? 120 : 180, marginBottom: 0 }}
         />
 
         <Typography
@@ -98,12 +102,21 @@ const Login: React.FC = () => {
           />
           <TextField
             label="Contraseña"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setShowPassword((prev) => !prev)} edge="end">
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <Button
             type="submit"
