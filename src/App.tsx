@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import ClientDashboard from './pages/ClientDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Entrevista from './pages/Entrevista';
+import CreateUser from './pages/CreateUser';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -13,7 +14,8 @@ function App() {
         <Route path="/client" element={<ProtectedRoute><ClientDashboard /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/entrevista" element={<ProtectedRoute><Entrevista /></ProtectedRoute>} />
-        {/* Agrega más rutas protegidas si es necesario */}
+        <Route path="/crear-usuario" element={<ProtectedRoute><CreateUser /></ProtectedRoute>} /> 
+        {/*Nueva ruta */}
       </Routes>
     </BrowserRouter>
   );
