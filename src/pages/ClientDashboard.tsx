@@ -203,7 +203,7 @@ const ClientDashboard: React.FC = () => {
               <Button
                 variant="outlined"
                 fullWidth
-                href="https://wa.me/59171234567?text=Hola%2C%20quisiera%20hacer%20una%20consulta%20sobre%20el%20test%20vocacional"
+                href="https://wa.me/59162733929?text=Hola%2C%20quisiera%20hacer%20una%20consulta%20sobre%20el%20test%20vocacional"
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{
