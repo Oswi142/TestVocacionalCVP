@@ -138,10 +138,10 @@ const AdminDashboard: React.FC = () => {
               <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2} mt={4} width="100%">
                 <Button
                   fullWidth
-                  onClick={() => navigate('/crear-usuario')}
+                  onClick={() => navigate('/gestion-usuarios')}
                   sx={buttonStyle('linear-gradient(90deg, #667eea, #764ba2)')}
                 >
-                  Crear Usuario
+                  Gestión de Usuarios
                 </Button>
                 <Button
                   fullWidth
