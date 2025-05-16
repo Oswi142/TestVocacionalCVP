@@ -150,22 +150,56 @@ const UserManagement: React.FC = () => {
   const isEditDisabled = !editingUser || (name === editingUser.name && username === editingUser.username && role === editingUser.role && password === '');
 
   return (
-    <Box sx={{ width: '100vw', minHeight: '100vh', background: 'linear-gradient(to right, #f9c9a4, #cafacc)', padding: 6, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <Box sx={{ width: '100%', maxWidth: 900, backgroundColor: '#fff', borderRadius: 3, padding: 4, boxShadow: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+    <Box
+      sx={{
+        width: '100vw',
+        minHeight: '100vh',
+        background: 'linear-gradient(to right, #f9c9a4, #cafacc)',
+        p: isMobile ? 2 : 6,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <Box
+        sx={{
+          width: '100%',
+          maxWidth: 900,
+          backgroundColor: '#fff',
+          borderRadius: 3,
+          p: isMobile ? 2 : 4,
+          boxShadow: 2,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            justifyContent: 'space-between',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            mb: 3,
+            gap: isMobile ? 2 : 0,
+          }}
+        >
           <Typography variant={isMobile ? 'h5' : 'h4'} fontWeight={700} color="primary">
             Gestión de Usuarios
           </Typography>
-          <Box display="flex" gap={2}>
-            <Button variant="contained" onClick={() => setOpenCreateDialog(true)}>+ Crear Usuario</Button>
-            <Button variant="outlined" onClick={() => navigate('/admin')}>← Volver al Dashboard</Button>
+          <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2} width={isMobile ? '100%' : 'auto'}>
+            <Button variant="contained" onClick={() => setOpenCreateDialog(true)} fullWidth={isMobile}>
+              + Crear Usuario
+            </Button>
+            <Button variant="outlined" onClick={() => navigate('/admin')} fullWidth={isMobile}>
+              ← Volver al Dashboard
+            </Button>
           </Box>
         </Box>
 
-        <Typography variant="h6" gutterBottom fontWeight={600}>Lista de Usuarios</Typography>
+        <Typography variant="h6" gutterBottom fontWeight={600}>
+          Lista de Usuarios
+        </Typography>
 
-        <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: 2 }}>
-          <Table>
+        <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: 2, overflowX: 'auto' }}>
+          <Table size={isMobile ? 'small' : 'medium'}>
             <TableHead>
               <TableRow>
                 <TableCell><strong>Nombre</strong></TableCell>
@@ -196,7 +230,7 @@ const UserManagement: React.FC = () => {
       </Box>
 
       {/* Crear Usuario */}
-      <Dialog open={openCreateDialog} onClose={handleCloseCreateDialog}>
+      <Dialog open={openCreateDialog} onClose={handleCloseCreateDialog} fullScreen={isMobile}>
         <DialogTitle>Crear Usuario</DialogTitle>
         <DialogContent>
           <TextField label="Nombre" fullWidth value={name} onChange={(e) => setName(e.target.value)} margin="dense" />
@@ -233,7 +267,7 @@ const UserManagement: React.FC = () => {
       </Dialog>
 
       {/* Editar Usuario */}
-      <Dialog open={openEditDialog} onClose={handleCloseEditDialog}>
+      <Dialog open={openEditDialog} onClose={handleCloseEditDialog} fullScreen={isMobile}>
         <DialogTitle>Editar Usuario</DialogTitle>
         <DialogContent>
           <TextField label="Nombre" fullWidth value={name} onChange={(e) => setName(e.target.value)} margin="dense" />
