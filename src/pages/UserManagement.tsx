@@ -230,7 +230,7 @@ const UserManagement: React.FC = () => {
       </Box>
 
       {/* Crear Usuario */}
-      <Dialog open={openCreateDialog} onClose={handleCloseCreateDialog} fullScreen={isMobile}>
+      <Dialog open={openCreateDialog} onClose={handleCloseCreateDialog} fullWidth maxWidth="xs">
         <DialogTitle>Crear Usuario</DialogTitle>
         <DialogContent>
           <TextField label="Nombre" fullWidth value={name} onChange={(e) => setName(e.target.value)} margin="dense" />
@@ -267,7 +267,7 @@ const UserManagement: React.FC = () => {
       </Dialog>
 
       {/* Editar Usuario */}
-      <Dialog open={openEditDialog} onClose={handleCloseEditDialog} fullScreen={isMobile}>
+      <Dialog open={openEditDialog} onClose={handleCloseEditDialog} fullWidth maxWidth="xs">
         <DialogTitle>Editar Usuario</DialogTitle>
         <DialogContent>
           <TextField label="Nombre" fullWidth value={name} onChange={(e) => setName(e.target.value)} margin="dense" />
