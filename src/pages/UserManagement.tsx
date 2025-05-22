@@ -56,10 +56,16 @@ const UserManagement: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const isValidName = (value: string) => {
+    const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/; // Letras y espacios
+    return regex.test(value.trim()) && value.trim().length > 0;
+  };
 
   const fetchUsers = async () => {
     const { data, error } = await supabase.from('users').select();
@@ -69,9 +75,21 @@ const UserManagement: React.FC = () => {
   const handleCreateUser = async () => {
     try {
       if (!name || !username || !password || !role) return;
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .single();
+
+      if (existing) {
+        showToast('Ese nombre de usuario ya está en uso', 'error');
+        return;
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
       const { error } = await supabase.from('users').insert({ name, username, password: hashedPassword, role });
       if (error) throw error;
+
       handleCloseCreateDialog();
       fetchUsers();
       showToast('Usuario creado exitosamente', 'success');
@@ -82,11 +100,25 @@ const UserManagement: React.FC = () => {
 
   const handleUpdateUser = async () => {
     try {
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .neq('id', editingUser.id)
+        .single();
+
+      if (existing) {
+        showToast('Ese nombre de usuario ya está en uso', 'error');
+        return;
+      }
+
       const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
-      const { error } = await supabase.from('users')
+      const { error } = await supabase
+        .from('users')
         .update({ name, username, ...(hashedPassword ? { password: hashedPassword } : {}), role })
         .eq('id', editingUser.id);
       if (error) throw error;
+
       handleCloseEditDialog();
       fetchUsers();
       showToast('Usuario actualizado', 'success');
@@ -95,8 +127,15 @@ const UserManagement: React.FC = () => {
     }
   };
 
+
   const handleDelete = async () => {
     if (!userToDelete) return;
+    if (userToDelete.id === currentUser.id) {
+      showToast('No puedes eliminar tu propio usuario', 'error');
+      setOpenConfirmDialog(false);
+      return;
+    }
+
     const { error } = await supabase.from('users').delete().eq('id', userToDelete.id);
     if (!error) {
       fetchUsers();
@@ -105,7 +144,6 @@ const UserManagement: React.FC = () => {
     setOpenConfirmDialog(false);
     setUserToDelete(null);
   };
-
   const showToast = (msg: string, type: 'success' | 'error') => {
     setMessage(msg);
     setMessageType(type);
@@ -146,8 +184,15 @@ const UserManagement: React.FC = () => {
     resetForm();
   };
 
-  const isCreateDisabled = !name || !username || !password || !role;
-  const isEditDisabled = !editingUser || (name === editingUser.name && username === editingUser.username && role === editingUser.role && password === '');
+  const isCreateDisabled = !isValidName(name) || !username || !password || !role;
+
+  const isEditDisabled =
+    !editingUser ||
+    !isValidName(name) ||
+    (name === editingUser.name &&
+      username === editingUser.username &&
+      role === editingUser.role &&
+      password === '');
 
   return (
     <Box
@@ -218,7 +263,11 @@ const UserManagement: React.FC = () => {
                     <IconButton sx={{ color: '#1976d2' }} onClick={() => handleEdit(user)}>
                       <EditIcon />
                     </IconButton>
-                    <IconButton sx={{ color: '#d32f2f' }} onClick={() => confirmDelete(user)}>
+                    <IconButton
+                      sx={{ color: '#d32f2f' }}
+                      onClick={() => confirmDelete(user)}
+                      disabled={user.id === currentUser.id}
+                      title={user.id === currentUser.id ? "No puedes eliminar tu propio usuario" : "Eliminar"}>
                       <DeleteIcon />
                     </IconButton>
                   </TableCell>
@@ -233,15 +282,30 @@ const UserManagement: React.FC = () => {
       <Dialog open={openCreateDialog} onClose={handleCloseCreateDialog} fullWidth maxWidth="xs">
         <DialogTitle>Crear Usuario</DialogTitle>
         <DialogContent>
-          <TextField label="Nombre" fullWidth value={name} onChange={(e) => setName(e.target.value)} margin="dense" />
+          <TextField
+            label="Nombre"
+            fullWidth
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            margin="dense"
+            error={!isValidName(name) && name.length > 0}
+            helperText={
+              !isValidName(name) && name.length > 0
+                ? 'Solo letras y espacios. No se permiten símbolos ni espacios vacíos.'
+                : ''
+            }
+          />
           <TextField label="Usuario" fullWidth value={username} onChange={(e) => setUsername(e.target.value)} margin="dense" />
           <TextField
             label="Contraseña"
             type={showPasswordCreate ? 'text' : 'password'}
             fullWidth
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value.length <= 12) setPassword(e.target.value);
+            }}
             margin="dense"
+            helperText={`Máx. 12 caracteres ${password.length}/12`}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -270,15 +334,30 @@ const UserManagement: React.FC = () => {
       <Dialog open={openEditDialog} onClose={handleCloseEditDialog} fullWidth maxWidth="xs">
         <DialogTitle>Editar Usuario</DialogTitle>
         <DialogContent>
-          <TextField label="Nombre" fullWidth value={name} onChange={(e) => setName(e.target.value)} margin="dense" />
+          <TextField
+            label="Nombre"
+            fullWidth
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            margin="dense"
+            error={!isValidName(name) && name.length > 0}
+            helperText={
+              !isValidName(name) && name.length > 0
+                ? 'Solo letras y espacios. No se permiten símbolos ni espacios vacíos.'
+                : ''
+            }
+          />
           <TextField label="Usuario" fullWidth value={username} onChange={(e) => setUsername(e.target.value)} margin="dense" />
           <TextField
             label="Contraseña (opcional)"
             type={showPasswordEdit ? 'text' : 'password'}
             fullWidth
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value.length <= 12) setPassword(e.target.value);
+            }}
             margin="dense"
+            helperText={`Máx. 12 caracteres ${password.length}/12`}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">

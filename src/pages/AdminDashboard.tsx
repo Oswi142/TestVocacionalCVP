@@ -11,6 +11,7 @@ import logo from '../assets/logo-cvp.png';
 
 const AdminDashboard: React.FC = () => {
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [activeTab, setActiveTab] = useState<'acciones' | 'cuenta'>('acciones');
   const navigate = useNavigate();
   const theme = useTheme();
@@ -21,6 +22,7 @@ const AdminDashboard: React.FC = () => {
     if (storedUser) {
       const user = JSON.parse(storedUser);
       setName(user.name);
+      setUsername(user.username);
     } else {
       navigate('/');
     }
@@ -157,8 +159,11 @@ const AdminDashboard: React.FC = () => {
               <Typography variant="h6" fontWeight={600} color="text.primary" gutterBottom>
                 Cuenta
               </Typography>
-              <Typography variant="body1" color="text.secondary" mb={3}>
+              <Typography variant="body1" color="text.secondary" mb={1}>
                 <strong>Nombre:</strong> {name}
+              </Typography>
+              <Typography variant="body1" color="text.secondary" mb={3}>
+                <strong>Usuario:</strong> {username}
               </Typography>
               <Button
                 variant="outlined"
