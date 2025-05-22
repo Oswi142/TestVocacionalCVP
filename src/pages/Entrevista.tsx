@@ -11,6 +11,10 @@ import {
   Select,
   FormControl,
   IconButton,
+  RadioGroup,
+  Radio,
+  FormControlLabel,
+  Snackbar
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -52,8 +56,20 @@ const Entrevista: React.FC = () => {
   const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(null);
   const [birthdayDate, setBirthdayDate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+
+  const showSnackbar = (message: string, severity: 'success' | 'error') => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
 
   const groupedQuestions = allQuestions.reduce((acc: { [key: number]: Question[] }, q) => {
     if (!acc[q.section]) acc[q.section] = [];
@@ -65,6 +81,24 @@ const Entrevista: React.FC = () => {
 
   const getOptionsForQuestion = (questionId: number) =>
     answerOptions.filter(opt => opt.questionid === questionId);
+
+    const conditionalVisibility: Record<number, number> = {
+      17: 16,
+      20: 19,
+      27: 26
+    };
+
+
+  const shouldDisplayQuestion = (questionId: number): boolean => {
+    const dependentId = conditionalVisibility[questionId];
+    if (!dependentId) return true; // Si no tiene dependencia, mostrar siempre
+
+    const selectedAnswerId = answers[dependentId];
+    const options = getOptionsForQuestion(dependentId);
+    const selectedAnswer = options.find(opt => String(opt.id) === String(selectedAnswerId));
+    return selectedAnswer?.answer?.toLowerCase() === 'sí';
+  };
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,22 +119,45 @@ const Entrevista: React.FC = () => {
   }, []);
 
   const handleChange = (id: number, value: string) => {
-    setAnswers(prev => ({ ...prev, [id]: value }));
+    const trimmed = value.trim();
+
+    setAnswers(prev => ({
+      ...prev,
+      [id]: trimmed === '' ? '' : value
+    }));
   };
 
   const handleNext = () => {
     setCurrentSection(prev => prev + 1);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 0);
   };
 
   const handlePrevious = () => {
     if (currentSection > 1) {
       setCurrentSection(prev => prev - 1);
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+      }, 0);
     }
   };
 
   const handleSubmit = async () => {
     setSaving(true);
-    setMessage('');
+    const allVisibleQuestions = allQuestions.filter(q => shouldDisplayQuestion(q.id));
+    const unansweredRequired = allVisibleQuestions.filter(q => {
+    if ([17, 20, 27].includes(q.id)) return false;
+    const value = answers[q.id];
+    return !value || String(value).trim() === '';
+    });
+
+    if (unansweredRequired.length > 0) {
+      showSnackbar('Debes responder todas las preguntas obligatorias antes de continuar.', 'error');
+      setSaving(false);
+      return;
+    }
+
 
     try {
       const section1 = groupedQuestions[1] || [];
@@ -252,9 +309,9 @@ const Entrevista: React.FC = () => {
               }
             }
 
-      setMessage('Respuestas guardadas correctamente.');
+      showSnackbar('Respuestas guardadas correctamente.', 'success');
     } catch (err: any) {
-      setMessage('Error al guardar respuestas: ' + err.message);
+      showSnackbar('Error al guardar respuestas: ' + err.message, 'error');
     } finally {
       setSaving(false);
     }
@@ -323,6 +380,7 @@ const Entrevista: React.FC = () => {
 
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           {questions.map((q) => {
+            if (!shouldDisplayQuestion(q.id)) return null;
             const options = getOptionsForQuestion(q.id);
             const isSelect = (currentSection === 3 || currentSection === 4|| currentSection === 6|| currentSection === 7|| currentSection === 8) && options.length > 0;
 
@@ -330,19 +388,20 @@ const Entrevista: React.FC = () => {
               <Box key={q.id} mb={3}>
                 <Typography variant="body1" fontWeight={500} gutterBottom>{q.question}</Typography>
 
-                {isSelect ? (
-                  <FormControl fullWidth variant="outlined">
-                    <Select
-                      displayEmpty
-                      value={answers[q.id] || ''}
-                      onChange={(e) => handleChange(q.id, e.target.value)}
-                    >
-                      <MenuItem value="" disabled>Selecciona una opción</MenuItem>
-                      {options.map((opt) => (
-                        <MenuItem key={opt.id} value={opt.id}>{opt.answer}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                {isSelect && !q.question.toLowerCase().includes('colegio') ? (
+                  <RadioGroup
+                    value={answers[q.id] || ''}
+                    onChange={(e) => handleChange(q.id, e.target.value)}
+                  >
+                    {options.map((opt) => (
+                      <FormControlLabel
+                        key={opt.id}
+                        value={String(opt.id)}
+                        control={<Radio color="primary" />}
+                        label={opt.answer}
+                      />
+                    ))}
+                  </RadioGroup>
                 ) : q.question.toLowerCase().includes('sexo') ? (
                   <FormControl fullWidth variant="outlined">
                     <Select
@@ -391,12 +450,21 @@ const Entrevista: React.FC = () => {
                     </Select>
                   </FormControl>
                 ) : (
-                  <TextField
-                    fullWidth
-                    variant="outlined"
-                    value={answers[q.id] || ''}
-                    onChange={(e) => handleChange(q.id, e.target.value)}
-                  />
+                  <>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      multiline
+                      minRows={1}
+                      maxRows={10}
+                      inputProps={{ maxLength: 100 }}
+                      value={answers[q.id] || ''}
+                      onChange={(e) => handleChange(q.id, e.target.value)}
+                    />
+                    <Typography variant="caption" color="textSecondary">
+                      Máx. de caracteres: {(answers[q.id] || '').length}/100
+                    </Typography>
+                  </>
                 )}
               </Box>
             );
@@ -419,11 +487,15 @@ const Entrevista: React.FC = () => {
           )}
         </Box>
 
-        {message && (
-          <Alert severity={message.includes('Error') ? 'error' : 'success'} sx={{ mt: 2 }}>
-            {message}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={4000}
+          onClose={handleSnackbarClose}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+          <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: '100%' }}>
+            {snackbarMessage}
           </Alert>
-        )}
+        </Snackbar>
       </Box>
     </Box>
   );
