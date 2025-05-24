@@ -99,6 +99,7 @@ const Login: React.FC = () => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
+            inputProps={{ 'data-testid': 'username-input' }}
           />
           <TextField
             label="Contraseña"
@@ -108,6 +109,7 @@ const Login: React.FC = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            inputProps={{ 'data-testid': 'password-input' }}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -119,6 +121,7 @@ const Login: React.FC = () => {
             }}
           />
           <Button
+            data-testid="login-button"
             type="submit"
             variant="contained"
             fullWidth
