@@ -5,6 +5,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Entrevista from './pages/Entrevista';
 import ProtectedRoute from './components/ProtectedRoute';
 import UserManagement from './pages/UserManagement';
+import IPPR from './pages/IPPR';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/entrevista" element={<ProtectedRoute><Entrevista /></ProtectedRoute>} />
         <Route path="/gestion-usuarios" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} /> 
+        <Route path="/ippr" element={<ProtectedRoute><IPPR /></ProtectedRoute>} />
         {/*Nueva ruta */}
       </Routes>
     </BrowserRouter>
