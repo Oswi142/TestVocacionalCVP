@@ -14,13 +14,22 @@ import {
   RadioGroup,
   Radio,
   FormControlLabel,
-  Snackbar
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
+import CheckIcon from '@mui/icons-material/Check';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+
+
 
 interface Question {
   id: number;
@@ -60,6 +69,7 @@ const Entrevista: React.FC = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbarMessage(message);
@@ -82,16 +92,15 @@ const Entrevista: React.FC = () => {
   const getOptionsForQuestion = (questionId: number) =>
     answerOptions.filter(opt => opt.questionid === questionId);
 
-    const conditionalVisibility: Record<number, number> = {
-      17: 16,
-      20: 19,
-      27: 26
-    };
-
+  const conditionalVisibility: Record<number, number> = {
+    17: 16,
+    20: 19,
+    27: 26
+  };
 
   const shouldDisplayQuestion = (questionId: number): boolean => {
     const dependentId = conditionalVisibility[questionId];
-    if (!dependentId) return true; // Si no tiene dependencia, mostrar siempre
+    if (!dependentId) return true;
 
     const selectedAnswerId = answers[dependentId];
     const options = getOptionsForQuestion(dependentId);
@@ -99,6 +108,27 @@ const Entrevista: React.FC = () => {
     return selectedAnswer?.answer?.toLowerCase() === 'sí';
   };
 
+  const isSectionComplete = (section: number): boolean => {
+    const questions = groupedQuestions[section] || [];
+
+    return questions.every((q) => {
+      if (!shouldDisplayQuestion(q.id)) return true;
+
+      const value = answers[q.id];
+
+      // Fecha de nacimiento
+      if (q.question.toLowerCase().includes('fecha')) {
+        return !!birthdayDate;
+      }
+
+      // Colegio
+      if (q.question.toLowerCase().includes('colegio')) {
+        return selectedSchoolId !== null;
+      }
+
+      return !!value && value.trim() !== '';
+    });
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -127,40 +157,68 @@ const Entrevista: React.FC = () => {
     }));
   };
 
-  const handleNext = () => {
-    setCurrentSection(prev => prev + 1);
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 0);
+  const isAllComplete = (): boolean => {
+    return Object.keys(groupedQuestions).every((key) => {
+      const section = parseInt(key);
+      return isSectionComplete(section);
+    });
   };
-
-  const handlePrevious = () => {
-    if (currentSection > 1) {
-      setCurrentSection(prev => prev - 1);
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-      }, 0);
-    }
-  };
-
   const handleSubmit = async () => {
     setSaving(true);
-    const allVisibleQuestions = allQuestions.filter(q => shouldDisplayQuestion(q.id));
-    const unansweredRequired = allVisibleQuestions.filter(q => {
-    if ([17, 20, 27].includes(q.id)) return false;
-    const value = answers[q.id];
-    return !value || String(value).trim() === '';
-    });
-
-    if (unansweredRequired.length > 0) {
-      showSnackbar('Debes responder todas las preguntas obligatorias antes de continuar.', 'error');
-      setSaving(false);
-      return;
-    }
-
-
+    
     try {
+      // Debug: log current state
+      console.log('Current answers:', answers);
+      console.log('Selected school:', selectedSchoolId);
+      console.log('Birthday:', birthdayDate);
+      console.log('User:', user);
+      
+      // Verificar que el usuario esté disponible
+      if (!user || !user.id) {
+        throw new Error('Usuario no encontrado en localStorage');
+      }
+
+      // Validación mejorada
+      const allVisibleQuestions = allQuestions.filter(q => shouldDisplayQuestion(q.id));
+      console.log('All visible questions:', allVisibleQuestions.map(q => ({ id: q.id, question: q.question })));
+      
+      const unansweredRequired = allVisibleQuestions.filter(q => {
+        // Excluir preguntas condicionales que no deben validarse
+        if ([17, 20, 27].includes(q.id)) return false;
+        
+        const value = answers[q.id];
+        
+        // Para la pregunta de fecha de nacimiento
+        if (q.question.toLowerCase().includes('fecha')) {
+          return !birthdayDate;
+        }
+        
+        // Para la pregunta de colegio
+        if (q.question.toLowerCase().includes('colegio')) {
+          return !selectedSchoolId;
+        }
+        
+        return !value || String(value).trim() === '';
+      });
+
+      console.log('Unanswered required questions:', unansweredRequired.map(q => ({ id: q.id, question: q.question })));
+
+      if (unansweredRequired.length > 0) {
+        const missingSections = [
+          ...new Set(unansweredRequired.map(q => q.section))
+        ];
+
+        const secciones = missingSections.join(', ');
+        showSnackbar(`Faltan preguntas por contestar en la(s) sección(es): ${secciones}`, 'error');
+        setSaving(false);
+        return;
+      }
+
+
+      // Mapear respuestas de la sección 1
       const section1 = groupedQuestions[1] || [];
+      console.log('Section 1 questions:', section1);
+      
       const mapped = {
         gender: answers[section1[0]?.id] || '',
         birthday: birthdayDate ? birthdayDate.format('YYYY-MM-DD') : '',
@@ -169,7 +227,10 @@ const Entrevista: React.FC = () => {
         grade: answers[section1[5]?.id] || '',
         hobbies: answers[section1[6]?.id] || '',
       };
+      
+      console.log('Mapped data for clientsinfo:', mapped);
 
+      // Insertar/actualizar información del cliente
       const { error: infoError } = await supabase.from('clientsinfo').upsert({
         userid: user.id,
         gender: mapped.gender,
@@ -181,137 +242,70 @@ const Entrevista: React.FC = () => {
         hobbies: mapped.hobbies,
       });
 
-      if (infoError) throw infoError;
-
-      const section2 = groupedQuestions[2] || [];
-      for (const q of section2) {
-        const detail = answers[q.id];
-        if (detail && detail.trim() !== '') {
-          const { error: insertError } = await supabase.from('testsanswers').insert({
-            clientid: user.id,
-            testid: 1,
-            questionid: q.id,
-            details: detail,
-          });
-          if (insertError) throw insertError;
-        }
+      if (infoError) {
+        console.error('Error inserting clientsinfo:', infoError);
+        throw infoError;
       }
 
-      const section3 = groupedQuestions[3] || [];
-      for (const q of section3) {
-        const value = answers[q.id];
-        if (!value || String(value).trim() === '') continue;
+      console.log('Successfully inserted clientsinfo');
 
-        const options = getOptionsForQuestion(q.id);
-        if (options.length > 0) {
-          const answerId = parseInt(value);
-          await supabase.from('testsanswers').insert({
-            clientid: user.id,
-            testid: 1,
-            questionid: q.id,
-            answerid: answerId
-          });
-        } else {
-          await supabase.from('testsanswers').insert({
-            clientid: user.id,
-            testid: 1,
-            questionid: q.id,
-            details: value
-          });
-        }
-      }
-
-      const section4 = groupedQuestions[4] || [];
-      for (const q of section4) {
-        const value = answers[q.id];
-        if (!value || String(value).trim() === '') continue;
-
-        const options = getOptionsForQuestion(q.id);
-        if (options.length > 0) {
-          const answerId = parseInt(value);
-          await supabase.from('testsanswers').insert({
-            clientid: user.id,
-            testid: 1,
-            questionid: q.id,
-            answerid: answerId
-          });
-        } else {
-          await supabase.from('testsanswers').insert({
-            clientid: user.id,
-            testid: 1,
-            questionid: q.id,
-            details: value
-          });
-        }
-      }
-
-      const section5 = groupedQuestions[5] || [];
-        for (const q of section5) {
+      // Procesar respuestas de cada sección
+      const sectionsToProcess = [2, 3, 4, 5, 6, 7, 8];
+      
+      for (const sectionNum of sectionsToProcess) {
+        const sectionQuestions = groupedQuestions[sectionNum] || [];
+        console.log(`Processing section ${sectionNum}:`, sectionQuestions.length, 'questions');
+        
+        for (const q of sectionQuestions) {
+          if (!shouldDisplayQuestion(q.id)) {
+            console.log(`Skipping question ${q.id} due to conditional visibility`);
+            continue;
+          }
+          
           const value = answers[q.id];
-          if (!value || String(value).trim() === '') continue;
-
-          await supabase.from('testsanswers').insert({
-            clientid: user.id,
-            testid: 1,
-            questionid: q.id,
-            details: value
-          });
-        }
-
-      const section6 = groupedQuestions[6] || [];
-        for (const q of section6) {
-          const value = answers[q.id];
-          if (!value || String(value).trim() === '') continue;
+          if (!value || String(value).trim() === '') {
+            console.log(`Skipping question ${q.id} - no answer provided`);
+            continue;
+          }
 
           const options = getOptionsForQuestion(q.id);
+          let insertData: any = {
+            clientid: user.id,
+            testid: 1,
+            questionid: q.id
+          };
+
           if (options.length > 0) {
+            // Pregunta con opciones - usar answerid
             const answerId = parseInt(value);
-            await supabase.from('testsanswers').insert({
-              clientid: user.id,
-              testid: 1,
-              questionid: q.id,
-              answerid: answerId
-            });
+            if (isNaN(answerId)) {
+              console.error(`Invalid answer ID for question ${q.id}:`, value);
+              continue;
+            }
+            insertData.answerid = answerId;
+          } else {
+            // Pregunta abierta - usar details
+            insertData.details = value;
+          }
+          
+          console.log(`Inserting answer for question ${q.id}:`, insertData);
+          
+          const { error: insertError } = await supabase.from('testsanswers').insert(insertData);
+          if (insertError) {
+            console.error(`Error inserting answer for question ${q.id}:`, insertError);
+            throw insertError;
           }
         }
-
-        const section7 = groupedQuestions[7] || [];
-          for (const q of section7) {
-            const value = answers[q.id];
-            if (!value || String(value).trim() === '') continue;
-
-            const options = getOptionsForQuestion(q.id);
-            if (options.length > 0) {
-              const answerId = parseInt(value);
-              await supabase.from('testsanswers').insert({
-                clientid: user.id,
-                testid: 1,
-                questionid: q.id,
-                answerid: answerId
-              });
-            }
-          }
-
-          const section8 = groupedQuestions[8] || [];
-            for (const q of section8) {
-              const value = answers[q.id];
-              if (!value || String(value).trim() === '') continue;
-
-              const options = getOptionsForQuestion(q.id);
-              if (options.length > 0) {
-                const answerId = parseInt(value);
-                await supabase.from('testsanswers').insert({
-                  clientid: user.id,
-                  testid: 1,
-                  questionid: q.id,
-                  answerid: answerId
-                });
-              }
-            }
+      }
 
       showSnackbar('Respuestas guardadas correctamente.', 'success');
+      setTimeout(() => {
+        navigate('/client');
+      }, 2000);
+      
     } catch (err: any) {
-      showSnackbar('Error al guardar respuestas: ' + err.message, 'error');
+      console.error('Error saving data:', err);
+      showSnackbar('Error al guardar respuestas: ' + (err.message || 'Error desconocido'), 'error');
     } finally {
       setSaving(false);
     }
@@ -319,173 +313,325 @@ const Entrevista: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ width: '100vw', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <Box 
+        sx={{ 
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'linear-gradient(to right, #f9c9a4, #cafacc)' 
+        }}
+      >
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ width: '100vw', minHeight: '100vh', background: 'linear-gradient(to right, #f9c9a4, #cafacc)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 2 }}>
-      <Box sx={{ width: '100%', maxWidth: 600, backgroundColor: '#ffffff', borderRadius: 4, boxShadow: 3, padding: 4 }}>
-        <IconButton onClick={() => navigate(-1)} sx={{ mb: 2 }}>
-          <ArrowBackIcon />
-        </IconButton>
+    <Box sx={{ 
+      width: '100vw', 
+      height: '100vh', 
+      background: 'linear-gradient(to right, #f9c9a4, #cafacc)', 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      padding: 2,
+      overflow: 'hidden' // Prevenir scroll en el contenedor principal
+    }}>
+      <Box sx={{ 
+        width: '100%', 
+        maxWidth: 600, 
+        height: '90vh', // Altura fija para el contenedor
+        backgroundColor: '#ffffff', 
+        borderRadius: 4, 
+        boxShadow: 3,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden' // Prevenir desbordamiento
+      }}>
+        {/* Header fijo */}
+        <Box sx={{ 
+          padding: 2, 
+          borderBottom: '1px solid #e0e0e0',
+          flexShrink: 0 // No se encoge
+        }}>
+          <IconButton onClick={() => navigate(-1)} sx={{ mb: 1 }}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h5" color="primary">Test: Entrevista</Typography>
+          <Typography variant="subtitle1" color="primary">
+            Sección {currentSection}
+          </Typography>
 
-        <Typography variant="h5" gutterBottom color="primary">Test: Entrevista</Typography>
-
-        {currentSection === 2 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Profundizar en la relación y ocupación de cada uno de sus familiares y otras personas significativas.
-            Incluir datos como convivencia, estudios, ocupación y lugar de nacimiento.
-          </Alert>
-        )}
-
-        {currentSection === 3 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Responde con sinceridad a las siguientes preguntas relacionadas con tu etapa escolar. Algunas requieren respuestas abiertas y otras selección.
-          </Alert>
-        )}
-
-        {currentSection === 4 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Indica cuánto piensas que ha influido cada factor en tu elección vocacional. Selecciona una opción por cada uno.
-          </Alert>
-        )}
-
-        {currentSection === 5 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Comparte tus reflexiones personales. Responde con sinceridad a las siguientes preguntas abiertas.
-          </Alert>
-        )}
-
-        {currentSection === 6 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Responde si las siguientes afirmaciones son verdaderas o falsas respecto a tus planes de carrera.
-          </Alert>
-        )}
-
-        {currentSection === 7 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Por favor indica si necesitas la siguiente información relacionada con tus decisiones vocacionales. Marca “Sí” o “No”.
-          </Alert>
-        )}
-
-        {currentSection === 8 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Indica si presentas alguna de las siguientes dificultades relacionadas con tu elección vocacional.
-          </Alert>
-        )}
-
-
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          {questions.map((q) => {
-            if (!shouldDisplayQuestion(q.id)) return null;
-            const options = getOptionsForQuestion(q.id);
-            const isSelect = (currentSection === 3 || currentSection === 4|| currentSection === 6|| currentSection === 7|| currentSection === 8) && options.length > 0;
-
-            return (
-              <Box key={q.id} mb={3}>
-                <Typography variant="body1" fontWeight={500} gutterBottom>{q.question}</Typography>
-
-                {isSelect && !q.question.toLowerCase().includes('colegio') ? (
-                  <RadioGroup
-                    value={answers[q.id] || ''}
-                    onChange={(e) => handleChange(q.id, e.target.value)}
-                  >
-                    {options.map((opt) => (
-                      <FormControlLabel
-                        key={opt.id}
-                        value={String(opt.id)}
-                        control={<Radio color="primary" />}
-                        label={opt.answer}
-                      />
-                    ))}
-                  </RadioGroup>
-                ) : q.question.toLowerCase().includes('sexo') ? (
-                  <FormControl fullWidth variant="outlined">
-                    <Select
-                      displayEmpty
-                      value={answers[q.id] || ''}
-                      onChange={(e) => handleChange(q.id, e.target.value)}
-                      inputProps={{ 'aria-label': 'Selecciona tu género' }}
-                    >
-                      <MenuItem value="" disabled>Selecciona tu género</MenuItem>
-                      <MenuItem value="Masculino">Masculino</MenuItem>
-                      <MenuItem value="Femenino">Femenino</MenuItem>
-                    </Select>
-                  </FormControl>
-                ) : q.question.toLowerCase().includes('fecha') ? (
-                  <DatePicker
-                    value={birthdayDate}
-                    onChange={(newValue) => setBirthdayDate(newValue)}
-                    format="DD/MM/YYYY"
-                  />
-                ) : q.question.toLowerCase().includes('departamento') ? (
-                  <FormControl fullWidth variant="outlined">
-                    <Select
-                      displayEmpty
-                      value={answers[q.id] || ''}
-                      onChange={(e) => handleChange(q.id, e.target.value)}
-                      inputProps={{ 'aria-label': 'Departamento' }}
-                    >
-                      <MenuItem value="" disabled>Departamento</MenuItem>
-                      {departamentos.map((dep) => (
-                        <MenuItem key={dep} value={dep}>{dep}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                ) : q.question.toLowerCase().includes('colegio') ? (
-                  <FormControl fullWidth variant="outlined">
-                    <Select
-                      displayEmpty
-                      value={selectedSchoolId !== null ? String(selectedSchoolId) : ''}
-                      onChange={(e) => setSelectedSchoolId(Number(e.target.value))}
-                      inputProps={{ 'aria-label': 'Selecciona tu colegio' }}
-                    >
-                      <MenuItem value="" disabled>Selecciona tu colegio</MenuItem>
-                      {schools.map((school) => (
-                        <MenuItem key={school.id} value={school.id}>{school.schoolname}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                ) : (
-                  <>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      multiline
-                      minRows={1}
-                      maxRows={10}
-                      inputProps={{ maxLength: 100 }}
-                      value={answers[q.id] || ''}
-                      onChange={(e) => handleChange(q.id, e.target.value)}
-                    />
-                    <Typography variant="caption" color="textSecondary">
-                      Máx. de caracteres: {(answers[q.id] || '').length}/100
-                    </Typography>
-                  </>
-                )}
-              </Box>
-            );
-          })}
-        </LocalizationProvider>
-
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" color="secondary" fullWidth disabled={currentSection === 1} onClick={handlePrevious}>
-            Anterior
-          </Button>
-
-          {currentSection < Object.keys(groupedQuestions).length ? (
-            <Button variant="contained" color="primary" fullWidth onClick={handleNext}>
-              Siguiente
-            </Button>
-          ) : (
-            <Button variant="contained" color="success" fullWidth disabled={saving} onClick={handleSubmit}>
-              {saving ? 'Guardando...' : 'Finalizar'}
-            </Button>
-          )}
         </Box>
+
+        {/* Contenido scrolleable */}
+        <Box 
+          id="scroll-container"
+          sx={{ 
+            flex: 1, // Toma todo el espacio disponible
+            overflow: 'auto', // Scroll vertical cuando sea necesario
+            padding: 3,
+            paddingTop: 2
+          }}
+        >
+          {/* Alerts para cada sección */}
+          {currentSection === 2 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Profundizar en la relación y ocupación de cada uno de sus familiares y otras personas significativas.
+              Incluir datos como convivencia, estudios, ocupación y lugar de nacimiento.
+            </Alert>
+          )}
+
+          {currentSection === 3 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Responde con sinceridad a las siguientes preguntas relacionadas con tu etapa escolar. Algunas requieren respuestas abiertas y otras selección.
+            </Alert>
+          )}
+
+          {currentSection === 4 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Indica cuánto piensas que ha influido cada factor en tu elección vocacional. Selecciona una opción por cada uno.
+            </Alert>
+          )}
+
+          {currentSection === 5 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Comparte tus reflexiones personales. Responde con sinceridad a las siguientes preguntas abiertas.
+            </Alert>
+          )}
+
+          {currentSection === 6 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Responde si las siguientes afirmaciones son verdaderas o falsas respecto a tus planes de carrera.
+            </Alert>
+          )}
+
+          {currentSection === 7 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Por favor indica si necesitas la siguiente información relacionada con tus decisiones vocacionales. Marca "Sí" o "No".
+            </Alert>
+          )}
+
+          {currentSection === 8 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Indica si presentas alguna de las siguientes dificultades relacionadas con tu elección vocacional.
+            </Alert>
+          )}
+
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            {questions.map((q) => {
+              if (!shouldDisplayQuestion(q.id)) return null;
+              const options = getOptionsForQuestion(q.id);
+              const isSelect = (currentSection === 3 || currentSection === 4|| currentSection === 6|| currentSection === 7|| currentSection === 8) && options.length > 0;
+
+              return (
+                <Box key={q.id} mb={3}>
+                  <Typography variant="body1" fontWeight={500} gutterBottom>{q.question}</Typography>
+
+                  {isSelect && !q.question.toLowerCase().includes('colegio') ? (
+                    <RadioGroup
+                      value={answers[q.id] || ''}
+                      onChange={(e) => handleChange(q.id, e.target.value)}
+                    >
+                      {options.map((opt) => (
+                        <FormControlLabel
+                          key={opt.id}
+                          value={String(opt.id)}
+                          control={<Radio color="primary" />}
+                          label={opt.answer}
+                        />
+                      ))}
+                    </RadioGroup>
+                  ) : q.question.toLowerCase().includes('sexo') ? (
+                    <FormControl fullWidth variant="outlined">
+                      <Select
+                        displayEmpty
+                        value={answers[q.id] || ''}
+                        onChange={(e) => handleChange(q.id, e.target.value)}
+                        inputProps={{ 'aria-label': 'Selecciona tu género' }}
+                      >
+                        <MenuItem value="" disabled>Selecciona tu género</MenuItem>
+                        <MenuItem value="Masculino">Masculino</MenuItem>
+                        <MenuItem value="Femenino">Femenino</MenuItem>
+                      </Select>
+                    </FormControl>
+                  ) : q.question.toLowerCase().includes('fecha') ? (
+                    <DatePicker
+                      value={birthdayDate}
+                      onChange={(newValue) => setBirthdayDate(newValue)}
+                      format="DD/MM/YYYY"
+                    />
+                  ) : q.question.toLowerCase().includes('departamento') ? (
+                    <FormControl fullWidth variant="outlined">
+                      <Select
+                        displayEmpty
+                        value={answers[q.id] || ''}
+                        onChange={(e) => handleChange(q.id, e.target.value)}
+                        inputProps={{ 'aria-label': 'Departamento' }}
+                      >
+                        <MenuItem value="" disabled>Departamento</MenuItem>
+                        {departamentos.map((dep) => (
+                          <MenuItem key={dep} value={dep}>{dep}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : q.question.toLowerCase().includes('colegio') ? (
+                    <FormControl fullWidth variant="outlined">
+                      <Select
+                        displayEmpty
+                        value={selectedSchoolId !== null ? String(selectedSchoolId) : ''}
+                        onChange={(e) => setSelectedSchoolId(Number(e.target.value))}
+                        inputProps={{ 'aria-label': 'Selecciona tu colegio' }}
+                      >
+                        <MenuItem value="" disabled>Selecciona tu colegio</MenuItem>
+                        {schools.map((school) => (
+                          <MenuItem key={school.id} value={school.id}>{school.schoolname}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <>
+                      <TextField
+                        fullWidth
+                        variant="outlined"
+                        multiline
+                        minRows={1}
+                        maxRows={10}
+                        inputProps={{ maxLength: 100 }}
+                        value={answers[q.id] || ''}
+                        onChange={(e) => handleChange(q.id, e.target.value)}
+                      />
+                      <Typography variant="caption" color="textSecondary">
+                        Máx. de caracteres: {(answers[q.id] || '').length}/100
+                      </Typography>
+                    </>
+                  )}
+                </Box>
+              );
+            })}
+          </LocalizationProvider>
+        </Box>
+
+        {/* Footer fijo con botones */}
+<Box sx={{
+  padding: 2,
+  borderTop: '1px solid #e0e0e0',
+  flexShrink: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 2
+}}>
+  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+    {Object.keys(groupedQuestions).map((key) => {
+      const section = parseInt(key);
+      const complete = isSectionComplete(section);
+      const isCurrent = currentSection === section;
+
+      return (
+        <Button
+          key={section}
+          onClick={() => setCurrentSection(section)}
+          sx={{
+            minWidth: 36,
+            height: 36,
+            borderRadius: '50%',
+            color: complete ? '#fff' : isCurrent ? '#fff' : '#333',
+            backgroundColor: complete
+              ? '#4caf50'
+              : isCurrent
+              ? '#1976d2'
+              : '#f0f0f0',
+            '&:hover': {
+              backgroundColor: complete
+                ? '#388e3c'
+                : isCurrent
+                ? '#1565c0'
+                : '#e0e0e0',
+            }
+          }}
+        >
+          {section}
+        </Button>
+      );
+    })}
+
+    {/* Botón Finalizar redondo con ícono */}
+    <Button
+      onClick={() => setConfirmOpen(true)}
+      disabled={saving || !isAllComplete()}
+      sx={{
+        minWidth: 36,
+        height: 36,
+        borderRadius: '50%',
+        backgroundColor: isAllComplete() ? '#0288d1' : '#cfd8dc',
+        color: isAllComplete() ? 'white' : '#757575',
+        '&:hover': {
+          backgroundColor: isAllComplete() ? '#0277bd' : '#cfd8dc',
+        },
+        transition: 'all 0.3s ease'
+      }}
+    >
+      <CheckIcon fontSize="small" />
+    </Button>
+
+  </Box>
+</Box>
+
+<Dialog
+  open={confirmOpen}
+  onClose={() => setConfirmOpen(false)}
+  PaperProps={{
+    sx: {
+      borderRadius: 3,
+      padding: 2,
+      border: '2px solid #fbc02d',
+      backgroundColor: '#fffde7',
+      maxWidth: 400
+    }
+  }}
+>
+  <Box sx={{ textAlign: 'center', px: 2, py: 1 }}>
+    <WarningAmberIcon sx={{ fontSize: 48, color: '#f9a825', mb: 1 }} />
+    <DialogTitle sx={{ fontWeight: 'bold', fontSize: '1.25rem', color: '#f57f17', pb: 0 }}>
+      ¿Estás seguro de enviar tus respuestas?
+    </DialogTitle>
+
+    <DialogContent>
+      <DialogContentText sx={{ fontSize: '0.95rem', color: '#5f5f5f' }}>
+        Una vez que envíes, <strong>no podrás modificarlas</strong>. Asegúrate de haber completado todo correctamente.
+      </DialogContentText>
+    </DialogContent>
+  </Box>
+
+  <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
+    <Button
+      onClick={() => setConfirmOpen(false)}
+      variant="outlined"
+      color="warning"
+      sx={{ borderColor: '#fbc02d', color: '#f57f17' }}
+    >
+      Cancelar
+    </Button>
+    <Button
+      onClick={() => {
+        setConfirmOpen(false);
+        handleSubmit();
+      }}
+      variant="contained"
+      color="warning"
+      sx={{ backgroundColor: '#fbc02d', color: '#white', '&:hover': { backgroundColor: '#f9a825' } }}
+      disabled={saving}
+    >
+      Confirmar y Enviar
+    </Button>
+  </DialogActions>
+</Dialog>
+
+
+
 
         <Snackbar
           open={snackbarOpen}
