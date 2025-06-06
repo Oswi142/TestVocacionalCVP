@@ -131,6 +131,13 @@ const IPPR: React.FC = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const scrollContainer = document.getElementById('scroll-container');
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0;
+    }
+  }, [currentSection]);
+
   if (loading) {
     return (
       <Box sx={{ width: '100vw', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(to right, #f9c9a4, #cafacc)' }}>
@@ -168,7 +175,7 @@ const IPPR: React.FC = () => {
           ))}
         </Box>
 
-        <Box sx={{ padding: 2, borderTop: '1px solid #e0e0e0', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ padding: 2, borderTop: '1px solid #e0e0e0', flexShrink: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
             {Object.keys(groupedQuestions).map((key) => {
               const section = parseInt(key);

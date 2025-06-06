@@ -131,6 +131,14 @@ const Entrevista: React.FC = () => {
   };
 
   useEffect(() => {
+    const scrollContainer = document.getElementById('scroll-container');
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0;
+    }
+  }, [currentSection]);
+
+
+  useEffect(() => {
     const fetchData = async () => {
       const [questionsRes, schoolsRes, optionsRes] = await Promise.all([
         supabase.from('questions').select('id, question, section').eq('testid', 1).order('section').order('id'),
