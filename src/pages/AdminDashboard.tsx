@@ -147,7 +147,7 @@ const AdminDashboard: React.FC = () => {
                 </Button>
                 <Button
                   fullWidth
-                  onClick={() => navigate('/ver-resultados')}
+                  onClick={() => navigate('/resultados-clientes')}
                   sx={buttonStyle('linear-gradient(90deg, #43cea2, #185a9d)')}
                 >
                   Ver Resultados
