@@ -588,58 +588,55 @@ const Entrevista: React.FC = () => {
   </Box>
 </Box>
 
-<Dialog
-  open={confirmOpen}
-  onClose={() => setConfirmOpen(false)}
-  PaperProps={{
-    sx: {
-      borderRadius: 3,
-      padding: 2,
-      border: '2px solid #fbc02d',
-      backgroundColor: '#fffde7',
-      maxWidth: 400
-    }
-  }}
->
-  <Box sx={{ textAlign: 'center', px: 2, py: 1 }}>
-    <WarningAmberIcon sx={{ fontSize: 48, color: '#f9a825', mb: 1 }} />
-    <DialogTitle sx={{ fontWeight: 'bold', fontSize: '1.25rem', color: '#f57f17', pb: 0 }}>
-      ¿Estás seguro de enviar tus respuestas?
-    </DialogTitle>
+        <Dialog
+          open={confirmOpen}
+          onClose={() => setConfirmOpen(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              padding: 2,
+              border: '2px solid #fbc02d',
+              backgroundColor: '#fffde7',
+              maxWidth: 400
+            }
+          }}
+        >
+          <Box sx={{ textAlign: 'center', px: 2, py: 1 }}>
+            <WarningAmberIcon sx={{ fontSize: 48, color: '#f9a825', mb: 1 }} />
+            <DialogTitle sx={{ fontWeight: 'bold', fontSize: '1.25rem', color: '#f57f17', pb: 0 }}>
+              ¿Estás seguro de enviar tus respuestas?
+            </DialogTitle>
 
-    <DialogContent>
-      <DialogContentText sx={{ fontSize: '0.95rem', color: '#5f5f5f' }}>
-        Una vez que envíes, <strong>no podrás modificarlas</strong>. Asegúrate de haber completado todo correctamente.
-      </DialogContentText>
-    </DialogContent>
-  </Box>
+            <DialogContent>
+              <DialogContentText sx={{ fontSize: '0.95rem', color: '#5f5f5f' }}>
+                Una vez que envíes, <strong>no podrás modificarlas</strong>. Asegúrate de haber completado todo correctamente.
+              </DialogContentText>
+            </DialogContent>
+          </Box>
 
-  <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
-    <Button
-      onClick={() => setConfirmOpen(false)}
-      variant="outlined"
-      color="warning"
-      sx={{ borderColor: '#fbc02d', color: '#f57f17' }}
-    >
-      Cancelar
-    </Button>
-    <Button
-      onClick={() => {
-        setConfirmOpen(false);
-        handleSubmit();
-      }}
-      variant="contained"
-      color="warning"
-      sx={{ backgroundColor: '#fbc02d', color: '#white', '&:hover': { backgroundColor: '#f9a825' } }}
-      disabled={saving}
-    >
-      Confirmar y Enviar
-    </Button>
-  </DialogActions>
-</Dialog>
-
-
-
+          <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
+            <Button
+              onClick={() => setConfirmOpen(false)}
+              variant="outlined"
+              color="warning"
+              sx={{ borderColor: '#fbc02d', color: '#f57f17' }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmOpen(false);
+                handleSubmit();
+              }}
+              variant="contained"
+              color="warning"
+              sx={{ backgroundColor: '#fbc02d', color: '#white', '&:hover': { backgroundColor: '#f9a825' } }}
+              disabled={saving}
+            >
+              Confirmar
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Snackbar
           open={snackbarOpen}

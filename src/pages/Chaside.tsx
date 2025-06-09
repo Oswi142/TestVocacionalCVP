@@ -26,6 +26,7 @@ interface Question {
   id: number;
   question: string;
   section: number;
+  chatype: string;
 }
 
 interface AnswerOption {
@@ -34,7 +35,7 @@ interface AnswerOption {
   answer: string;
 }
 
-const IPPR: React.FC = () => {
+const Chaside: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
 
@@ -68,7 +69,7 @@ const IPPR: React.FC = () => {
   const questions = groupedQuestions[currentSection] || [];
 
   const getOptionsForQuestion = (questionId: number) =>
-    answerOptions.filter(opt => opt.questionid === questionId);
+    answerOptions.filter(opt => Number(opt.questionid) === Number(questionId));
 
   const handleChange = (id: number, value: string) => {
     setAnswers(prev => ({
@@ -101,12 +102,11 @@ const IPPR: React.FC = () => {
       for (const q of allQuestions) {
         await supabase.from('testsanswers').insert({
           clientid: user.id,
-          testid: 2,
+          testid: 3,
           questionid: q.id,
           answerid: parseInt(answers[q.id])
         });
       }
-
       showSnackbar('Respuestas guardadas correctamente.', 'success');
       setTimeout(() => navigate('/client'), 2000);
     } catch (err: any) {
@@ -116,20 +116,47 @@ const IPPR: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const [questionsRes, optionsRes] = await Promise.all([
-        supabase.from('questions').select('id, question, section').eq('testid', 2).order('id'),
-        supabase.from('answeroptions').select('id, questionid, answer').order('id')
-      ]);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      // Primero obtener las preguntas
+      const questionsRes = await supabase
+        .from('questions')
+        .select('id, question, section, chatype')
+        .eq('testid', 3)
+        .order('id');
 
-      if (!questionsRes.error) setAllQuestions(questionsRes.data || []);
-      if (!optionsRes.error) setAnswerOptions(optionsRes.data || []);
+      if (questionsRes.error) throw questionsRes.error;
+      
+      const questions = questionsRes.data || [];
+      const questionIds = questions.map(q => q.id);
+      
+      // Luego obtener solo las opciones de respuesta para estas preguntas
+      const optionsRes = await supabase
+        .from('answeroptions')
+        .select('id, questionid, answer')
+        .in('questionid', questionIds)
+        .order('id');
+
+      if (optionsRes.error) throw optionsRes.error;
+
+      setAllQuestions(questions);
+      const cleaned = (optionsRes.data || []).map((opt: any) => ({
+        ...opt,
+        questionid: Number(opt.questionid),
+      }));
+      setAnswerOptions(cleaned);
+      
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      showSnackbar('Error al cargar los datos', 'error');
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
-    fetchData();
-  }, []);
+  fetchData();
+}, []);
 
   useEffect(() => {
     const scrollContainer = document.getElementById('scroll-container');
@@ -153,27 +180,47 @@ const IPPR: React.FC = () => {
           <IconButton onClick={() => navigate(-1)} sx={{ mb: 1 }}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h5" color="primary">Test: IPP-R</Typography>
+          <Typography variant="h5" color="primary">Test: Chaside</Typography>
           <Typography variant="subtitle1" color="primary">Sección {currentSection}</Typography>
         </Box>
 
         <Box id="scroll-container" sx={{ flex: 1, overflow: 'auto', padding: 3, paddingTop: 2 }}>
-          {questions.map((q) => (
-            <Box key={q.id} mb={4}>
-              <Typography variant="body1" fontWeight={500} gutterBottom>{q.question}</Typography>
-              <RadioGroup value={answers[q.id] || ''} onChange={(e) => handleChange(q.id, e.target.value)}>
-                {getOptionsForQuestion(q.id).map((opt) => (
-                  <FormControlLabel
-                    key={opt.id}
-                    value={String(opt.id)}
-                    control={<Radio color="primary" />}
-                    label={opt.answer}
-                  />
-                ))}
-              </RadioGroup>
+            {['interest', 'aptitude'].map(type => {
+                const questionsOfType = questions.filter(q => q.chatype === type);
+                if (questionsOfType.length === 0) return null;
+
+                return (
+                <Box key={type}>
+                    <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+                    {type === 'interest' ? 'Interés' : 'Aptitud'}
+                    </Typography>
+
+                    {questionsOfType.map((q) => (
+                    <Box key={q.id} mb={4}>
+                        <Typography variant="body1" fontWeight={500} gutterBottom>{q.question}</Typography>
+                        <RadioGroup value={answers[q.id] || ''} onChange={(e) => handleChange(q.id, e.target.value)}>
+                        {getOptionsForQuestion(q.id).map((opt) => (
+                            <FormControlLabel
+                            key={opt.id}
+                            value={String(opt.id)}
+                            control={<Radio color="primary" />}
+                            label={opt.answer}
+                            />
+                        ))}
+                        {/* Depurador visual para preguntas sin opciones */}
+                        {getOptionsForQuestion(q.id).length === 0 && (
+                            <Typography variant="caption" color="error">
+                            ⚠️ Esta pregunta no tiene opciones cargadas (ID: {q.id})
+                            </Typography>
+                        )}
+                        </RadioGroup>
+                    </Box>
+                    ))}
+                </Box>
+                );
+            })}
             </Box>
-          ))}
-        </Box>
+
 
         <Box sx={{ padding: 2, borderTop: '1px solid #e0e0e0', flexShrink: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -270,4 +317,4 @@ const IPPR: React.FC = () => {
   );
 };
 
-export default IPPR;
+export default Chaside;
