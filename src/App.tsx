@@ -8,6 +8,7 @@ import UserManagement from './pages/UserManagement';
 import IPPR from './pages/IPPR';
 import ClientsResults from './pages/ClientsResults';
 import Chaside from './pages/Chaside';
+import MACI from './pages/MACI';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/ippr" element={<ProtectedRoute><IPPR /></ProtectedRoute>} />
         <Route path="/resultados-clientes" element={<ProtectedRoute><ClientsResults /></ProtectedRoute>} />
         <Route path="/chaside" element={<ProtectedRoute><Chaside/></ProtectedRoute>} />
+        <Route path="/maci" element={<ProtectedRoute><MACI/></ProtectedRoute>} />
         {/*Nueva ruta */}
       </Routes>
     </BrowserRouter>

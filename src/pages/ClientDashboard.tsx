@@ -169,10 +169,10 @@ const ClientDashboard: React.FC = () => {
                 </Button>
                 <Button
                   fullWidth
-                  onClick={() => navigate('/dat')}
+                  onClick={() => navigate('/maci')}
                   sx={buttonStyle('linear-gradient(90deg, #43cea2, #185a9d)')}
                 >
-                  🛠️ DAT
+                  🛠️ MACI
                 </Button>
               </Box>
             </>
