@@ -137,7 +137,14 @@ const AdminDashboard: React.FC = () => {
                 Este es el panel de administración. Aquí puedes gestionar usuarios y ver resultados.
               </Typography>
 
-              <Box display="flex" flexDirection={isMobile ? 'column' : 'row'} gap={2} mt={4} width="100%">
+              {/* Botones siempre en columna */}
+              <Box
+                display="flex"
+                flexDirection="column"
+                gap={2}
+                mt={4}
+                width="100%"
+              >
                 <Button
                   fullWidth
                   onClick={() => navigate('/gestion-usuarios')}
@@ -145,6 +152,15 @@ const AdminDashboard: React.FC = () => {
                 >
                   Gestión de Usuarios
                 </Button>
+
+                <Button
+                  fullWidth
+                  onClick={() => navigate('/resultados-clientes')}
+                  sx={buttonStyle('linear-gradient(90deg, #e04545ff,#e3a656ff)')}
+                >
+                  Ver Resultados
+                </Button>
+
                 <Button
                   fullWidth
                   onClick={() => navigate('/respuestas-clientes')}

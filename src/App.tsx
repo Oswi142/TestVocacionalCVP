@@ -6,7 +6,7 @@ import Entrevista from './pages/Entrevista';
 import ProtectedRoute from './components/ProtectedRoute';
 import UserManagement from './pages/UserManagement';
 import IPPR from './pages/IPPR';
-import ClientsResults from './pages/ClientsAnswers';
+import ClientsAnswers from './pages/ClientsAnswers';
 import Chaside from './pages/Chaside';
 import MACI from './pages/MACI';
 
@@ -20,7 +20,7 @@ function App() {
         <Route path="/entrevista" element={<ProtectedRoute><Entrevista /></ProtectedRoute>} />
         <Route path="/gestion-usuarios" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} /> 
         <Route path="/ippr" element={<ProtectedRoute><IPPR /></ProtectedRoute>} />
-        <Route path="/respuestas-clientes" element={<ProtectedRoute><ClientsResults /></ProtectedRoute>} />
+        <Route path="/respuestas-clientes" element={<ProtectedRoute><ClientsAnswers /></ProtectedRoute>} />
         <Route path="/chaside" element={<ProtectedRoute><Chaside/></ProtectedRoute>} />
         <Route path="/maci" element={<ProtectedRoute><MACI/></ProtectedRoute>} />
         {/*Nueva ruta */}

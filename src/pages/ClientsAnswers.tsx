@@ -20,7 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 
-const ClientsResults: React.FC = () => {
+const ClientsAnswers: React.FC = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [tests, setTests] = useState<any[]>([]);
@@ -231,7 +231,7 @@ const ClientsResults: React.FC = () => {
       </Box>
     );
   }
-  
+
   return (
     <Box sx={{
       width: '100vw', 
@@ -492,4 +492,4 @@ const ClientsResults: React.FC = () => {
   );
 };
 
-export default ClientsResults;
+export default ClientsAnswers;
