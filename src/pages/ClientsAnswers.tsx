@@ -217,24 +217,21 @@ const ClientsResults: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{
-        width: '100vw', 
-        height: '100vh',
-        display: 'flex', 
-        flexDirection: 'column',
-        justifyContent: 'center', 
-        alignItems: 'center',
-        background: 'linear-gradient(to right, #f9c9a4, #cafacc)',
-        color: 'white'
-      }}>
-        <CircularProgress size={60} sx={{ color: 'white', mb: 3 }} />
-        <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Cargando información de clientes...
-        </Typography>
+      <Box
+        sx={{
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'linear-gradient(to right, #f9c9a4, #cafacc)',
+        }}
+      >
+        <CircularProgress />
       </Box>
     );
   }
-
+  
   return (
     <Box sx={{
       width: '100vw', 
