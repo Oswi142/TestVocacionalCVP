@@ -463,6 +463,7 @@ const Entrevista: React.FC = () => {
                         <MenuItem value="" disabled>Selecciona tu género</MenuItem>
                         <MenuItem value="Masculino">Masculino</MenuItem>
                         <MenuItem value="Femenino">Femenino</MenuItem>
+                        <MenuItem value="Otro">Otro</MenuItem>
                       </Select>
                     </FormControl>
                   ) : q.question.toLowerCase().includes('fecha') ? (
@@ -507,12 +508,12 @@ const Entrevista: React.FC = () => {
                         multiline
                         minRows={1}
                         maxRows={10}
-                        inputProps={{ maxLength: 100 }}
+                        inputProps={{ maxLength: 150 }}
                         value={answers[q.id] || ''}
                         onChange={(e) => handleChange(q.id, e.target.value)}
                       />
                       <Typography variant="caption" color="textSecondary">
-                        Máx. de caracteres: {(answers[q.id] || '').length}/100
+                        Máx. de caracteres: {(answers[q.id] || '').length}/150
                       </Typography>
                     </>
                   )}
