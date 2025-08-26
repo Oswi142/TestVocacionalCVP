@@ -81,12 +81,22 @@ const AdminDashboard: React.FC = () => {
           alignItems: 'center',
         }}
       >
-        <Box
-          component="img"
-          src={logo}
-          alt="Club Vida Plena"
-          sx={{ height: 120, maxWidth: '100%', objectFit: 'contain', mb: 3 }}
-        />
+      <Box
+        component="img"
+        src={logo}
+        alt="Club Vida Plena"
+        draggable={false}
+        sx={{
+          height: 120,
+          maxWidth: '100%',
+          objectFit: 'contain',
+          mb: 3,
+          userSelect: 'none',
+          WebkitUserDrag: 'none',
+          pointerEvents: 'none',
+          caretColor: 'transparent',
+        }}
+      />
 
         {/* Tabs */}
         <Box

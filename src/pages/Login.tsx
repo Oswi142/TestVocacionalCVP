@@ -51,18 +51,17 @@ const Login: React.FC = () => {
       sx={{
         width: '100vw',
         height: '100vh',
-        backgroundColor: '#ffffff',
+        background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        background: 'linear-gradient(to right,rgb(249, 201, 164),rgb(202, 250, 204))',
-        padding: 2,
+        p: 2,
       }}
     >
       <Paper
         elevation={6}
         sx={{
-          padding: 4,
+          p: 4,
           borderRadius: 4,
           width: '100%',
           maxWidth: 420,
@@ -70,20 +69,42 @@ const Login: React.FC = () => {
           backgroundColor: '#fff',
         }}
       >
-        <img
-          src={logo}
-          alt="Club Vida Plena"
-          style={{ width: isMobile ? 120 : 180, marginBottom: 0 }}
-        />
-
-        <Typography
-          variant={isMobile ? 'h6' : 'h5'}
-          fontWeight={600}
-          color="#2E7D32"
-          gutterBottom
+        {/* Encabezado sin caret ni selección */}
+        <Box
+          tabIndex={-1}
+          sx={{
+            userSelect: 'none',
+            caretColor: 'transparent',
+            outline: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            mb: 1,
+          }}
         >
-          Bienvenido!
-        </Typography>
+          <Box
+            component="img"
+            src={logo}
+            alt="Club Vida Plena"
+            draggable={false}
+            sx={{
+              width: isMobile ? 120 : 180,
+              mb: 0,
+              userSelect: 'none',
+              WebkitUserDrag: 'none',
+              pointerEvents: 'none', // el logo no es clickeable
+            }}
+          />
+          <Typography
+            variant={isMobile ? 'h6' : 'h5'}
+            fontWeight={600}
+            color="#2E7D32"
+            gutterBottom
+            sx={{ mt: 1 }}
+          >
+            Bienvenido!
+          </Typography>
+        </Box>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -101,6 +122,7 @@ const Login: React.FC = () => {
             required
             inputProps={{ 'data-testid': 'username-input' }}
           />
+
           <TextField
             label="Contraseña"
             type={showPassword ? 'text' : 'password'}
@@ -120,6 +142,7 @@ const Login: React.FC = () => {
               ),
             }}
           />
+
           <Button
             data-testid="login-button"
             type="submit"

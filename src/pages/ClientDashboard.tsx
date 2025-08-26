@@ -86,13 +86,19 @@ const ClientDashboard: React.FC = () => {
           component="img"
           src={logo}
           alt="Club Vida Plena"
+          draggable={false}
           sx={{
             height: 120,
             maxWidth: '100%',
             objectFit: 'contain',
             mb: 3,
+            userSelect: 'none',
+            WebkitUserDrag: 'none',
+            pointerEvents: 'none',
+            caretColor: 'transparent',
           }}
         />
+
 
         {/* Tabs */}
         <Box
