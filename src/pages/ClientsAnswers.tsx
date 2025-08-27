@@ -19,45 +19,84 @@ import autoTable from 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
+// ===== Tipos para evitar errores TS =====
+type QuestionRow = { id: number; question: string };
+type AnswerOptionRow = { id: number; answer: string };
+type TestsAnswerRow = {
+  clientid: number;
+  testid: number;
+  questionid: number;
+  answerid: number | null;
+  details: string | null;
+};
+
+type ClientView = {
+  userid: number;
+  birthday?: string | null;
+  address?: string | null;
+  birthplace?: string | null;
+};
 
 const ClientsAnswers: React.FC = () => {
-  const [clients, setClients] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  // Ahora "clients" será la lista unificada (usuarios con role=client + datos de clientsinfo si existen)
+  const [clients, setClients] = useState<ClientView[]>([]);
+  const [users, setUsers] = useState<any[]>([]); // solo usuarios con role=client
   const [tests, setTests] = useState<any[]>([]);
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [answers, setAnswers] = useState<any[]>([]);
-  const [answerOptions, setAnswerOptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Estado para expandir y para cachear tests por cliente
   const [expandedClientId, setExpandedClientId] = useState<number | null>(null);
+  const [clientTestsMap, setClientTestsMap] = useState<Record<number, any[]>>({});
+  const [loadingTestsForClient, setLoadingTestsForClient] = useState<Record<number, boolean>>({});
+
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
-
   useEffect(() => {
     const fetchAll = async () => {
-      const [clientRes, userRes, testRes, questionRes, answerRes, optionRes] = await Promise.all([
-        supabase.from('clientsinfo').select('*'),
-        supabase.from('users').select('*'),
-        supabase.from('tests').select('id, testname'),
-        supabase.from('questions').select('id, question'),
-        supabase.from('testsanswers').select('*'),
-        supabase.from('answeroptions').select('*')
+      const [clientRes, userRes, testRes] = await Promise.all([
+        supabase.from('clientsinfo').select('*').range(0, 9999),
+        supabase.from('users').select('*').eq('role', 'client').range(0, 9999),
+        supabase.from('tests').select('id, testname').range(0, 9999),
       ]);
 
-      if (!clientRes.error) setClients(clientRes.data || []);
-      if (!userRes.error) setUsers(userRes.data || []);
-      if (!testRes.error) setTests(testRes.data || []);
-      if (!questionRes.error) setQuestions(questionRes.data || []);
-      if (!answerRes.error) setAnswers(answerRes.data || []);
-      if (!optionRes.error) setAnswerOptions(optionRes.data || []);
+      const clientsinfoRows = clientRes.error ? [] : (clientRes.data || []);
+      const userRowsRaw     = userRes.error ? [] : (userRes.data || []);
+      const testsRows       = testRes.error ? [] : (testRes.data || []);
+
+      // 🔒 Deduplicar usuarios por id (por si la consulta trae duplicados)
+      const usersDedup = Array.from(new Map(
+        userRowsRaw.map((u: any) => [u.id, u])
+      ).values());
+
+      // Mapa por userid para left-join de datos de clientsinfo
+      const ciMap = new Map<number, any>(
+        clientsinfoRows.map((c: any) => [c.userid, c])
+      );
+
+      // 📋 Lista final de clientes ÚNICOS por userid
+      const unified = usersDedup.map((u: any) => {
+        const ci = ciMap.get(u.id);
+        return {
+          userid: u.id,
+          birthday: ci?.birthday ?? null,
+          address:  ci?.address  ?? null,
+          birthplace: ci?.birthplace ?? null,
+        } as ClientView;
+      });
+
+      setUsers(usersDedup);
+      setClients(unified);
+      setTests(testsRows);
       setLoading(false);
     };
 
     fetchAll();
   }, []);
 
+
   const splitTextIntoLines = (text: string, maxWidth: number = 50): string[] => {
-    const words = text.split(' ');
+    const words = (text || '').split(' ');
     const lines: string[] = [];
     let currentLine = '';
 
@@ -74,145 +113,178 @@ const ClientsAnswers: React.FC = () => {
       }
     });
 
-    if (currentLine) {
-      lines.push(currentLine);
-    }
-
+    if (currentLine) lines.push(currentLine);
     return lines;
   };
 
-  const downloadPDF = (clientId: number, testId: number) => {
-    const client = clients.find(c => c.userid === clientId);
-    const user = users.find(u => u.id === clientId);
-    const clientAnswers = answers.filter(a => a.clientid === clientId && a.testid === testId);
-    const test = tests.find(t => t.id === testId);
+  // ===== PDF robusto: trae datos on-demand =====
+  const downloadPDF = async (clientId: number, testId: number) => {
+    try {
+      const client = clients.find(c => c.userid === clientId);
+      const user = users.find(u => u.id === clientId);
+      const test = tests.find(t => t.id === testId);
 
-    const doc = new jsPDF();
-    const now = new Date().toLocaleDateString('es-ES');
+      // 1) Respuestas del cliente para ese test
+      const { data: clientAnswersRaw, error: ansErr } = await supabase
+        .from('testsanswers')
+        .select('clientid,testid,questionid,answerid,details')
+        .eq('clientid', clientId)
+        .eq('testid', testId)
+        .order('questionid', { ascending: true })
+        .range(0, 99999);
 
-    doc.setFont('helvetica');
-    doc.setFontSize(16);
-    doc.text('Reporte de Resultados', 14, 20);
+      if (ansErr) throw ansErr;
+      const clientAnswers = (clientAnswersRaw ?? []) as TestsAnswerRow[];
 
-    doc.setFontSize(12);
-    doc.text(`Fecha de generación: ${now}`, 14, 30);
-    doc.text(`Nombre: ${user?.name || ''}`, 14, 38);
-    doc.text(`Nacimiento: ${client?.birthday || ''}`, 14, 46);
-    doc.text(`Dirección: ${client?.address || ''}`, 14, 54);
-    doc.text(`Procedencia: ${client?.birthplace || ''}`, 14, 62);
+      // 2) Traer solo preguntas y opciones necesarias
+      const qIds = [...new Set(clientAnswers.map(a => a.questionid))];
+      const aIds = [...new Set(clientAnswers.map(a => a.answerid).filter((x): x is number => x != null))];
 
-    doc.setFontSize(14);
-    doc.text(`Test: ${test?.testname || ''}`, 14, 75);
+      const [{ data: qsRaw, error: qErr }, { data: optsRaw, error: oErr }] = await Promise.all([
+        qIds.length
+          ? supabase.from('questions').select('id,question').in('id', qIds)
+          : Promise.resolve({ data: [] as any[], error: null } as any),
+        aIds.length
+          ? supabase.from('answeroptions').select('id,answer').in('id', aIds)
+          : Promise.resolve({ data: [] as any[], error: null } as any),
+      ]);
+      if (qErr) throw qErr;
+      if (oErr) throw oErr;
 
-    const tableData: any[] = [];
-    let questionNumber = 1;
+      const qs = (qsRaw ?? []) as QuestionRow[];
+      const opts = (optsRaw ?? []) as AnswerOptionRow[];
 
-    clientAnswers.forEach((ans: any) => {
-      const question = questions.find((q: any) => q.id === ans.questionid);
-      const option = answerOptions.find((ao: any) => ao.id === ans.answerid);
+      // 3) Mapas tipados
+      const qMap = new Map<number, QuestionRow>(qs.map(q => [q.id, q]));
+      const oMap = new Map<number, AnswerOptionRow>(opts.map(o => [o.id, o]));
 
-      const questionText = question?.question || '';
-      const answerText = option?.answer || ans.details || '';
+      // 4) PDF
+      const doc = new jsPDF();
+      const now = new Date().toLocaleDateString('es-ES');
 
-      const questionLines = splitTextIntoLines(questionText, 80);
-      const answerLines = splitTextIntoLines(answerText, 80);
+      doc.setFont('helvetica');
+      doc.setFontSize(16);
+      doc.text('Reporte de Resultados', 14, 20);
 
-      tableData.push([{
-        content: `PREGUNTA ${questionNumber}: ${questionLines[0]}`,
-        styles: {
-          fillColor: [232, 245, 255],
-          textColor: [33, 150, 243],
-          fontStyle: 'bold',
-          fontSize: 10
-        }
-      }]);
+      doc.setFontSize(12);
+      doc.text(`Fecha de generación: ${now}`, 14, 30);
+      doc.text(`Nombre: ${user?.name || ''}`, 14, 38);
+      doc.text(`Nacimiento: ${client?.birthday || ''}`, 14, 46);
+      doc.text(`Dirección: ${client?.address || ''}`, 14, 54);
+      doc.text(`Procedencia: ${client?.birthplace || ''}`, 14, 62);
 
-      for (let i = 1; i < questionLines.length; i++) {
+      doc.setFontSize(14);
+      doc.text(`Test: ${test?.testname || ''}`, 14, 75);
+
+      const tableData: any[] = [];
+      let questionNumber = 1;
+
+      (clientAnswers || []).forEach((ans) => {
+        const questionRow = qMap.get(ans.questionid);
+        const optionRow = ans.answerid != null ? oMap.get(ans.answerid) : undefined;
+
+        const questionText = questionRow?.question ?? '';
+        const answerText = optionRow?.answer ?? ans.details ?? '';
+
+        const questionLines = splitTextIntoLines(questionText, 80);
+        const answerLines = splitTextIntoLines(answerText, 80);
+
         tableData.push([{
-          content: questionLines[i],
-          styles: {
-            fillColor: [232, 245, 255],
-            textColor: [33, 150, 243],
-            fontStyle: 'bold',
-            fontSize: 10
-          }
+          content: `PREGUNTA ${questionNumber}: ${questionLines[0]}`,
+          styles: { fillColor: [232,245,255], textColor: [33,150,243], fontStyle: 'bold', fontSize: 10 }
         }]);
-      }
 
-      tableData.push([{
-        content: `RESPUESTA: ${answerLines[0]}`,
+        for (let i = 1; i < questionLines.length; i++) {
+          tableData.push([{ content: questionLines[i], styles: { fillColor: [232,245,255], textColor: [33,150,243], fontStyle: 'bold', fontSize: 10 } }]);
+        }
+
+        tableData.push([{ content: `RESPUESTA: ${answerLines[0]}`, styles: { fontSize: 10, textColor: [60,60,60] } }]);
+        for (let i = 1; i < answerLines.length; i++) {
+          tableData.push([{ content: answerLines[i], styles: { fontSize: 10, textColor: [60,60,60] } }]);
+        }
+
+        tableData.push([{ content: '', styles: { minCellHeight: 3 } }]);
+        questionNumber++;
+      });
+
+      // AutoTable sin overflow de ancho (warning fuera)
+      const left = 12, right = 12;
+      autoTable(doc, {
+        startY: 85,
+        body: tableData,
+        theme: 'plain',
         styles: {
           fontSize: 10,
-          textColor: [60, 60, 60]
-        }
-      }]);
+          cellPadding: 2,
+          overflow: 'linebreak',
+          valign: 'top',
+          halign: 'left',
+        },
+        columnStyles: { 0: { cellWidth: 'wrap' } },
+        tableWidth: 'auto',
+        margin: { left, right },
+        showHead: false,
+        pageBreak: 'auto',
+        rowPageBreak: 'avoid',
+      });
 
-      for (let i = 1; i < answerLines.length; i++) {
-        tableData.push([{
-          content: answerLines[i],
-          styles: {
-            fontSize: 10,
-            textColor: [60, 60, 60]
-          }
-        }]);
-      }
-
-      tableData.push([{
-        content: '',
-        styles: { minCellHeight: 3 }
-      }]);
-
-      questionNumber++;
-    });
-
-    autoTable(doc, {
-      startY: 85,
-      body: tableData,
-      theme: 'plain',
-      styles: {
-        fontSize: 10,
-        cellPadding: 3,
-        overflow: 'linebreak',
-        halign: 'left',
-        valign: 'top'
-      },
-      columnStyles: {
-        0: {
-          cellWidth: 175
-        }
-      },
-      margin: { left: 14, right: 14 },
-      showHead: false,
-      pageBreak: 'auto',
-      rowPageBreak: 'avoid'
-    });
-
-    const fileName = `Resultados_${user?.name || 'Cliente'}_${test?.testname || 'Test'}.pdf`;
-    doc.save(fileName);
+      const fileName = `Resultados_${user?.name || 'Cliente'}_${test?.testname || 'Test'}.pdf`;
+      doc.save(fileName);
+    } catch (e) {
+      console.error(e);
+      alert('Ocurrió un error generando el PDF.');
+    }
   };
 
-  const uniqueClients = clients.reduce((acc: any[], current) => {
-    const exists = acc.find(c => c.userid === current.userid);
-    return exists ? acc : [...acc, current];
-  }, []);
-
-  const filteredClients = uniqueClients.filter(client => {
+  // 👉 Ahora filtramos directamente sobre "clients" (ya unificado por role=client)
+  const filteredClients = clients.filter(client => {
     const user = users.find(u => u.id === client.userid);
-    return user?.name?.toLowerCase().includes(search.toLowerCase());
+    const name = (user?.name || '').toLowerCase();
+    return name.includes(search.toLowerCase());
   });
 
-  const getClientInitials = (name: string) => {
-    return name
+  const getClientInitials = (name: string) =>
+    (name || '')
       .split(' ')
       .map(word => word[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'No especificado';
-    return new Date(dateString).toLocaleDateString('es-ES');
+    const d = new Date(dateString);
+    return isNaN(d.getTime()) ? 'No especificado' : d.toLocaleDateString('es-ES');
+  };
+
+  // Maneja expand/collapse y carga de tests por cliente
+  const handleToggleClient = async (client: ClientView) => {
+    setExpandedClientId(prev => (prev === client.userid ? null : client.userid));
+
+    if (!clientTestsMap[client.userid]) {
+      try {
+        setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: true }));
+        const { data: rows, error } = await supabase
+          .from('testsanswers')
+          .select('testid')
+          .eq('clientid', client.userid)
+          .order('testid', { ascending: true })
+          .range(0, 9999);
+
+        if (error) throw error;
+
+        const uniqIds = [...new Set((rows || []).map(r => r.testid))];
+        const testsForClient = uniqIds
+          .map(id => tests.find(t => t.id === id))
+          .filter(Boolean) as any[];
+
+        setClientTestsMap(prev => ({ ...prev, [client.userid]: testsForClient }));
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: false }));
+      }
+    }
   };
 
   if (loading) {
@@ -234,41 +306,41 @@ const ClientsAnswers: React.FC = () => {
 
   return (
     <Box sx={{
-      width: '100vw', 
+      width: '100vw',
       height: '100vh',
       background: 'linear-gradient(to right, #f9c9a4, #cafacc)',
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
       padding: 2
     }}>
       <Box sx={{
-        width: '100%', 
-        maxWidth: 800, 
+        width: '100%',
+        maxWidth: 800,
         height: '90vh',
-        backgroundColor: '#ffffff', 
-        borderRadius: 4, 
+        backgroundColor: '#ffffff',
+        borderRadius: 4,
         boxShadow: 3,
-        display: 'flex', 
-        flexDirection: 'column', 
+        display: 'flex',
+        flexDirection: 'column',
         overflow: 'hidden'
       }}>
         {/* Header */}
-        <Box sx={{ 
-          padding: 3, 
+        <Box sx={{
+          padding: 3,
           borderBottom: '1px solid #e0e0e0',
           background: 'white',
           color: 'primary.main'
         }}>
           <Box display="flex" alignItems="center" mb={1} gap={2}>
             <IconButton onClick={() => navigate(-1)} sx={{ color: 'primary.main' }} size="small">
-            <ArrowBackIcon />
+              <ArrowBackIcon />
             </IconButton>
             <PersonIcon sx={{ fontSize: 32 }} />
             <Typography variant="h5" fontWeight="bold">
-                Gestión de Resultados
+              Gestión de Resultados
             </Typography>
-            </Box>
+          </Box>
 
           <Typography variant="body2" sx={{ opacity: 0.9 }}>
             Consulta y descarga los resultados de evaluaciones
@@ -302,8 +374,8 @@ const ClientsAnswers: React.FC = () => {
               }
             }}
           />
-          <Chip 
-            icon={<PersonIcon />} 
+          <Chip
+            icon={<PersonIcon />}
             label={`${filteredClients.length} cliente${filteredClients.length !== 1 ? 's' : ''} encontrado${filteredClients.length !== 1 ? 's' : ''}`}
             color="primary"
             variant="outlined"
@@ -312,17 +384,17 @@ const ClientsAnswers: React.FC = () => {
         </Box>
 
         {/* Clients List */}
-        <Box sx={{ 
-          flex: 1, 
-          overflowY: 'auto', 
+        <Box sx={{
+          flex: 1,
+          overflowY: 'auto',
           padding: 2,
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: 2 
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2
         }}>
           {filteredClients.length === 0 ? (
-            <Box sx={{ 
-              textAlign: 'center', 
+            <Box sx={{
+              textAlign: 'center',
               p: 4,
               display: 'flex',
               flexDirection: 'column',
@@ -342,16 +414,13 @@ const ClientsAnswers: React.FC = () => {
             filteredClients.map((client) => {
               const user = users.find(u => u.id === client.userid);
               const isExpanded = expandedClientId === client.userid;
-              const clientTests = answers.filter(a => a.clientid === client.userid)
-                .map(a => a.testid)
-                .filter((value, index, self) => self.indexOf(value) === index);
-              const testsForClient = clientTests.map(id => tests.find(t => t.id === id)).filter(Boolean);
+              const testsForClient = clientTestsMap[client.userid] || [];
 
               return (
                 <Box key={client.userid} sx={{ mb: 1 }}>
                   {/* Client Header */}
                   <Box
-                    onClick={() => setExpandedClientId(prev => prev === client.userid ? null : client.userid)}
+                    onClick={() => handleToggleClient(client)}
                     sx={{
                       p: 2,
                       cursor: 'pointer',
@@ -360,15 +429,13 @@ const ClientsAnswers: React.FC = () => {
                       justifyContent: 'space-between',
                       borderRadius: 2,
                       transition: 'background-color 0.2s ease',
-                      '&:hover': {
-                        backgroundColor: '#f8f9fa'
-                      }
+                      '&:hover': { backgroundColor: '#f8f9fa' }
                     }}
                   >
                     <Box display="flex" alignItems="center" gap={2}>
-                      <Avatar sx={{ 
-                        bgcolor: 'primary.main', 
-                        width: 40, 
+                      <Avatar sx={{
+                        bgcolor: 'primary.main',
+                        width: 40,
                         height: 40,
                         fontSize: '0.9rem',
                         fontWeight: 'bold'
@@ -399,10 +466,10 @@ const ClientsAnswers: React.FC = () => {
                         </Box>
                       </Box>
                     </Box>
-                    
+
                     <Box display="flex" alignItems="center" gap={1}>
                       <Badge badgeContent={testsForClient.length} color="primary">
-                        <Chip 
+                        <Chip
                           icon={<AssignmentIcon />}
                           label="Tests"
                           variant="outlined"
@@ -427,19 +494,23 @@ const ClientsAnswers: React.FC = () => {
                           </Typography>
                         </Box>
                       )}
-                      
+
                       <Typography variant="subtitle2" gutterBottom color="primary" sx={{ mb: 2 }}>
                         Evaluaciones Disponibles
                       </Typography>
-                      
-                      {testsForClient.length === 0 ? (
+
+                      {loadingTestsForClient[client.userid] ? (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                          Cargando evaluaciones...
+                        </Typography>
+                      ) : testsForClient.length === 0 ? (
                         <Typography variant="body2" color="text.secondary" style={{ fontStyle: 'italic' }}>
                           No hay evaluaciones disponibles para este cliente
                         </Typography>
                       ) : (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                           {testsForClient.map((test: any) => (
-                            <Paper key={test.id} variant="outlined" sx={{ 
+                            <Paper key={test.id} variant="outlined" sx={{
                               borderRadius: 2,
                               transition: 'all 0.2s ease',
                               '&:hover': {
@@ -460,16 +531,14 @@ const ClientsAnswers: React.FC = () => {
                                   </Box>
                                 </Box>
                                 <Tooltip title="Descargar PDF" arrow>
-                                  <IconButton 
-                                    color="primary" 
+                                  <IconButton
+                                    color="primary"
                                     onClick={() => downloadPDF(client.userid, test.id)}
                                     size="small"
                                     sx={{
                                       backgroundColor: 'primary.main',
                                       color: 'white',
-                                      '&:hover': {
-                                        backgroundColor: 'primary.dark',
-                                      }
+                                      '&:hover': { backgroundColor: 'primary.dark' }
                                     }}
                                   >
                                     <GetAppIcon sx={{ fontSize: 18 }} />
