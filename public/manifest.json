@@ -7,7 +7,7 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#E8744F",
+  "theme_color": "#7cdc90",
   "background_color": "#f9c9a4",
   "icons": [
     { "src": "/icons/android-launchericon-192-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
