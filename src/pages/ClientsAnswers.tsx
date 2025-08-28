@@ -353,7 +353,6 @@ const ClientsAnswers: React.FC = () => {
                                     <AssignmentIcon color="primary" sx={{ fontSize: 20 }} />
                                     <Box>
                                       <Typography variant="body2" fontWeight="500">{test.testname}</Typography>
-                                      <Typography variant="caption" color="text.secondary">Evaluación completada</Typography>
                                     </Box>
                                   </Box>
                                   <Tooltip title="Descargar PDF" arrow>
