@@ -238,9 +238,9 @@ const ClientsAnswers: React.FC = () => {
           <Box display="flex" alignItems="center" mb={1} gap={2}>
             <IconButton onClick={() => navigate(-1)} sx={{ color: 'primary.main' }} size="small"><ArrowBackIcon /></IconButton>
             <PersonIcon sx={{ fontSize: 32 }} />
-            <Typography variant="h5" fontWeight="bold">Gestión de Resultados</Typography>
+            <Typography variant="h5" fontWeight="bold">Descargar Resultados</Typography>
           </Box>
-          <Typography variant="body2" sx={{ opacity: 0.9 }}>Consulta y descarga los resultados de evaluaciones</Typography>
+          <Typography variant="body2" sx={{ opacity: 0.9 }}>Descarga los resultados de las evaluaciones</Typography>
         </Box>
 
         {/* Search */}

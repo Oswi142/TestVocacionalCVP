@@ -176,7 +176,7 @@ const AdminDashboard: React.FC = () => {
                   onClick={() => navigate('/respuestas-clientes')}
                   sx={buttonStyle('linear-gradient(90deg, #43cea2, #185a9d)')}
                 >
-                  Ver Respuestas
+                  Descargar Respuestas
                 </Button>
               </Box>
             </>
