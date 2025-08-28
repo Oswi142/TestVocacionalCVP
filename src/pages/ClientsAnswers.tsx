@@ -43,7 +43,6 @@ const ClientsAnswers: React.FC = () => {
   const [expandedClientId, setExpandedClientId] = useState<number | null>(null);
   const [clientTestsMap, setClientTestsMap] = useState<Record<number, any[]>>({});
   const [loadingTestsForClient, setLoadingTestsForClient] = useState<Record<number, boolean>>({});
-  const [testsCountMap, setTestsCountMap] = useState<Record<number, number>>({});
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
 
@@ -72,36 +71,9 @@ const ClientsAnswers: React.FC = () => {
         } as ClientView;
       });
 
-      // Contadores de tests por cliente (testid únicos)
-      let counts: Record<number, number> = {};
-      try {
-        const ids = usersDedup.map((u: any) => u.id);
-        if (ids.length) {
-          const { data: rows } = await supabase
-            .from('testsanswers')
-            .select('clientid,testid')
-            .in('clientid', ids)
-            .range(0, 999999);
-
-          if (rows) {
-            const map = new Map<number, Set<number>>();
-            rows.forEach((r: any) => {
-              if (!map.has(r.clientid)) map.set(r.clientid, new Set<number>());
-              map.get(r.clientid)!.add(r.testid);
-            });
-            counts = Object.fromEntries(
-              Array.from(map.entries()).map(([cid, set]) => [cid, set.size])
-            );
-          }
-        }
-      } catch (e) {
-        console.error(e);
-      }
-
       setUsers(usersDedup);
       setClients(unified);
       setTests(testsRows);
-      setTestsCountMap(counts);
       setLoading(false);
     };
 
@@ -220,6 +192,7 @@ const ClientsAnswers: React.FC = () => {
   const getClientInitials = (name: string) =>
     (name || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
+  // Expand/collapse y carga on-demand de tests
   const handleToggleClient = async (client: ClientView) => {
     setExpandedClientId(prev => (prev === client.userid ? null : client.userid));
 
@@ -298,7 +271,6 @@ const ClientsAnswers: React.FC = () => {
               const user = users.find(u => u.id === client.userid);
               const isExpanded = expandedClientId === client.userid;
               const testsForClient = clientTestsMap[client.userid] || [];
-              const testCount = testsCountMap[client.userid] ?? 0;
 
               return (
                 <Paper
@@ -333,72 +305,72 @@ const ClientsAnswers: React.FC = () => {
                         <Typography variant="subtitle1" fontWeight="600" color="text.primary">
                           {user?.name || 'Sin nombre'}
                         </Typography>
-                        {/* 👇 Se quitó fecha de nacimiento y procedencia */}
                       </Box>
                     </Box>
 
-                    <Box display="flex" alignItems="center" gap={1.25}>
-                      <Chip
-                        icon={<AssignmentIcon />}
-                        label={testCount > 0 ? `${testCount} test${testCount !== 1 ? 's' : ''}` : 'Sin respuestas'}
-                        variant={testCount > 0 ? 'outlined' : 'filled'}
-                        color={testCount > 0 ? 'primary' : 'default'}
-                        size="small"
-                        sx={{ fontWeight: 600 }}
-                      />
-                      <IconButton color="primary" size="small">
-                        {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                      </IconButton>
-                    </Box>
+                    <IconButton color="primary" size="small">
+                      {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </IconButton>
                   </Box>
 
                   {/* Contenido expandido */}
                   <Collapse in={isExpanded} unmountOnExit>
                     <Box sx={{ px: 2, pb: 2 }}>
                       <Divider sx={{ mb: 2 }} />
-                      {/* 👇 Se quitó el bloque de Dirección */}
-                      <Typography variant="subtitle2" gutterBottom color="primary" sx={{ mb: 2 }}>
-                        {testCount > 0 ? 'Evaluaciones disponibles' : 'No hay evaluaciones respondidas'}
-                      </Typography>
 
                       {loadingTestsForClient[client.userid] ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                          Cargando evaluaciones...
-                        </Typography>
+                        <>
+                          <Typography variant="subtitle2" gutterBottom color="primary" sx={{ mb: 2 }}>
+                            Cargando evaluaciones...
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            Obteniendo respuestas del cliente…
+                          </Typography>
+                        </>
                       ) : testsForClient.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                          {testCount > 0 ? 'Toca para recargar' : 'Aún no hay respuestas para este cliente'}
-                        </Typography>
+                        <>
+                          <Typography variant="subtitle2" gutterBottom color="primary" sx={{ mb: 2 }}>
+                            No hay evaluaciones respondidas
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            Aún no hay respuestas para este cliente
+                          </Typography>
+                        </>
                       ) : (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          {testsForClient.map((test: any) => (
-                            <Paper key={test.id} variant="outlined" sx={{
-                              borderRadius: 2,
-                              transition: 'all 0.2s ease',
-                              '&:hover': { borderColor: 'primary.main', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }
-                            }}>
-                              <Box display="flex" justifyContent="space-between" alignItems="center" p={1.5}>
-                                <Box display="flex" alignItems="center" gap={1.5}>
-                                  <AssignmentIcon color="primary" sx={{ fontSize: 20 }} />
-                                  <Box>
-                                    <Typography variant="body2" fontWeight="500">{test.testname}</Typography>
-                                    <Typography variant="caption" color="text.secondary">Evaluación completada</Typography>
+                        <>
+                          <Typography variant="subtitle2" gutterBottom color="primary" sx={{ mb: 2 }}>
+                            Evaluaciones disponibles
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {testsForClient.map((test: any) => (
+                              <Paper key={test.id} variant="outlined" sx={{
+                                borderRadius: 2,
+                                transition: 'all 0.2s ease',
+                                '&:hover': { borderColor: 'primary.main', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }
+                              }}>
+                                <Box display="flex" justifyContent="space-between" alignItems="center" p={1.5}>
+                                  <Box display="flex" alignItems="center" gap={1.5}>
+                                    <AssignmentIcon color="primary" sx={{ fontSize: 20 }} />
+                                    <Box>
+                                      <Typography variant="body2" fontWeight="500">{test.testname}</Typography>
+                                      <Typography variant="caption" color="text.secondary">Evaluación completada</Typography>
+                                    </Box>
                                   </Box>
+                                  <Tooltip title="Descargar PDF" arrow>
+                                    <IconButton
+                                      color="primary"
+                                      onClick={() => downloadPDF(client.userid, test.id)}
+                                      size="small"
+                                      sx={{ backgroundColor: 'primary.main', color: 'white', '&:hover': { backgroundColor: 'primary.dark' } }}
+                                    >
+                                      <GetAppIcon sx={{ fontSize: 18 }} />
+                                    </IconButton>
+                                  </Tooltip>
                                 </Box>
-                                <Tooltip title="Descargar PDF" arrow>
-                                  <IconButton
-                                    color="primary"
-                                    onClick={() => downloadPDF(client.userid, test.id)}
-                                    size="small"
-                                    sx={{ backgroundColor: 'primary.main', color: 'white', '&:hover': { backgroundColor: 'primary.dark' } }}
-                                  >
-                                    <GetAppIcon sx={{ fontSize: 18 }} />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
-                            </Paper>
-                          ))}
-                        </Box>
+                              </Paper>
+                            ))}
+                          </Box>
+                        </>
                       )}
                     </Box>
                   </Collapse>
