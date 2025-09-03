@@ -9,6 +9,7 @@ import IPPR from './pages/IPPR';
 import ClientsAnswers from './pages/ClientsAnswers';
 import Chaside from './pages/Chaside';
 import MACI from './pages/MACI';
+import ClientsReports from './pages/ClientsReports';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/respuestas-clientes" element={<ProtectedRoute><ClientsAnswers /></ProtectedRoute>} />
         <Route path="/chaside" element={<ProtectedRoute><Chaside/></ProtectedRoute>} />
         <Route path="/maci" element={<ProtectedRoute><MACI/></ProtectedRoute>} />
+        <Route path="/reportes-clientes" element={<ProtectedRoute><ClientsReports/></ProtectedRoute>} />
         {/*Nueva ruta */}
       </Routes>
     </BrowserRouter>
