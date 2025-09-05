@@ -26,6 +26,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 import { useNavigate } from 'react-router-dom';
 import { downloadChasideReportPDF } from '../utils/chaside';
+import { downloadIpprReportPDF } from '../utils/ippr';
+import { downloadMaciReportPDF } from '../utils/maci';
 
 // ===== Tipos =====
 type ClientView = { userid: number };
@@ -120,14 +122,27 @@ const ClientsReports: React.FC = () => {
     }
   };
 
+  // ← ahora con try/catch para ver los errores en UI
   const handleDownload = async (clientId: number, test: TestRow) => {
-    const type = kindOfTest(test.testname);
-    if (type === 'chaside') {
-      await downloadChasideReportPDF(clientId);
-      return;
+    try {
+      const type = kindOfTest(test.testname);
+      if (type === 'chaside') {
+        await downloadChasideReportPDF(clientId);
+        return;
+      }
+      if (type === 'ippr') {
+        await downloadIpprReportPDF(clientId);
+        return;
+      }
+      if (type === 'maci') {
+        await downloadMaciReportPDF(clientId);
+        return;
+      }
+      alert('Reporte disponible próximamente para este test.');
+    } catch (err: any) {
+      console.error(err);
+      alert(`No se pudo generar el reporte: ${err?.message ?? 'Error desconocido'}`);
     }
-    // futuros: ippr / maci
-    alert('Reporte disponible próximamente para este test.');
   };
 
   if (loading) {
@@ -149,7 +164,7 @@ const ClientsReports: React.FC = () => {
             <Typography variant="h5" fontWeight="bold">Descargar Resultados</Typography>
           </Box>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            Descarga los reportes disponibles (CHASIDE ya incluye interpretación).
+            Descarga los reportes disponibles (CHASIDE e IPP-R interpretados; MACI con puntajes brutos).
           </Typography>
         </Box>
 
@@ -243,7 +258,8 @@ const ClientsReports: React.FC = () => {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                           {testsForClient.map((test) => {
                             const kind = kindOfTest(test.testname);
-                            const isReadyReport = kind === 'chaside'; // futuros: ippr/maci
+                            const isReadyReport = kind === 'chaside' || kind === 'ippr' || kind === 'maci';
+                            const captionText = kind === 'maci' ? 'Puntajes brutos' : 'Reporte interpretado';
 
                             return (
                               <Paper
@@ -260,11 +276,9 @@ const ClientsReports: React.FC = () => {
                                     <AssignmentIcon color="primary" sx={{ fontSize: 20 }} />
                                     <Box>
                                       <Typography variant="body2" fontWeight="500">{test.testname}</Typography>
-                                      {isReadyReport ? (
-                                        <Typography variant="caption" color="text.secondary">Reporte interpretado</Typography>
-                                      ) : (
-                                        <Typography variant="caption" color="text.secondary">Reporte próximamente</Typography>
-                                      )}
+                                      <Typography variant="caption" color="text.secondary">
+                                        {isReadyReport ? captionText : 'Reporte próximamente'}
+                                      </Typography>
                                     </Box>
                                   </Box>
 
