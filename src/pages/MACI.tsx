@@ -376,7 +376,7 @@ const MACI: React.FC = () => {
           </Box>
           <DialogActions sx={{ justifyContent: 'center', pb: 2, gap: 1 }}>
             <Button onClick={() => setExitConfirmOpen(false)} variant="outlined" color="primary" sx={{ minWidth: 100 }}>
-              Continuar test
+              Continuar
             </Button>
             <Button onClick={confirmExit} variant="contained" color="primary" sx={{ minWidth: 100 }}>
               Salir

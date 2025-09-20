@@ -457,7 +457,7 @@ const IPPR: React.FC = () => {
               color="primary"
               sx={{ minWidth: 100 }}
             >
-              Continuar test
+              Continuar
             </Button>
             <Button
               onClick={confirmExit}
