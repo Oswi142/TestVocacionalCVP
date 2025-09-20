@@ -55,6 +55,7 @@ function isTrue(text: string | null | undefined): boolean {
   return t === 'verdadero';
 }
 
+// === Cálculo de puntajes (PD por escala) ================================
 export async function computeMaciScore(clientId: number): Promise<MaciResult> {
   const testId = await getMaciTestId();
 
@@ -108,9 +109,8 @@ export async function computeMaciScore(clientId: number): Promise<MaciResult> {
     .eq('testid', testId)
     .range(0, 999999);
 
-  // Si hay error accediendo a maci_key o no hay filas, hacemos fallback por sección:
+  // Si no existe llave, fallback por sección (suma "Verdadero" por sección)
   if (kErr || !keyRows || keyRows.length === 0) {
-    // Fallback: contamos "Verdadero" por sección de `questions`
     const { data: qrows, error: qErr } = await supabase
       .from('questions')
       .select('id, section')
@@ -118,8 +118,8 @@ export async function computeMaciScore(clientId: number): Promise<MaciResult> {
       .range(0, 999999);
     if (qErr) throw qErr;
 
-    const sectionMax = new Map<number, number>(); // cuántos ítems hay por sección
-    const sectionTrue = new Map<number, number>(); // cuántos "Verdadero" respondió por sección
+    const sectionMax = new Map<number, number>();
+    const sectionTrue = new Map<number, number>();
 
     for (const q of qrows || []) {
       const sec = Number(q.section) || 0;
@@ -151,7 +151,7 @@ export async function computeMaciScore(clientId: number): Promise<MaciResult> {
     };
   }
 
-  // Intento 2 (ideal): maci_key presente -> sumas por escala
+  // maci_key presente -> PD por escala
   const sumByScale = new Map<string, number>();
   const maxByScale = new Map<string, number>();
   const labelByScale = new Map<string, string>();
@@ -166,7 +166,7 @@ export async function computeMaciScore(clientId: number): Promise<MaciResult> {
     // máximo posible (suma de pesos de la escala)
     maxByScale.set(k.scale, (maxByScale.get(k.scale) || 0) + weight);
 
-    // suma si coincide la clave: 'T' <-> Verdadero, 'F' <-> Falso
+    // suma si coincide la clave
     const hit = keyedTrue ? ansTrue === true : ansTrue === false;
     if (hit) sumByScale.set(k.scale, (sumByScale.get(k.scale) || 0) + weight);
 
@@ -195,82 +195,99 @@ export async function computeMaciScore(clientId: number): Promise<MaciResult> {
   };
 }
 
-// Helpers para la tabla “tipo Excel”
+// === Transformación TB ilustrativa e interpretación =======================
 function tbFromPD(pd: number, max: number): number {
   if (!max) return 0;
-  return Math.round((pd / max) * 100); // 0–100
+  return Math.round((pd / max) * 100); // 0–100 (place-holder)
 }
+
 function interpretacion(tb: number): string {
-  if (tb >= 60) return 'Área principal de preocupación';
-  if (tb >= 40) return 'Tema ligeramente problemático';
+  // Ajusta los cortes si quieres replicar literal tu planilla:
+  if (tb >= 85) return 'Área principal de preocupación';
+  if (tb >= 75) return 'Área problemática';
+  if (tb >= 60) return 'Tema ligeramente problemático';
   return 'Indicador nulo';
 }
 
-// === PDF con tabla estilo “Excel” ===
+// === PDF: SOLO TABLA como en tu imagen ===================================
 export async function downloadMaciReportPDF(clientId: number): Promise<void> {
   const res = await computeMaciScore(clientId);
 
-  const doc = new jsPDF();
+  // Orden exacto del cuadro mostrado (primero 1–9, luego A–GG)
+  const block1 = ['1','2A','2B','3','4','5','6A','6B','7','8A','8B','9'];
+  const block2 = ['A','B','C','D','E','F','G','H','AA','BB','CC','DD','EE','FF','GG'];
+
+  // Indexar por código
+  const byCode = new Map(res.scales.map(s => [s.code.toUpperCase(), s]));
+
+  const rowsForBlock = (codes: string[]) =>
+    codes
+      .map(code => byCode.get(code.toUpperCase()))
+      .filter((s): s is typeof res.scales[number] => !!s)
+      .map(s => {
+        const tb = tbFromPD(s.value, s.maxPossible);
+        const inter = interpretacion(tb);
+        // SOLO TB + INTERPRETACIÓN (como tu ejemplo)
+        return [s.label, tb.toString(), inter];
+      });
+
+  // Construcción del cuerpo
+  const body: any[] = [];
+  body.push(...rowsForBlock(block1));
+  // separador intermedio “ESCALAS”
+  body.push([{ content: 'ESCALAS', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold' } }]);
+  body.push(...rowsForBlock(block2));
+
+  // === PDF ===
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const now = new Date().toLocaleDateString('es-ES');
 
-  // Encabezado
-  doc.setFont('helvetica');
-  doc.setFontSize(16);
-  doc.text('MACI — Informe de Puntuaciones Brutas', 14, 18);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('INVENTARIO CLÍNICO PARA ADOLESCENTES DE MILLON (MACI)', 40, 46);
 
-  doc.setFontSize(11);
-  doc.text(`Fecha: ${now}`, 14, 26);
-  doc.text(`Cliente: ${res.userName ?? clientId.toString()}`, 14, 33);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(`Fecha: ${now}`, 40, 64);
+  doc.text(`Cliente: ${res.userName ?? String(res.clientId)}`, 40, 78);
 
-  doc.setFontSize(9);
   if (res.fallbackNote) {
-    doc.text(res.fallbackNote, 14, 39);
+    doc.setTextColor(180, 0, 0);
+    doc.text(res.fallbackNote, 40, 94, { maxWidth: 515 });
+    doc.setTextColor(0, 0, 0);
   } else {
     doc.text(
-      'Nota: puntajes brutos calculados desde una llave local. No son baremos ni interpretación clínica.',
-      14,
-      39
+      'TB mostrado es una transformación lineal ilustrativa (no baremos oficiales).',
+      40,
+      94,
+      { maxWidth: 515 }
     );
   }
 
-  // Cuerpo de tabla “tipo Excel”
-  const tableBody = res.scales.map((s) => {
-    const pd = s.value;
-    const tb = tbFromPD(s.value, s.maxPossible);
-    const tbFinal = tb; // placeholder
-    const interp = interpretacion(tb);
-    return [s.label, pd.toString(), tb.toString(), tbFinal.toString(), interp];
-  });
-
   autoTable(doc, {
-    startY: 46,
-    head: [['ESCALAS', 'PD', 'TB', 'TB FINAL', 'INTERPRETACIÓN DE LA ESCALA']],
-    body: tableBody,
-    styles: { fontSize: 9, cellPadding: 2 },
-    headStyles: { fillColor: [30, 136, 229], textColor: 255 },
-    columnStyles: {
-      1: { halign: 'center' as const, cellWidth: 22 },
-      2: { halign: 'center' as const, cellWidth: 22 },
-      3: { halign: 'center' as const, cellWidth: 26 },
-      0: { cellWidth: 90 },
-    },
+    startY: 112,
+    head: [['ESCALAS', 'TB', 'INTERPRETACIÓN']],
+    body,
     theme: 'grid',
-    margin: { left: 12, right: 12 },
-  });
-
-  // Fila “PROTOCOLO VÁLIDO”
-  const y = (doc as any).lastAutoTable.finalY + 3;
-  autoTable(doc, {
-    startY: y,
-    body: [['PROTOCOLO VÁLIDO']],
-    styles: { fontSize: 9, cellPadding: 2 },
-    theme: 'plain',
-    margin: { left: 12, right: 12 },
+    styles: { fontSize: 10, cellPadding: 4 },
+    headStyles: { fillColor: [224, 224, 224], textColor: 0, fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 260 },
+      1: { halign: 'center', cellWidth: 60 },
+      2: { cellWidth: 220 },
+    },
+    margin: { left: 40, right: 40 },
     didParseCell: (data) => {
-      data.cell.styles.fontStyle = 'bold';
+      const raw: any = data.cell.raw;
+      if (raw && typeof raw === 'object' && raw.content === 'ESCALAS') {
+        data.cell.styles.fillColor = [240, 240, 240];
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.halign = 'center';
+      }
     },
   });
 
-  const filename = `MACI_${res.userName ?? clientId}.pdf`;
+
+  const filename = `MACI_TABLA_${res.userName ?? res.clientId}.pdf`;
   doc.save(filename);
 }

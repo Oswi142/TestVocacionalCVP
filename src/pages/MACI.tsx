@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import {
   Box,
@@ -20,6 +20,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import SaveIcon from '@mui/icons-material/Save';
 import { useNavigate } from 'react-router-dom';
 
 interface Question {
@@ -39,6 +40,8 @@ const MACI: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
 
+  const STORAGE_KEY = `test_${TEST_ID}_${user.id || 'anonymous'}`;
+
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [answerOptions, setAnswerOptions] = useState<AnswerOption[]>([]);
   const [currentSection, setCurrentSection] = useState<number>(1);
@@ -49,6 +52,8 @@ const MACI: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string>('');
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbarMessage(message);
@@ -57,14 +62,42 @@ const MACI: React.FC = () => {
   };
   const handleSnackbarClose = () => setSnackbarOpen(false);
 
-  // Agrupar preguntas por sección
+  // ===== Guardado local (manual y al salir) =====
+  const saveToLocal = useCallback(() => {
+    try {
+      const data = {
+        answers,
+        currentSection,
+        lastSaved: new Date().toLocaleString(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      setLastSaved(data.lastSaved);
+      return true;
+    } catch (error) {
+      console.error('Error saving:', error);
+      return false;
+    }
+  }, [answers, currentSection, STORAGE_KEY]);
+
+  const handleManualSave = () => {
+    const ok = saveToLocal();
+    showSnackbar(ok ? 'Respuestas guardadas correctamente' : 'Error al guardar', ok ? 'success' : 'error');
+  };
+
+  const handleExit = () => setExitConfirmOpen(true);
+  const confirmExit = () => {
+    saveToLocal(); // guardar automáticamente al salir
+    setExitConfirmOpen(false);
+    navigate(-1);
+  };
+
+  // ===== Agrupar preguntas por sección =====
   const groupedQuestions = useMemo(() => {
     const acc: Record<number, Question[]> = {};
     for (const q of allQuestions) {
       if (!acc[q.section]) acc[q.section] = [];
       acc[q.section].push(q);
     }
-    // ordenar cada sección por id por si acaso
     Object.keys(acc).forEach(k => acc[Number(k)].sort((a, b) => a.id - b.id));
     return acc;
   }, [allQuestions]);
@@ -85,6 +118,7 @@ const MACI: React.FC = () => {
   const isAllComplete = (): boolean =>
     Object.keys(groupedQuestions).every(key => isSectionComplete(parseInt(key)));
 
+  // ===== Envío a Supabase =====
   const handleSubmit = async () => {
     const unanswered = allQuestions.filter(q => !answers[q.id]);
     if (unanswered.length > 0) {
@@ -94,7 +128,6 @@ const MACI: React.FC = () => {
 
     setSaving(true);
     try {
-      // Inserción por lotes para mejor performance
       const payload = allQuestions.map(q => ({
         clientid: user.id,
         testid: TEST_ID,
@@ -105,6 +138,9 @@ const MACI: React.FC = () => {
       const { error } = await supabase.from('testsanswers').insert(payload);
       if (error) throw error;
 
+      // Limpia almacenamiento local al finalizar correctamente
+      localStorage.removeItem(STORAGE_KEY);
+
       showSnackbar('Respuestas guardadas correctamente.', 'success');
       setTimeout(() => navigate('/client'), 1500);
     } catch (err: any) {
@@ -114,10 +150,10 @@ const MACI: React.FC = () => {
     }
   };
 
+  // ===== Carga inicial: preguntas, opciones y recuperación local =====
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 1) Preguntas de MACI
         const questionsRes = await supabase
           .from('questions')
           .select('id, question, section')
@@ -126,29 +162,41 @@ const MACI: React.FC = () => {
 
         if (questionsRes.error) throw questionsRes.error;
 
-        const questions = (questionsRes.data || []) as Question[];
-        setAllQuestions(questions);
+        const qs = (questionsRes.data || []) as Question[];
+        setAllQuestions(qs);
 
-        // 2) Opciones para estas preguntas
-        const ids = questions.map(q => q.id);
-        if (ids.length === 0) {
+        const ids = qs.map(q => q.id);
+        if (ids.length > 0) {
+          const optionsRes = await supabase
+            .from('answeroptions')
+            .select('id, questionid, answer')
+            .in('questionid', ids)
+            .order('id', { ascending: true });
+
+          if (optionsRes.error) throw optionsRes.error;
+
+          const cleaned = (optionsRes.data || []).map((opt: any) => ({
+            ...opt,
+            questionid: Number(opt.questionid)
+          })) as AnswerOption[];
+          setAnswerOptions(cleaned);
+        } else {
           setAnswerOptions([]);
-          return;
         }
 
-        const optionsRes = await supabase
-          .from('answeroptions')
-          .select('id, questionid, answer')
-          .in('questionid', ids)
-          .order('id', { ascending: true });
-
-        if (optionsRes.error) throw optionsRes.error;
-
-        const cleaned = (optionsRes.data || []).map((opt: any) => ({
-          ...opt,
-          questionid: Number(opt.questionid)
-        })) as AnswerOption[];
-        setAnswerOptions(cleaned);
+        // Recuperar de localStorage (si existe)
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const localData = JSON.parse(stored);
+            setAnswers(localData.answers || {});
+            setCurrentSection(localData.currentSection || 1);
+            setLastSaved(localData.lastSaved || '');
+            showSnackbar('Respuestas cargadas', 'success');
+          }
+        } catch (e) {
+          console.error('Error loading local data:', e);
+        }
       } catch (error) {
         console.error('Error fetching MACI:', error);
         showSnackbar('Error al cargar el test MACI', 'error');
@@ -158,8 +206,9 @@ const MACI: React.FC = () => {
     };
 
     fetchData();
-  }, []);
+  }, [STORAGE_KEY]);
 
+  // Scroll al cambiar de sección
   useEffect(() => {
     const el = document.getElementById('scroll-container');
     if (el) el.scrollTop = 0;
@@ -174,15 +223,39 @@ const MACI: React.FC = () => {
   }
 
   return (
-    <Box sx={{ width: '100vw', height: '100vh', background: 'linear-gradient(to right, #f9c9a4, #cafacc)', display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
+    <Box sx={{ width: '100vw', height: '100vh', background: 'linear-gradient(to right, #f9c9a4, #cafacc)', display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2, overflow: 'hidden' }}>
       <Box sx={{ width: '100%', maxWidth: 600, height: '90vh', bgcolor: '#fff', borderRadius: 4, boxShadow: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
         <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', flexShrink: 0 }}>
-          <IconButton onClick={() => navigate(-1)} sx={{ mb: 1 }}>
-            <ArrowBackIcon />
-          </IconButton>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <IconButton onClick={handleExit}>
+              <ArrowBackIcon />
+            </IconButton>
+
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SaveIcon />}
+              onClick={handleManualSave}
+              sx={{
+                borderColor: '#4caf50',
+                color: '#4caf50',
+                '&:hover': { borderColor: '#388e3c', backgroundColor: '#f1f8e9' }
+              }}
+            >
+              Guardar
+            </Button>
+          </Box>
+
           <Typography variant="h5" color="primary">Test: MACI</Typography>
           <Typography variant="subtitle1" color="primary">Sección {currentSection}</Typography>
+
+          {lastSaved && (
+            <Typography variant="caption" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+              <SaveIcon sx={{ fontSize: 12, mr: 0.5, color: '#4caf50' }} />
+              Guardado: {lastSaved}
+            </Typography>
+          )}
         </Box>
 
         {/* Body */}
@@ -202,7 +275,7 @@ const MACI: React.FC = () => {
                   {opts.map((opt) => (
                     <FormControlLabel
                       key={opt.id}
-                      value={String(opt.id)} // guardamos el id de la opción
+                      value={String(opt.id)}
                       control={<Radio color="primary" />}
                       label={opt.answer}
                     />
@@ -220,7 +293,7 @@ const MACI: React.FC = () => {
         </Box>
 
         {/* Footer: navegación por secciones + enviar */}
-        <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', flexShrink: 0 }}>
+        <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
             {Object.keys(groupedQuestions).map((key) => {
               const section = parseInt(key, 10);
@@ -257,15 +330,11 @@ const MACI: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Confirmación */}
+        {/* Confirmación de envío */}
         <Dialog
           open={confirmOpen}
           onClose={() => setConfirmOpen(false)}
-          PaperProps={{
-            sx: {
-              borderRadius: 3, p: 2, border: '2px solid #fbc02d', bgcolor: '#fffde7', maxWidth: 400
-            }
-          }}
+          PaperProps={{ sx: { borderRadius: 3, p: 2, border: '2px solid #fbc02d', bgcolor: '#fffde7', maxWidth: 400 } }}
         >
           <Box sx={{ textAlign: 'center', px: 2, py: 1 }}>
             <WarningAmberIcon sx={{ fontSize: 48, color: '#f9a825', mb: 1 }} />
@@ -284,6 +353,33 @@ const MACI: React.FC = () => {
             </Button>
             <Button onClick={() => { setConfirmOpen(false); handleSubmit(); }} variant="contained" color="warning" sx={{ backgroundColor: '#fbc02d', color: '#333', '&:hover': { backgroundColor: '#f9a825' } }} disabled={saving}>
               Confirmar
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Confirmación de salida (guarda y sale) */}
+        <Dialog
+          open={exitConfirmOpen}
+          onClose={() => setExitConfirmOpen(false)}
+          PaperProps={{ sx: { borderRadius: 3, p: 2, border: '2px solid #2196f3', backgroundColor: '#e3f2fd', maxWidth: 450 } }}
+        >
+          <Box sx={{ textAlign: 'center', px: 2, py: 1 }}>
+            <WarningAmberIcon sx={{ fontSize: 48, color: '#1976d2', mb: 1 }} />
+            <DialogTitle sx={{ fontWeight: 'bold', fontSize: '1.25rem', color: '#1565c0', pb: 0 }}>
+              ¿Seguro que quieres salir?
+            </DialogTitle>
+            <DialogContent>
+              <DialogContentText sx={{ fontSize: '0.95rem', color: '#5f5f5f', textAlign: 'center' }}>
+                Tus respuestas serán guardadas automáticamente y podrás continuar desde donde lo dejaste cuando regreses.
+              </DialogContentText>
+            </DialogContent>
+          </Box>
+          <DialogActions sx={{ justifyContent: 'center', pb: 2, gap: 1 }}>
+            <Button onClick={() => setExitConfirmOpen(false)} variant="outlined" color="primary" sx={{ minWidth: 100 }}>
+              Continuar test
+            </Button>
+            <Button onClick={confirmExit} variant="contained" color="primary" sx={{ minWidth: 100 }}>
+              Salir
             </Button>
           </DialogActions>
         </Dialog>

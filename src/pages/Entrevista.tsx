@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import {
   Box,
@@ -28,8 +28,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 import CheckIcon from '@mui/icons-material/Check';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-
-
+import SaveIcon from '@mui/icons-material/Save';
+import dayjs from 'dayjs';
 
 interface Question {
   id: number;
@@ -56,6 +56,7 @@ const departamentos = [
 const Entrevista: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
+  const STORAGE_KEY = `entrevista_${user.id || 'anonymous'}`;
 
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [answerOptions, setAnswerOptions] = useState<AnswerOption[]>([]);
@@ -70,6 +71,28 @@ const Entrevista: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string>('');
+
+  // Sistema de guardado manual únicamente
+  const saveToLocal = useCallback(() => {
+    try {
+      const data = {
+        answers,
+        selectedSchoolId,
+        birthdayDate: birthdayDate ? birthdayDate.toISOString() : null,
+        currentSection,
+        lastSaved: new Date().toLocaleString()
+      };
+      
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      setLastSaved(data.lastSaved);
+      return true;
+    } catch (error) {
+      console.error('Error saving:', error);
+      return false;
+    }
+  }, [answers, selectedSchoolId, birthdayDate, currentSection, STORAGE_KEY]);
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
     setSnackbarMessage(message);
@@ -116,12 +139,10 @@ const Entrevista: React.FC = () => {
 
       const value = answers[q.id];
 
-      // Fecha de nacimiento
       if (q.question.toLowerCase().includes('fecha')) {
         return !!birthdayDate;
       }
 
-      // Colegio
       if (q.question.toLowerCase().includes('colegio')) {
         return selectedSchoolId !== null;
       }
@@ -137,7 +158,6 @@ const Entrevista: React.FC = () => {
     }
   }, [currentSection]);
 
-
   useEffect(() => {
     const fetchData = async () => {
       const [questionsRes, schoolsRes, optionsRes] = await Promise.all([
@@ -150,19 +170,66 @@ const Entrevista: React.FC = () => {
       if (!schoolsRes.error) setSchools(schoolsRes.data || []);
       if (!optionsRes.error) setAnswerOptions(optionsRes.data || []);
 
+      // Cargar datos guardados
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const localData = JSON.parse(stored);
+          setAnswers(localData.answers || {});
+          setSelectedSchoolId(localData.selectedSchoolId);
+          
+          if (localData.birthdayDate) {
+            setBirthdayDate(dayjs(localData.birthdayDate));
+          }
+          
+          setCurrentSection(localData.currentSection || 1);
+          setLastSaved(localData.lastSaved || '');
+          
+          showSnackbar('Respuestas cargadas', 'success');
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+
       setLoading(false);
     };
 
     fetchData();
-  }, []);
+  }, [STORAGE_KEY]);
 
   const handleChange = (id: number, value: string) => {
-    const trimmed = value.trim();
-
     setAnswers(prev => ({
       ...prev,
-      [id]: trimmed === '' ? '' : value
+      [id]: value.trim() === '' ? '' : value
     }));
+  };
+
+  const handleSchoolChange = (schoolId: number) => {
+    setSelectedSchoolId(schoolId);
+  };
+
+  const handleDateChange = (newValue: any) => {
+    setBirthdayDate(newValue);
+  };
+
+  const handleSectionChange = (section: number) => {
+    setCurrentSection(section);
+  };
+
+  const handleExit = () => {
+    setExitConfirmOpen(true);
+  };
+
+  const confirmExit = () => {
+    // Guardar automáticamente al salir
+    saveToLocal();
+    setExitConfirmOpen(false);
+    navigate(-1);
+  };
+
+  const handleManualSave = () => {
+    const success = saveToLocal();
+    showSnackbar(success ? 'Respuestas guardadas correctamente' : 'Error al guardar', success ? 'success' : 'error');
   };
 
   const isAllComplete = (): boolean => {
@@ -171,37 +238,26 @@ const Entrevista: React.FC = () => {
       return isSectionComplete(section);
     });
   };
+
   const handleSubmit = async () => {
     setSaving(true);
     
     try {
-      // Debug: log current state
-      console.log('Current answers:', answers);
-      console.log('Selected school:', selectedSchoolId);
-      console.log('Birthday:', birthdayDate);
-      console.log('User:', user);
-      
-      // Verificar que el usuario esté disponible
       if (!user || !user.id) {
-        throw new Error('Usuario no encontrado en localStorage');
+        throw new Error('Usuario no encontrado');
       }
 
-      // Validación mejorada
       const allVisibleQuestions = allQuestions.filter(q => shouldDisplayQuestion(q.id));
-      console.log('All visible questions:', allVisibleQuestions.map(q => ({ id: q.id, question: q.question })));
       
       const unansweredRequired = allVisibleQuestions.filter(q => {
-        // Excluir preguntas condicionales que no deben validarse
         if ([17, 20, 27].includes(q.id)) return false;
         
         const value = answers[q.id];
         
-        // Para la pregunta de fecha de nacimiento
         if (q.question.toLowerCase().includes('fecha')) {
           return !birthdayDate;
         }
         
-        // Para la pregunta de colegio
         if (q.question.toLowerCase().includes('colegio')) {
           return !selectedSchoolId;
         }
@@ -209,23 +265,16 @@ const Entrevista: React.FC = () => {
         return !value || String(value).trim() === '';
       });
 
-      console.log('Unanswered required questions:', unansweredRequired.map(q => ({ id: q.id, question: q.question })));
-
       if (unansweredRequired.length > 0) {
         const missingSections = [
           ...new Set(unansweredRequired.map(q => q.section))
         ];
-
-        const secciones = missingSections.join(', ');
-        showSnackbar(`Faltan preguntas por contestar en la(s) sección(es): ${secciones}`, 'error');
+        showSnackbar(`Faltan preguntas en sección(es): ${missingSections.join(', ')}`, 'error');
         setSaving(false);
         return;
       }
 
-
-      // Mapear respuestas de la sección 1
       const section1 = groupedQuestions[1] || [];
-      console.log('Section 1 questions:', section1);
       
       const mapped = {
         gender: answers[section1[0]?.id] || '',
@@ -235,10 +284,7 @@ const Entrevista: React.FC = () => {
         grade: answers[section1[5]?.id] || '',
         hobbies: answers[section1[6]?.id] || '',
       };
-      
-      console.log('Mapped data for clientsinfo:', mapped);
 
-      // Insertar/actualizar información del cliente
       const { error: infoError } = await supabase.from('clientsinfo').upsert({
         userid: user.id,
         gender: mapped.gender,
@@ -250,31 +296,18 @@ const Entrevista: React.FC = () => {
         hobbies: mapped.hobbies,
       });
 
-      if (infoError) {
-        console.error('Error inserting clientsinfo:', infoError);
-        throw infoError;
-      }
+      if (infoError) throw infoError;
 
-      console.log('Successfully inserted clientsinfo');
-
-      // Procesar respuestas de cada sección
       const sectionsToProcess = [2, 3, 4, 5, 6, 7, 8];
       
       for (const sectionNum of sectionsToProcess) {
         const sectionQuestions = groupedQuestions[sectionNum] || [];
-        console.log(`Processing section ${sectionNum}:`, sectionQuestions.length, 'questions');
         
         for (const q of sectionQuestions) {
-          if (!shouldDisplayQuestion(q.id)) {
-            console.log(`Skipping question ${q.id} due to conditional visibility`);
-            continue;
-          }
+          if (!shouldDisplayQuestion(q.id)) continue;
           
           const value = answers[q.id];
-          if (!value || String(value).trim() === '') {
-            console.log(`Skipping question ${q.id} - no answer provided`);
-            continue;
-          }
+          if (!value || String(value).trim() === '') continue;
 
           const options = getOptionsForQuestion(q.id);
           let insertData: any = {
@@ -284,36 +317,29 @@ const Entrevista: React.FC = () => {
           };
 
           if (options.length > 0) {
-            // Pregunta con opciones - usar answerid
             const answerId = parseInt(value);
-            if (isNaN(answerId)) {
-              console.error(`Invalid answer ID for question ${q.id}:`, value);
-              continue;
-            }
+            if (isNaN(answerId)) continue;
             insertData.answerid = answerId;
           } else {
-            // Pregunta abierta - usar details
             insertData.details = value;
           }
           
-          console.log(`Inserting answer for question ${q.id}:`, insertData);
-          
           const { error: insertError } = await supabase.from('testsanswers').insert(insertData);
-          if (insertError) {
-            console.error(`Error inserting answer for question ${q.id}:`, insertError);
-            throw insertError;
-          }
+          if (insertError) throw insertError;
         }
       }
 
-      showSnackbar('Respuestas guardadas correctamente.', 'success');
+      // Limpiar datos locales después del envío exitoso
+      localStorage.removeItem(STORAGE_KEY);
+      
+      showSnackbar('Respuestas enviadas correctamente', 'success');
       setTimeout(() => {
         navigate('/client');
       }, 2000);
       
     } catch (err: any) {
-      console.error('Error saving data:', err);
-      showSnackbar('Error al guardar respuestas: ' + (err.message || 'Error desconocido'), 'error');
+      console.error('Error:', err);
+      showSnackbar('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');
     } finally {
       setSaving(false);
     }
@@ -345,80 +371,102 @@ const Entrevista: React.FC = () => {
       justifyContent: 'center', 
       alignItems: 'center', 
       padding: 2,
-      overflow: 'hidden' // Prevenir scroll en el contenedor principal
+      overflow: 'hidden'
     }}>
       <Box sx={{ 
         width: '100%', 
         maxWidth: 600, 
-        height: '90vh', // Altura fija para el contenedor
+        height: '90vh',
         backgroundColor: '#ffffff', 
         borderRadius: 4, 
         boxShadow: 3,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden' // Prevenir desbordamiento
+        overflow: 'hidden'
       }}>
-        {/* Header fijo */}
+        {/* Header */}
         <Box sx={{ 
           padding: 2, 
           borderBottom: '1px solid #e0e0e0',
-          flexShrink: 0 // No se encoge
+          flexShrink: 0
         }}>
-          <IconButton onClick={() => navigate(-1)} sx={{ mb: 1 }}>
-            <ArrowBackIcon />
-          </IconButton>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <IconButton onClick={handleExit}>
+              <ArrowBackIcon />
+            </IconButton>
+            
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SaveIcon />}
+              onClick={handleManualSave}
+              sx={{ 
+                borderColor: '#4caf50',
+                color: '#4caf50',
+                '&:hover': { borderColor: '#388e3c', backgroundColor: '#f1f8e9' }
+              }}
+            >
+              Guardar
+            </Button>
+          </Box>
+
           <Typography variant="h5" color="primary">Test: Entrevista</Typography>
           <Typography variant="subtitle1" color="primary">
             Sección {currentSection}
           </Typography>
 
+          {lastSaved && (
+            <Typography variant="caption" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+              <SaveIcon sx={{ fontSize: 12, mr: 0.5, color: '#4caf50' }} />
+              Guardado: {lastSaved}
+            </Typography>
+          )}
         </Box>
 
-        {/* Contenido scrolleable */}
+        {/* Contenido */}
         <Box 
           id="scroll-container"
           sx={{ 
-            flex: 1, // Toma todo el espacio disponible
-            overflow: 'auto', // Scroll vertical cuando sea necesario
+            flex: 1,
+            overflow: 'auto',
             padding: 3,
             paddingTop: 2
           }}
         >
-          {/* Alerts para cada sección */}
+          {/* Alerts */}
           {currentSection === 2 && (
             <Alert severity="info" sx={{ mb: 2 }}>
               Profundizar en la relación y ocupación de cada uno de sus familiares y otras personas significativas.
-              Incluir datos como convivencia, estudios, ocupación y lugar de nacimiento.
             </Alert>
           )}
 
           {currentSection === 3 && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Responde con sinceridad a las siguientes preguntas relacionadas con tu etapa escolar. Algunas requieren respuestas abiertas y otras selección.
+              Responde con sinceridad a las siguientes preguntas relacionadas con tu etapa escolar.
             </Alert>
           )}
 
           {currentSection === 4 && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Indica cuánto piensas que ha influido cada factor en tu elección vocacional. Selecciona una opción por cada uno.
+              Indica cuánto piensas que ha influido cada factor en tu elección vocacional.
             </Alert>
           )}
 
           {currentSection === 5 && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Comparte tus reflexiones personales. Responde con sinceridad a las siguientes preguntas abiertas.
+              Comparte tus reflexiones personales. Responde con sinceridad.
             </Alert>
           )}
 
           {currentSection === 6 && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Responde si las siguientes afirmaciones son verdaderas o falsas respecto a tus planes de carrera.
+              Responde si las siguientes afirmaciones son verdaderas o falsas.
             </Alert>
           )}
 
           {currentSection === 7 && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Por favor indica si necesitas la siguiente información relacionada con tus decisiones vocacionales. Marca "Sí" o "No".
+              Indica si necesitas la siguiente información relacionada con tus decisiones vocacionales.
             </Alert>
           )}
 
@@ -458,7 +506,6 @@ const Entrevista: React.FC = () => {
                         displayEmpty
                         value={answers[q.id] || ''}
                         onChange={(e) => handleChange(q.id, e.target.value)}
-                        inputProps={{ 'aria-label': 'Selecciona tu género' }}
                       >
                         <MenuItem value="" disabled>Selecciona tu género</MenuItem>
                         <MenuItem value="Masculino">Masculino</MenuItem>
@@ -469,7 +516,7 @@ const Entrevista: React.FC = () => {
                   ) : q.question.toLowerCase().includes('fecha') ? (
                     <DatePicker
                       value={birthdayDate}
-                      onChange={(newValue) => setBirthdayDate(newValue)}
+                      onChange={handleDateChange}
                       format="DD/MM/YYYY"
                     />
                   ) : q.question.toLowerCase().includes('departamento') ? (
@@ -478,7 +525,6 @@ const Entrevista: React.FC = () => {
                         displayEmpty
                         value={answers[q.id] || ''}
                         onChange={(e) => handleChange(q.id, e.target.value)}
-                        inputProps={{ 'aria-label': 'Departamento' }}
                       >
                         <MenuItem value="" disabled>Departamento</MenuItem>
                         {departamentos.map((dep) => (
@@ -491,8 +537,7 @@ const Entrevista: React.FC = () => {
                       <Select
                         displayEmpty
                         value={selectedSchoolId !== null ? String(selectedSchoolId) : ''}
-                        onChange={(e) => setSelectedSchoolId(Number(e.target.value))}
-                        inputProps={{ 'aria-label': 'Selecciona tu colegio' }}
+                        onChange={(e) => handleSchoolChange(Number(e.target.value))}
                       >
                         <MenuItem value="" disabled>Selecciona tu colegio</MenuItem>
                         {schools.map((school) => (
@@ -523,72 +568,70 @@ const Entrevista: React.FC = () => {
           </LocalizationProvider>
         </Box>
 
-        {/* Footer fijo con botones */}
-<Box sx={{
-  padding: 2,
-  borderTop: '1px solid #e0e0e0',
-  flexShrink: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: 2
-}}>
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
-    {Object.keys(groupedQuestions).map((key) => {
-      const section = parseInt(key);
-      const complete = isSectionComplete(section);
-      const isCurrent = currentSection === section;
+        {/* Footer */}
+        <Box sx={{
+          padding: 2,
+          borderTop: '1px solid #e0e0e0',
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {Object.keys(groupedQuestions).map((key) => {
+              const section = parseInt(key);
+              const complete = isSectionComplete(section);
+              const isCurrent = currentSection === section;
 
-      return (
-        <Button
-          key={section}
-          onClick={() => setCurrentSection(section)}
-          sx={{
-            minWidth: 36,
-            height: 36,
-            borderRadius: '50%',
-            color: complete ? '#fff' : isCurrent ? '#fff' : '#333',
-            backgroundColor: complete
-              ? '#4caf50'
-              : isCurrent
-              ? '#1976d2'
-              : '#f0f0f0',
-            '&:hover': {
-              backgroundColor: complete
-                ? '#388e3c'
-                : isCurrent
-                ? '#1565c0'
-                : '#e0e0e0',
-            }
-          }}
-        >
-          {section}
-        </Button>
-      );
-    })}
+              return (
+                <Button
+                  key={section}
+                  onClick={() => handleSectionChange(section)}
+                  sx={{
+                    minWidth: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    color: complete ? '#fff' : isCurrent ? '#fff' : '#333',
+                    backgroundColor: complete
+                      ? '#4caf50'
+                      : isCurrent
+                      ? '#1976d2'
+                      : '#f0f0f0',
+                    '&:hover': {
+                      backgroundColor: complete
+                        ? '#388e3c'
+                        : isCurrent
+                        ? '#1565c0'
+                        : '#e0e0e0',
+                    }
+                  }}
+                >
+                  {section}
+                </Button>
+              );
+            })}
 
-    {/* Botón Finalizar redondo con ícono */}
-    <Button
-      onClick={() => setConfirmOpen(true)}
-      disabled={saving || !isAllComplete()}
-      sx={{
-        minWidth: 36,
-        height: 36,
-        borderRadius: '50%',
-        backgroundColor: isAllComplete() ? '#0288d1' : '#cfd8dc',
-        color: isAllComplete() ? 'white' : '#757575',
-        '&:hover': {
-          backgroundColor: isAllComplete() ? '#0277bd' : '#cfd8dc',
-        },
-        transition: 'all 0.3s ease'
-      }}
-    >
-      <CheckIcon fontSize="small" />
-    </Button>
+            <Button
+              onClick={() => setConfirmOpen(true)}
+              disabled={saving || !isAllComplete()}
+              sx={{
+                minWidth: 36,
+                height: 36,
+                borderRadius: '50%',
+                backgroundColor: isAllComplete() ? '#0288d1' : '#cfd8dc',
+                color: isAllComplete() ? 'white' : '#757575',
+                '&:hover': {
+                  backgroundColor: isAllComplete() ? '#0277bd' : '#cfd8dc',
+                }
+              }}
+            >
+              <CheckIcon fontSize="small" />
+            </Button>
+          </Box>
+        </Box>
 
-  </Box>
-</Box>
-
+        {/* Dialog envío */}
         <Dialog
           open={confirmOpen}
           onClose={() => setConfirmOpen(false)}
@@ -605,22 +648,19 @@ const Entrevista: React.FC = () => {
           <Box sx={{ textAlign: 'center', px: 2, py: 1 }}>
             <WarningAmberIcon sx={{ fontSize: 48, color: '#f9a825', mb: 1 }} />
             <DialogTitle sx={{ fontWeight: 'bold', fontSize: '1.25rem', color: '#f57f17', pb: 0 }}>
-              ¿Estás seguro de enviar tus respuestas?
+              ¿Enviar respuestas?
             </DialogTitle>
-
             <DialogContent>
               <DialogContentText sx={{ fontSize: '0.95rem', color: '#5f5f5f' }}>
-                Una vez que envíes, <strong>no podrás modificarlas</strong>. Asegúrate de haber completado todo correctamente.
+                Una vez enviadas, no podrás modificarlas.
               </DialogContentText>
             </DialogContent>
           </Box>
-
           <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
             <Button
               onClick={() => setConfirmOpen(false)}
               variant="outlined"
               color="warning"
-              sx={{ borderColor: '#fbc02d', color: '#f57f17' }}
             >
               Cancelar
             </Button>
@@ -631,7 +671,6 @@ const Entrevista: React.FC = () => {
               }}
               variant="contained"
               color="warning"
-              sx={{ backgroundColor: '#fbc02d', color: '#white', '&:hover': { backgroundColor: '#f9a825' } }}
               disabled={saving}
             >
               Confirmar
@@ -639,9 +678,54 @@ const Entrevista: React.FC = () => {
           </DialogActions>
         </Dialog>
 
+        {/* Dialog salida */}
+        <Dialog
+          open={exitConfirmOpen}
+          onClose={() => setExitConfirmOpen(false)}
+          PaperProps={{
+            sx: {
+              borderRadius: 3,
+              padding: 2,
+              border: '2px solid #2196f3',
+              backgroundColor: '#e3f2fd',
+              maxWidth: 450
+            }
+          }}
+        >
+          <Box sx={{ textAlign: 'center', px: 2, py: 1 }}>
+            <WarningAmberIcon sx={{ fontSize: 48, color: '#1976d2', mb: 1 }} />
+            <DialogTitle sx={{ fontWeight: 'bold', fontSize: '1.25rem', color: '#1565c0', pb: 0 }}>
+              ¿Seguro que quieres salir?
+            </DialogTitle>
+            <DialogContent>
+              <DialogContentText sx={{ fontSize: '0.95rem', color: '#5f5f5f', textAlign: 'center' }}>
+                Tus respuestas serán guardadas automáticamente y podrás continuar desde donde lo dejaste cuando regreses.
+              </DialogContentText>
+            </DialogContent>
+          </Box>
+          <DialogActions sx={{ justifyContent: 'center', pb: 2, gap: 1 }}>
+            <Button
+              onClick={() => setExitConfirmOpen(false)}
+              variant="outlined"
+              color="primary"
+              sx={{ minWidth: 100 }}
+            >
+              Continuar test
+            </Button>
+            <Button
+              onClick={confirmExit}
+              variant="contained"
+              color="primary"
+              sx={{ minWidth: 100 }}
+            >
+              Salir
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         <Snackbar
           open={snackbarOpen}
-          autoHideDuration={4000}
+          autoHideDuration={3000}
           onClose={handleSnackbarClose}
           anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
           <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: '100%' }}>
