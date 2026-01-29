@@ -10,6 +10,9 @@ import ClientsAnswers from './pages/ClientsAnswers';
 import Chaside from './pages/Chaside';
 import MACI from './pages/MACI';
 import ClientsReports from './pages/ClientsReports';
+import DatDashboard from './pages/DatDashboard';
+import DatVerbal from './pages/DatVerbal';
+import DatNumerico from './pages/DatNumerico';
 
 function App() {
   return (
@@ -25,6 +28,9 @@ function App() {
         <Route path="/chaside" element={<ProtectedRoute><Chaside/></ProtectedRoute>} />
         <Route path="/maci" element={<ProtectedRoute><MACI/></ProtectedRoute>} />
         <Route path="/reportes-clientes" element={<ProtectedRoute><ClientsReports/></ProtectedRoute>} />
+        <Route path="/dat" element={<DatDashboard />} />
+        <Route path="/dat/verbal" element={<DatVerbal />} />
+        <Route path="/dat/numerico" element={<DatNumerico />} />
         {/*Nueva ruta */}
       </Routes>
     </BrowserRouter>

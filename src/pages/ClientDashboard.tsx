@@ -1,18 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Button,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material';
-import logo from '../assets/logo-cvp.png'; // Asegurate que la ruta sea correcta
+import { Box, Button, Typography, useMediaQuery, useTheme } from '@mui/material';
+import logo from '../assets/logo-cvp.png';
 
 const ClientDashboard: React.FC = () => {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [activeTab, setActiveTab] = useState<'tests' | 'account'>('tests');
+
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -26,32 +21,62 @@ const ClientDashboard: React.FC = () => {
     } else {
       navigate('/');
     }
-  }, []);
+  }, [navigate]);
+
+  // Ajustes para que entre en 1 pantalla (sin scroll) y se vea como tu screenshot
+  const sizes = useMemo(() => {
+    if (isMobile) {
+      return {
+        maxWidth: 420,
+        logoH: 70,
+        outerPad: 12,     // px
+        tabsH: 42,        // px
+        cardPad: 18,      // px
+        titleVariant: 'h6' as const,
+        subtitleVariant: 'body2' as const,
+        btnPy: 1.55,      // 🔥 más gorditos
+        btnFont: '0.95rem',
+        btnGap: 12,       // px
+        cardRadius: 18,
+      };
+    }
+    return {
+      maxWidth: 620,
+      logoH: 92,
+      outerPad: 16,
+      tabsH: 46,
+      cardPad: 26,
+      titleVariant: 'h5' as const,
+      subtitleVariant: 'body1' as const,
+      btnPy: 1.75,       // 🔥 más gorditos
+      btnFont: '1rem',
+      btnGap: 14,
+      cardRadius: 22,
+    };
+  }, [isMobile]);
 
   const buttonStyle = (gradient: string) => ({
     background: gradient,
     color: '#fff',
-    fontWeight: 600,
-    paddingY: 2,
+    fontWeight: 700,
+    py: sizes.btnPy,
     borderRadius: 2,
     textTransform: 'none',
-    fontSize: '1rem',
-    '&:hover': {
-      opacity: 0.9,
-    },
+    fontSize: sizes.btnFont,
+    lineHeight: 1.1,
+    '&:hover': { opacity: 0.92 },
   });
 
   const tabButtonStyle = (selected: boolean) => ({
     flex: 1,
     borderRadius: 0,
-    fontWeight: 600,
+    fontWeight: 700,
     color: selected ? '#2e7d32' : '#888',
     backgroundColor: '#ffffff',
     borderBottom: selected ? '3px solid #2e7d32' : '1px solid #ccc',
     textTransform: 'none',
-    '&:hover': {
-      backgroundColor: '#f5f5f5',
-    },
+    height: sizes.tabsH,
+    '&:hover': { backgroundColor: '#f5f5f5' },
   });
 
   const handleLogout = () => {
@@ -63,22 +88,23 @@ const ClientDashboard: React.FC = () => {
     <Box
       sx={{
         width: '100vw',
-        height: '100vh',
+        height: '100dvh',     // ✅ ocupa exactamente la pantalla
+        overflow: 'hidden',   // ✅ NO scroll dentro del componente
         background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 2,
-        overflow: 'hidden',
+        px: `${sizes.outerPad}px`,
       }}
     >
       <Box
         sx={{
           width: '100%',
-          maxWidth: 600,
+          maxWidth: sizes.maxWidth,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          gap: isMobile ? 1.2 : 1.6,
         }}
       >
         {/* LOGO */}
@@ -88,17 +114,15 @@ const ClientDashboard: React.FC = () => {
           alt="Club Vida Plena"
           draggable={false}
           sx={{
-            height: 120,
+            height: sizes.logoH,
             maxWidth: '100%',
             objectFit: 'contain',
-            mb: 3,
             userSelect: 'none',
             WebkitUserDrag: 'none',
             pointerEvents: 'none',
             caretColor: 'transparent',
           }}
         />
-
 
         {/* Tabs */}
         <Box
@@ -107,7 +131,6 @@ const ClientDashboard: React.FC = () => {
             display: 'flex',
             borderRadius: 2,
             overflow: 'hidden',
-            mb: 2,
             boxShadow: 2,
             backgroundColor: '#fff',
           }}
@@ -120,38 +143,43 @@ const ClientDashboard: React.FC = () => {
           </Button>
         </Box>
 
-        {/* Contenido */}
+        {/* Card */}
         <Box
           sx={{
             width: '100%',
-            padding: 4,
-            borderRadius: 4,
-            backgroundColor: '#ffffff',
-            boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.1)',
-            minHeight: 460,
+            backgroundColor: '#fff',
+            boxShadow: '0px 8px 30px rgba(0,0,0,0.10)',
+            borderRadius: `${sizes.cardRadius}px`,
+            p: `${sizes.cardPad}px`,
+            textAlign: 'center',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center',
+            overflow: 'hidden', // ✅ evita scroll interno
+
+            // ✅ limita el alto del card para que SIEMPRE entre en pantalla
+            maxHeight: `calc(100dvh - ${sizes.logoH}px - ${sizes.tabsH}px - 64px)`,
           }}
         >
           {activeTab === 'tests' ? (
             <>
-              <Typography
-                variant={isMobile ? 'h6' : 'h5'}
-                fontWeight={700}
-                color="green"
-                gutterBottom
-              >
+              <Typography variant={sizes.titleVariant} fontWeight={800} color="green" gutterBottom>
                 Bienvenido, {name} 👋
               </Typography>
 
-              <Typography variant="body1" gutterBottom>
+              <Typography variant={sizes.subtitleVariant} gutterBottom sx={{ mb: isMobile ? 1.2 : 2 }}>
                 Es hora de iniciar a realizar los tests! 😄
               </Typography>
 
-              <Box display="flex" flexDirection="column" gap={2} mt={4} width="100%">
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: `${sizes.btnGap}px`,
+                  width: '100%',
+                  mt: isMobile ? 1 : 2,
+                }}
+              >
                 <Button
                   fullWidth
                   onClick={() => navigate('/entrevista')}
@@ -159,6 +187,7 @@ const ClientDashboard: React.FC = () => {
                 >
                   📄 ENTREVISTA
                 </Button>
+
                 <Button
                   fullWidth
                   onClick={() => navigate('/ippr')}
@@ -166,6 +195,7 @@ const ClientDashboard: React.FC = () => {
                 >
                   🧠 IPPR
                 </Button>
+
                 <Button
                   fullWidth
                   onClick={() => navigate('/chaside')}
@@ -173,6 +203,7 @@ const ClientDashboard: React.FC = () => {
                 >
                   🍥 CHASIDE
                 </Button>
+
                 <Button
                   fullWidth
                   onClick={() => navigate('/maci')}
@@ -180,27 +211,39 @@ const ClientDashboard: React.FC = () => {
                 >
                   🛠️ MACI
                 </Button>
+
+                <Button
+                  fullWidth
+                  onClick={() => navigate('/dat')}
+                  sx={buttonStyle('linear-gradient(90deg, #11998e, #38ef7d)')}
+                >
+                  🧩 DAT
+                </Button>
               </Box>
             </>
           ) : (
             <>
-              <Typography variant="h6" fontWeight={600} color="text.primary" gutterBottom>
+              <Typography variant="h6" fontWeight={700} color="text.primary" gutterBottom>
                 Cuenta
               </Typography>
-              <Typography variant="body1" color="text.secondary" mb={1}>
+
+              <Typography variant={sizes.subtitleVariant} color="text.secondary" sx={{ mb: 0.5 }}>
                 <strong>Nombre:</strong> {name}
               </Typography>
-              <Typography variant="body1" color="text.secondary" mb={3}>
+
+              <Typography variant={sizes.subtitleVariant} color="text.secondary" sx={{ mb: 2 }}>
                 <strong>Usuario:</strong> {username}
               </Typography>
+
               <Button
                 variant="outlined"
                 color="error"
                 fullWidth
                 onClick={handleLogout}
                 sx={{
-                  fontWeight: 600,
+                  fontWeight: 700,
                   textTransform: 'none',
+                  py: sizes.btnPy,
                 }}
               >
                 Cerrar sesión
@@ -213,14 +256,13 @@ const ClientDashboard: React.FC = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 sx={{
-                  mt: 2,
-                  fontWeight: 600,
+                  mt: 1.2,
+                  fontWeight: 700,
                   textTransform: 'none',
+                  py: sizes.btnPy,
                   borderColor: '#2e7d32',
                   color: '#2e7d32',
-                  '&:hover': {
-                    backgroundColor: '#e8f5e9',
-                  },
+                  '&:hover': { backgroundColor: '#e8f5e9' },
                 }}
               >
                 Contáctanos por WhatsApp

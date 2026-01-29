@@ -27,7 +27,6 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 import { downloadChasideReportPDF } from '../utils/chaside';
 import { downloadIpprReportPDF } from '../utils/ippr';
-import { downloadMaciReportPDF } from '../utils/maci';
 
 // ===== Tipos =====
 type ClientView = { userid: number };
@@ -132,10 +131,6 @@ const ClientsReports: React.FC = () => {
       }
       if (type === 'ippr') {
         await downloadIpprReportPDF(clientId);
-        return;
-      }
-      if (type === 'maci') {
-        await downloadMaciReportPDF(clientId);
         return;
       }
       alert('Reporte disponible próximamente para este test.');
