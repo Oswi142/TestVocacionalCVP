@@ -15,7 +15,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  IconButton,
+  IconButton
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
@@ -25,8 +25,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface Question {
   id: number;
-  question: string;
+  question: string | null;
   section: number;
+  dat_type?: string | null;
+  image_path?: string | null;
 }
 
 interface AnswerOption {
@@ -39,13 +41,19 @@ const DatVerbal: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
 
-  // ✅ DAT = testid 5
   const TEST_ID = 5;
+  const DAT_TYPE = 'razonamiento_verbal';
+  const QUESTIONS_PER_SECTION = 10;
 
-  // ✅ "van desde el 528"
-  const MIN_QUESTION_ID = 528;
+  const STORAGE_KEY = `dat_verbal_${user.id || 'anonymous'}`;
 
-  const STORAGE_KEY = `dat_${TEST_ID}_${user.id || 'anonymous'}`;
+  // Bucket público (igual que tu DatNumerico)
+  const STORAGE_BUCKET = 'question_images';
+  const getPublicImageUrl = (imagePath?: string | null) => {
+    if (!imagePath) return null;
+    const base = import.meta.env.VITE_SUPABASE_URL;
+    return `${base}/storage/v1/object/public/${STORAGE_BUCKET}/${imagePath}`;
+  };
 
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [answerOptions, setAnswerOptions] = useState<AnswerOption[]>([]);
@@ -60,7 +68,6 @@ const DatVerbal: React.FC = () => {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
-
   const [lastSaved, setLastSaved] = useState<string>('');
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
@@ -71,7 +78,6 @@ const DatVerbal: React.FC = () => {
 
   const handleSnackbarClose = () => setSnackbarOpen(false);
 
-  // ✅ Guardado manual únicamente
   const saveToLocal = useCallback(() => {
     try {
       const data = {
@@ -79,7 +85,6 @@ const DatVerbal: React.FC = () => {
         currentSection,
         lastSaved: new Date().toLocaleString(),
       };
-
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       setLastSaved(data.lastSaved);
       return true;
@@ -99,7 +104,7 @@ const DatVerbal: React.FC = () => {
   const confirmExit = () => {
     saveToLocal();
     setExitConfirmOpen(false);
-    navigate('/dat'); // ✅ vuelve al dashboard DAT
+    navigate('/dat');
   };
 
   const handleChange = (id: number, value: string) => {
@@ -109,19 +114,36 @@ const DatVerbal: React.FC = () => {
     }));
   };
 
-  // ✅ Agrupar por section (igual que IPPR)
+  // ✅ Agrupar por sección (y limitar a 10 por sección)
   const groupedQuestions = useMemo(() => {
-    return allQuestions.reduce((acc: { [key: number]: Question[] }, q) => {
+    const acc: { [key: number]: Question[] } = {};
+    for (const q of allQuestions) {
       if (!acc[q.section]) acc[q.section] = [];
-      acc[q.section].push(q);
-      return acc;
-    }, {});
+      if (acc[q.section].length < QUESTIONS_PER_SECTION) {
+        acc[q.section].push(q);
+      }
+    }
+    return acc;
   }, [allQuestions]);
+
+  const availableSections = useMemo(() => {
+    return Object.keys(groupedQuestions)
+      .map((k) => parseInt(k))
+      .sort((a, b) => a - b);
+  }, [groupedQuestions]);
 
   const questions = groupedQuestions[currentSection] || [];
 
-  const getOptionsForQuestion = (questionId: number) =>
-    answerOptions.filter((opt) => opt.questionid === questionId);
+  const optionsByQuestion = useMemo(() => {
+    const map = new Map<number, AnswerOption[]>();
+    for (const opt of answerOptions) {
+      if (!map.has(opt.questionid)) map.set(opt.questionid, []);
+      map.get(opt.questionid)!.push(opt);
+    }
+    return map;
+  }, [answerOptions]);
+
+  const getOptionsForQuestion = (questionId: number) => optionsByQuestion.get(questionId) || [];
 
   const handleSectionChange = (section: number) => setCurrentSection(section);
 
@@ -131,7 +153,7 @@ const DatVerbal: React.FC = () => {
   };
 
   const isAllComplete = (): boolean => {
-    return Object.keys(groupedQuestions).every((key) => isSectionComplete(parseInt(key)));
+    return availableSections.every((section) => isSectionComplete(section));
   };
 
   const handleSubmit = async () => {
@@ -153,7 +175,6 @@ const DatVerbal: React.FC = () => {
       }
 
       localStorage.removeItem(STORAGE_KEY);
-
       showSnackbar('Respuestas enviadas correctamente', 'success');
       setTimeout(() => navigate('/dat'), 1500);
     } catch (err: any) {
@@ -167,12 +188,12 @@ const DatVerbal: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
 
-      // ✅ 1) Traer TODAS las preguntas del testid=5 desde la 528 (sin filtro de section)
+      // ✅ 1) Preguntas del test 5 por dat_type razonamiento_verbal
       const questionsRes = await supabase
         .from('questions')
-        .select('id, question, section')
+        .select('id, question, section, dat_type, image_path')
         .eq('testid', TEST_ID)
-        .gte('id', MIN_QUESTION_ID)
+        .eq('dat_type', DAT_TYPE)
         .order('id');
 
       if (questionsRes.error) {
@@ -185,13 +206,13 @@ const DatVerbal: React.FC = () => {
       const qs: Question[] = questionsRes.data || [];
       setAllQuestions(qs);
 
-      // ✅ 2) Fijar sección inicial a la primera sección disponible (si existe)
-      const availableSections = Array.from(new Set(qs.map((q) => q.section))).sort((a, b) => a - b);
-      if (availableSections.length > 0) {
-        setCurrentSection((prev) => (availableSections.includes(prev) ? prev : availableSections[0]));
+      // ✅ 2) Sección inicial = primera disponible
+      const sectionsSorted = Array.from(new Set(qs.map((q) => q.section))).sort((a, b) => a - b);
+      if (sectionsSorted.length > 0) {
+        setCurrentSection((prev) => (sectionsSorted.includes(prev) ? prev : sectionsSorted[0]));
       }
 
-      // ✅ 3) Traer answeroptions SOLO para esas preguntas (evita límite 1000)
+      // ✅ 3) Opciones SOLO para esas preguntas (chunks)
       const questionIds = qs.map((q) => q.id);
 
       if (questionIds.length === 0) {
@@ -222,13 +243,13 @@ const DatVerbal: React.FC = () => {
         setAnswerOptions(allOpts);
       }
 
-      // ✅ 4) Cargar datos guardados
+      // ✅ 4) Cargar localStorage
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const localData = JSON.parse(stored);
           setAnswers(localData.answers || {});
-          setCurrentSection(localData.currentSection || (availableSections[0] ?? 1));
+          setCurrentSection(localData.currentSection || (sectionsSorted[0] ?? 1));
           setLastSaved(localData.lastSaved || '');
           showSnackbar('Respuestas cargadas', 'success');
         }
@@ -264,9 +285,10 @@ const DatVerbal: React.FC = () => {
     );
   }
 
-  const availableSections = Object.keys(groupedQuestions)
-    .map((k) => parseInt(k))
-    .sort((a, b) => a - b);
+  // ⚠️ Aviso si alguna sección tiene menos de 10 preguntas
+  const sectionsWithLessThan10 = availableSections.filter(
+    (s) => (groupedQuestions[s]?.length || 0) < QUESTIONS_PER_SECTION
+  );
 
   return (
     <Box
@@ -317,7 +339,7 @@ const DatVerbal: React.FC = () => {
           </Box>
 
           <Typography variant="h5" color="primary">
-            DAT
+            Test: Razonamiento Verbal
           </Typography>
           <Typography variant="subtitle1" color="primary">
             Sección {currentSection}
@@ -329,6 +351,12 @@ const DatVerbal: React.FC = () => {
               Guardado: {lastSaved}
             </Typography>
           )}
+
+          {sectionsWithLessThan10.length > 0 && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              Ojo: hay secciones con menos de {QUESTIONS_PER_SECTION} preguntas: {sectionsWithLessThan10.join(', ')}.
+            </Alert>
+          )}
         </Box>
 
         {/* Contenido */}
@@ -337,13 +365,46 @@ const DatVerbal: React.FC = () => {
             <Alert severity="warning">No hay preguntas para mostrar en esta sección.</Alert>
           ) : (
             questions.map((q) => {
+              const imgUrl = getPublicImageUrl(q.image_path);
               const opts = getOptionsForQuestion(q.id);
+
               return (
                 <Box key={q.id} mb={4}>
-                  <Typography variant="body1" fontWeight={500} gutterBottom>
-                    {q.question}
-                  </Typography>
+                  {/* Imagen si existe */}
+                  {imgUrl && (
+                    <Box
+                      sx={{
+                        mt: 1,
+                        mb: 1.5,
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        backgroundColor: 'rgba(0,0,0,0.02)',
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={imgUrl}
+                        alt={`Pregunta ${q.id}`}
+                        loading="lazy"
+                        sx={{
+                          display: 'block',
+                          width: '100%',
+                          maxHeight: 420,
+                          objectFit: 'contain',
+                        }}
+                      />
+                    </Box>
+                  )}
 
+                  {/* Texto */}
+                  {q.question && (
+                    <Typography variant="body1" fontWeight={500} gutterBottom>
+                      {q.question}
+                    </Typography>
+                  )}
+
+                  {/* Opciones */}
                   {opts.length === 0 ? (
                     <Alert severity="error" sx={{ mt: 1 }}>
                       No se encontraron opciones para la pregunta ID {q.id}.
