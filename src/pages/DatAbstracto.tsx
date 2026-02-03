@@ -69,6 +69,8 @@ const DatAbstracto: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>('');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
 
   // Guardado local
   const saveToLocal = useCallback(() => {
@@ -127,6 +129,16 @@ const DatAbstracto: React.FC = () => {
       success ? 'Respuestas guardadas correctamente' : 'Error al guardar',
       success ? 'success' : 'error'
     );
+  };
+
+  const handleOpenPreview = (src: string) => {
+    setPreviewSrc(src);
+    setPreviewOpen(true);
+  };
+
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
+    setPreviewSrc(null);
   };
 
   const isSectionComplete = (section: number): boolean => {
@@ -362,6 +374,7 @@ const DatAbstracto: React.FC = () => {
                       src={imgUrl}
                       alt={`Pregunta ${q.id}`}
                       loading="lazy"
+                      onClick={() => handleOpenPreview(imgUrl)}
                       sx={{
                         display: 'block',
                         maxWidth: '100%',
@@ -369,7 +382,8 @@ const DatAbstracto: React.FC = () => {
                         height: 'auto',
                         width: 'auto',
                         objectFit: 'contain',
-                        margin: '0 auto'
+                        margin: '0 auto',
+                        cursor: 'zoom-in'
                       }}
                     />
                   </Box>
@@ -536,6 +550,43 @@ const DatAbstracto: React.FC = () => {
             </Button>
             <Button onClick={confirmExit} variant="contained" color="primary" sx={{ minWidth: 100 }}>
               Salir
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Vista previa imagen */}
+        <Dialog
+          open={previewOpen}
+          onClose={handleClosePreview}
+          maxWidth="lg"
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              backgroundColor: '#111'
+            }
+          }}
+        >
+          <DialogContent sx={{ p: 2, backgroundColor: '#111' }}>
+            {previewSrc && (
+              <Box
+                component="img"
+                src={previewSrc}
+                alt="Vista previa"
+                sx={{
+                  display: 'block',
+                  maxWidth: '90vw',
+                  maxHeight: '80vh',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  margin: '0 auto'
+                }}
+              />
+            )}
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: 'center', backgroundColor: '#111', pb: 2 }}>
+            <Button onClick={handleClosePreview} variant="outlined" color="inherit">
+              Cerrar
             </Button>
           </DialogActions>
         </Dialog>
