@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import {
   Box,
@@ -15,11 +15,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  IconButton,
-  useMediaQuery
+  IconButton
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import Fade from '@mui/material/Fade';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -43,8 +40,6 @@ interface AnswerOption {
 const DatAbstracto: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const TEST_ID = 5;
   const DAT_TYPE = 'razonamiento_abstracto';
@@ -76,8 +71,6 @@ const DatAbstracto: React.FC = () => {
   const [lastSaved, setLastSaved] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
-  const [previewZoomed, setPreviewZoomed] = useState(false);
-  const lastTapRef = useRef<number | null>(null);
 
   // Guardado local
   const saveToLocal = useCallback(() => {
@@ -140,32 +133,12 @@ const DatAbstracto: React.FC = () => {
 
   const handleOpenPreview = (src: string) => {
     setPreviewSrc(src);
-    setPreviewZoomed(false);
     setPreviewOpen(true);
   };
 
   const handleClosePreview = () => {
     setPreviewOpen(false);
     setPreviewSrc(null);
-    setPreviewZoomed(false);
-  };
-
-  const handlePreviewTap = () => {
-    if (!isMobile) return;
-    const now = Date.now();
-    const last = lastTapRef.current;
-    if (last && now - last < 300) {
-      lastTapRef.current = null;
-      setPreviewZoomed(prev => !prev);
-      return;
-    }
-    lastTapRef.current = now;
-    setTimeout(() => {
-      if (lastTapRef.current === now) {
-        lastTapRef.current = null;
-        handleClosePreview();
-      }
-    }, 320);
   };
 
   const isSectionComplete = (section: number): boolean => {
@@ -290,6 +263,17 @@ const DatAbstracto: React.FC = () => {
     if (scrollContainer) scrollContainer.scrollTop = 0;
   }, [currentSection]);
 
+  // Resetear scroll de la vista previa al inicio cuando se abre
+  useEffect(() => {
+    if (previewOpen) {
+      const previewContainer = document.getElementById('preview-scroll-container');
+      if (previewContainer) {
+        previewContainer.scrollLeft = 0;
+        previewContainer.scrollTop = 0;
+      }
+    }
+  }, [previewOpen]);
+
   if (loading) {
     return (
       <Box
@@ -393,7 +377,11 @@ const DatAbstracto: React.FC = () => {
                       borderRadius: 2,
                       overflow: 'hidden',
                       border: '1px solid rgba(0,0,0,0.08)',
-                      backgroundColor: 'rgba(0,0,0,0.02)'
+                      backgroundColor: 'rgba(0,0,0,0.02)',
+                      position: 'relative',
+                      '&:hover .zoom-hint': {
+                        opacity: 1
+                      }
                     }}
                   >
                     <Box
@@ -410,9 +398,35 @@ const DatAbstracto: React.FC = () => {
                         width: 'auto',
                         objectFit: 'contain',
                         margin: '0 auto',
-                        cursor: 'zoom-in'
+                        cursor: 'zoom-in',
+                        transition: 'transform 0.2s ease',
+                        '&:hover': {
+                          transform: 'scale(1.02)'
+                        }
                       }}
                     />
+                    {/* Hint de zoom */}
+                    <Box
+                      className="zoom-hint"
+                      sx={{
+                        position: 'absolute',
+                        bottom: 8,
+                        right: 8,
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: 'white',
+                        padding: '4px 12px',
+                        borderRadius: 2,
+                        fontSize: '0.75rem',
+                        opacity: 0,
+                        transition: 'opacity 0.3s ease',
+                        pointerEvents: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5
+                      }}
+                    >
+                      🔍 Clic para ampliar
+                    </Box>
                   </Box>
                 )}
 
@@ -581,51 +595,168 @@ const DatAbstracto: React.FC = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Vista previa imagen */}
+        {/* Vista previa imagen - Modal compacto */}
         <Dialog
           open={previewOpen}
           onClose={handleClosePreview}
-          fullScreen={isMobile}
           maxWidth="lg"
-          TransitionComponent={Fade}
-          transitionDuration={200}
+          fullWidth
           PaperProps={{
             sx: {
-              borderRadius: isMobile ? 0 : 2,
-              backgroundColor: '#111'
+              backgroundColor: 'rgba(0, 0, 0, 0.98)',
+              boxShadow: 'none',
+              margin: { xs: 2, sm: 4 },
+              maxHeight: { xs: '85vh', sm: '90vh' },
+              borderRadius: { xs: 2, sm: 3 }
+            }
+          }}
+          sx={{
+            '& .MuiBackdrop-root': {
+              backgroundColor: 'rgba(0, 0, 0, 0.92)',
+              backdropFilter: 'blur(8px)'
             }
           }}
         >
-          <DialogContent sx={{ p: isMobile ? 0 : 2, backgroundColor: '#111' }}>
-            {previewSrc && (
-              <Box
-                component="img"
-                src={previewSrc}
-                alt="Vista previa"
-                onClick={handlePreviewTap}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%'
+            }}
+          >
+            {/* Botón cerrar arriba */}
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                padding: { xs: 1.5, sm: 2 },
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <IconButton
+                onClick={handleClosePreview}
                 sx={{
-                  display: 'block',
-                  maxWidth: isMobile ? '100vw' : '90vw',
-                  maxHeight: isMobile ? '100vh' : '80vh',
-                  width: 'auto',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  margin: '0 auto',
-                  cursor: isMobile ? 'zoom-in' : 'default',
-                  transform: previewZoomed ? 'scale(2)' : 'scale(1)',
-                  transformOrigin: 'center center',
-                  transition: 'transform 180ms ease-out'
+                  color: 'white',
+                  backgroundColor: 'rgba(255, 59, 48, 0.2)',
+                  backdropFilter: 'blur(10px)',
+                  width: { xs: 42, sm: 48 },
+                  height: { xs: 42, sm: 48 },
+                  border: '2px solid rgba(255, 59, 48, 0.3)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 59, 48, 0.9)',
+                    transform: 'scale(1.1) rotate(90deg)',
+                    borderColor: 'rgba(255, 59, 48, 0.8)'
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
-              />
-            )}
-          </DialogContent>
-          {!isMobile && (
-            <DialogActions sx={{ justifyContent: 'center', backgroundColor: '#111', pb: 2 }}>
-              <Button onClick={handleClosePreview} variant="outlined" color="inherit">
-                Cerrar
-              </Button>
-            </DialogActions>
-          )}
+              >
+                <Box 
+                  component="span" 
+                  sx={{ 
+                    fontSize: { xs: '1.5rem', sm: '1.8rem' },
+                    fontWeight: 300,
+                    lineHeight: 1
+                  }}
+                >
+                  ✕
+                </Box>
+              </IconButton>
+            </Box>
+
+            {/* Contenedor de imagen con scroll */}
+            <Box
+              id="preview-scroll-container"
+              sx={{
+                flex: 1,
+                overflow: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start', // Cambiado de center a flex-start
+                backgroundColor: '#000',
+                padding: { xs: 1, sm: 2 },
+                WebkitOverflowScrolling: 'touch',
+                '&::-webkit-scrollbar': {
+                  height: '6px',
+                  width: '6px'
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'rgba(255, 255, 255, 0.05)'
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '3px'
+                }
+              }}
+            >
+              {/* Imagen completa sin cortes */}
+              {previewSrc && (
+                <Box
+                  component="img"
+                  src={previewSrc}
+                  alt="Vista previa"
+                  onClick={handleClosePreview}
+                  sx={{
+                    display: 'block',
+                    maxWidth: 'none', // Sin límite de ancho - permite mostrar imagen completa
+                    maxHeight: '100%',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    cursor: 'zoom-out',
+                    borderRadius: 1,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    animation: 'zoomIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '@keyframes zoomIn': {
+                      from: {
+                        opacity: 0,
+                        transform: 'scale(0.95)'
+                      },
+                      to: {
+                        opacity: 1,
+                        transform: 'scale(1)'
+                      }
+                    }
+                  }}
+                />
+              )}
+            </Box>
+
+            {/* Footer con indicador */}
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                padding: { xs: 1.5, sm: 2 },
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                  fontWeight: 500,
+                  textAlign: 'center'
+                }}
+              >
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                  👆 Toca para cerrar
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  💡 Clic o <Box component="span" sx={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+                    padding: '3px 8px', 
+                    borderRadius: 1,
+                    fontFamily: 'monospace',
+                    fontSize: '0.8rem',
+                    mx: 0.5
+                  }}>ESC</Box> para cerrar
+                </Box>
+              </Typography>
+            </Box>
+          </Box>
         </Dialog>
 
         {/* Snackbar */}
