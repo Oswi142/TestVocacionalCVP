@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import {
   Box,
@@ -15,8 +15,11 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  IconButton
+  IconButton,
+  useMediaQuery
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import Fade from '@mui/material/Fade';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
@@ -40,6 +43,8 @@ interface AnswerOption {
 const DatAbstracto: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const TEST_ID = 5;
   const DAT_TYPE = 'razonamiento_abstracto';
@@ -71,6 +76,8 @@ const DatAbstracto: React.FC = () => {
   const [lastSaved, setLastSaved] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [previewZoomed, setPreviewZoomed] = useState(false);
+  const lastTapRef = useRef<number | null>(null);
 
   // Guardado local
   const saveToLocal = useCallback(() => {
@@ -133,12 +140,32 @@ const DatAbstracto: React.FC = () => {
 
   const handleOpenPreview = (src: string) => {
     setPreviewSrc(src);
+    setPreviewZoomed(false);
     setPreviewOpen(true);
   };
 
   const handleClosePreview = () => {
     setPreviewOpen(false);
     setPreviewSrc(null);
+    setPreviewZoomed(false);
+  };
+
+  const handlePreviewTap = () => {
+    if (!isMobile) return;
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last && now - last < 300) {
+      lastTapRef.current = null;
+      setPreviewZoomed(prev => !prev);
+      return;
+    }
+    lastTapRef.current = now;
+    setTimeout(() => {
+      if (lastTapRef.current === now) {
+        lastTapRef.current = null;
+        handleClosePreview();
+      }
+    }, 320);
   };
 
   const isSectionComplete = (section: number): boolean => {
@@ -558,37 +585,47 @@ const DatAbstracto: React.FC = () => {
         <Dialog
           open={previewOpen}
           onClose={handleClosePreview}
+          fullScreen={isMobile}
           maxWidth="lg"
+          TransitionComponent={Fade}
+          transitionDuration={200}
           PaperProps={{
             sx: {
-              borderRadius: 2,
+              borderRadius: isMobile ? 0 : 2,
               backgroundColor: '#111'
             }
           }}
         >
-          <DialogContent sx={{ p: 2, backgroundColor: '#111' }}>
+          <DialogContent sx={{ p: isMobile ? 0 : 2, backgroundColor: '#111' }}>
             {previewSrc && (
               <Box
                 component="img"
                 src={previewSrc}
                 alt="Vista previa"
+                onClick={handlePreviewTap}
                 sx={{
                   display: 'block',
-                  maxWidth: '90vw',
-                  maxHeight: '80vh',
+                  maxWidth: isMobile ? '100vw' : '90vw',
+                  maxHeight: isMobile ? '100vh' : '80vh',
                   width: 'auto',
                   height: 'auto',
                   objectFit: 'contain',
-                  margin: '0 auto'
+                  margin: '0 auto',
+                  cursor: isMobile ? 'zoom-in' : 'default',
+                  transform: previewZoomed ? 'scale(2)' : 'scale(1)',
+                  transformOrigin: 'center center',
+                  transition: 'transform 180ms ease-out'
                 }}
               />
             )}
           </DialogContent>
-          <DialogActions sx={{ justifyContent: 'center', backgroundColor: '#111', pb: 2 }}>
-            <Button onClick={handleClosePreview} variant="outlined" color="inherit">
-              Cerrar
-            </Button>
-          </DialogActions>
+          {!isMobile && (
+            <DialogActions sx={{ justifyContent: 'center', backgroundColor: '#111', pb: 2 }}>
+              <Button onClick={handleClosePreview} variant="outlined" color="inherit">
+                Cerrar
+              </Button>
+            </DialogActions>
+          )}
         </Dialog>
 
         {/* Snackbar */}
