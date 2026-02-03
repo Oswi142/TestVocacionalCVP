@@ -13,6 +13,7 @@ import ClientsReports from './pages/ClientsReports';
 import DatDashboard from './pages/DatDashboard';
 import DatVerbal from './pages/DatVerbal';
 import DatNumerico from './pages/DatNumerico';
+import DatAbstracto from './pages/DatAbstracto';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
         <Route path="/dat" element={<DatDashboard />} />
         <Route path="/dat/verbal" element={<DatVerbal />} />
         <Route path="/dat/numerico" element={<DatNumerico />} />
+        <Route path="/dat/abstracto" element={<DatAbstracto />} />
         {/*Nueva ruta */}
       </Routes>
     </BrowserRouter>
