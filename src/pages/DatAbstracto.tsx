@@ -442,6 +442,12 @@ const DatAbstracto: React.FC = () => {
                   <RadioGroup
                     value={answers[q.id] || ''}
                     onChange={(e) => handleChange(q.id, e.target.value)}
+                    row
+                    sx={{
+                      flexWrap: 'nowrap',
+                      width: '100%',
+                      justifyContent: 'space-between'
+                    }}
                   >
                     {opts.map((opt) => (
                       <FormControlLabel
@@ -449,6 +455,7 @@ const DatAbstracto: React.FC = () => {
                         value={String(opt.id)}
                         control={<Radio color="primary" />}
                         label={opt.answer}
+                        sx={{ mr: 0, flex: 1, justifyContent: 'center' }}
                       />
                     ))}
                   </RadioGroup>
