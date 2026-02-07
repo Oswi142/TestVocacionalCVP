@@ -14,6 +14,7 @@ import DatDashboard from './pages/DatDashboard';
 import DatVerbal from './pages/DatVerbal';
 import DatNumerico from './pages/DatNumerico';
 import DatAbstracto from './pages/DatAbstracto';
+import DatMecanico from './pages/DatMecanico';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
         <Route path="/dat/verbal" element={<DatVerbal />} />
         <Route path="/dat/numerico" element={<DatNumerico />} />
         <Route path="/dat/abstracto" element={<DatAbstracto />} />
+        <Route path="/dat/mecanico" element={<DatMecanico />} />
         {/*Nueva ruta */}
       </Routes>
     </BrowserRouter>
