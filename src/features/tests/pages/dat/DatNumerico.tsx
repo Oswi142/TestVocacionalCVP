@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../../../supabaseClient';
 import {
   Box,
   Button,
@@ -37,18 +37,16 @@ interface AnswerOption {
   answer: string;
 }
 
-const DatMecanico: React.FC = () => {
+const DatNumerico: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
-
+  const STORAGE_KEY = `dat_numerico_${user.id || 'anonymous'}`;
   const TEST_ID = 5;
-  const DAT_TYPE = 'razonamiento_mecanico';
-  const MIN_QUESTION_ID = 658;
+  const DAT_TYPE = 'razonamiento_numerico';
 
-  const STORAGE_KEY = `dat_mecanico_${user.id || 'anonymous'}`;
-
-  // Bucket público
+  // Config del bucket público
   const STORAGE_BUCKET = 'question_images';
+  const SECTION_IMAGE_PATH = 'dat_numerico/diagrama.png';
   const getPublicImageUrl = (imagePath?: string | null) => {
     if (!imagePath) return null;
     const base = import.meta.env.VITE_SUPABASE_URL;
@@ -61,11 +59,9 @@ const DatMecanico: React.FC = () => {
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
-
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>('');
@@ -95,7 +91,6 @@ const DatMecanico: React.FC = () => {
 
   const handleSnackbarClose = () => setSnackbarOpen(false);
 
-  // Agrupar por section
   const groupedQuestions = allQuestions.reduce((acc: { [key: number]: Question[] }, q) => {
     if (!acc[q.section]) acc[q.section] = [];
     acc[q.section].push(q);
@@ -108,7 +103,10 @@ const DatMecanico: React.FC = () => {
     answerOptions.filter(opt => opt.questionid === questionId);
 
   const handleChange = (id: number, value: string) => {
-    setAnswers(prev => ({ ...prev, [id]: value }));
+    setAnswers(prev => ({
+      ...prev,
+      [id]: value
+    }));
   };
 
   const handleSectionChange = (section: number) => setCurrentSection(section);
@@ -123,10 +121,7 @@ const DatMecanico: React.FC = () => {
 
   const handleManualSave = () => {
     const success = saveToLocal();
-    showSnackbar(
-      success ? 'Respuestas guardadas correctamente' : 'Error al guardar',
-      success ? 'success' : 'error'
-    );
+    showSnackbar(success ? 'Respuestas guardadas correctamente' : 'Error al guardar', success ? 'success' : 'error');
   };
 
   const isSectionComplete = (section: number): boolean => {
@@ -153,7 +148,7 @@ const DatMecanico: React.FC = () => {
       for (const q of allQuestions) {
         await supabase.from('testsanswers').insert({
           clientid: user.id,
-          testid: TEST_ID,
+          testid: TEST_ID, // 👈 Dat Numérico
           questionid: q.id,
           answerid: parseInt(answers[q.id])
         });
@@ -173,13 +168,12 @@ const DatMecanico: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
 
-      // Traer preguntas del mecánico desde id >= 658
+      // Traer preguntas de razonamiento numérico (testid 5)
       const questionsRes = await supabase
         .from('questions')
         .select('id, question, section, dat_type, image_path')
         .eq('testid', TEST_ID)
         .eq('dat_type', DAT_TYPE)
-        .gte('id', MIN_QUESTION_ID)
         .order('id');
 
       if (questionsRes.error) {
@@ -192,13 +186,13 @@ const DatMecanico: React.FC = () => {
       const qs: Question[] = questionsRes.data || [];
       setAllQuestions(qs);
 
-      const sectionsSorted = Array.from(new Set(qs.map(q => q.section))).sort((a, b) => a - b);
+      const sectionsSorted = Array.from(new Set(qs.map((q) => q.section))).sort((a, b) => a - b);
       if (sectionsSorted.length > 0) {
-        setCurrentSection(prev => (sectionsSorted.includes(prev) ? prev : sectionsSorted[0]));
+        setCurrentSection((prev) => (sectionsSorted.includes(prev) ? prev : sectionsSorted[0]));
       }
 
-      // Traer opciones solo para esas preguntas
-      const questionIds = qs.map(q => q.id);
+      // Opciones SOLO para esas preguntas
+      const questionIds = qs.map((q) => q.id);
       if (questionIds.length === 0) {
         setAnswerOptions([]);
       } else {
@@ -226,7 +220,7 @@ const DatMecanico: React.FC = () => {
         setAnswerOptions(allOpts);
       }
 
-      // Cargar guardado local
+      // Cargar datos guardados
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -269,31 +263,27 @@ const DatMecanico: React.FC = () => {
   }
 
   return (
-    <Box
-      sx={{
-        width: '100vw',
-        height: '100vh',
-        background: 'linear-gradient(to right, #f9c9a4, #cafacc)',
+    <Box sx={{
+      width: '100vw',
+      height: '100vh',
+      background: 'linear-gradient(to right, #f9c9a4, #cafacc)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 2,
+      overflow: 'hidden'
+    }}>
+      <Box sx={{
+        width: '100%',
+        maxWidth: 600,
+        height: '90vh',
+        backgroundColor: '#ffffff',
+        borderRadius: 4,
+        boxShadow: 3,
         display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 2,
+        flexDirection: 'column',
         overflow: 'hidden'
-      }}
-    >
-      <Box
-        sx={{
-          width: '100%',
-          maxWidth: 600,
-          height: '90vh',
-          backgroundColor: '#ffffff',
-          borderRadius: 4,
-          boxShadow: 3,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}
-      >
+      }}>
         {/* Header */}
         <Box sx={{ padding: 2, borderBottom: '1px solid #e0e0e0', flexShrink: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -316,7 +306,7 @@ const DatMecanico: React.FC = () => {
             </Button>
           </Box>
 
-          <Typography variant="h5" color="primary">Test: Razonamiento Mecánico</Typography>
+          <Typography variant="h5" color="primary">Test: Razonamiento Numérico</Typography>
           <Typography variant="subtitle1" color="primary">
             Sección {currentSection}
           </Typography>
@@ -339,13 +329,39 @@ const DatMecanico: React.FC = () => {
             paddingTop: 2
           }}
         >
+          {/* Imagen de sección */}
+          {currentSection === 5 && (
+            <Box
+              sx={{
+                mb: 3,
+                borderRadius: 2,
+                overflow: 'hidden',
+                border: '1px solid rgba(0,0,0,0.08)',
+                backgroundColor: 'rgba(0,0,0,0.02)'
+              }}
+            >
+              <Box
+                component="img"
+                src={getPublicImageUrl(SECTION_IMAGE_PATH) || ''}
+                alt="Diagrama sección"
+                loading="lazy"
+                sx={{
+                  display: 'block',
+                  width: '100%',
+                  maxHeight: 800,
+                  objectFit: 'contain'
+                }}
+              />
+            </Box>
+          )}
+
           {questions.map((q) => {
             const imgUrl = getPublicImageUrl(q.image_path);
             const opts = getOptionsForQuestion(q.id);
 
             return (
               <Box key={q.id} mb={4}>
-                {/* Imagen (sin zoom / modal) */}
+                {/* Imagen */}
                 {imgUrl && (
                   <Box
                     sx={{
@@ -365,7 +381,7 @@ const DatMecanico: React.FC = () => {
                       sx={{
                         display: 'block',
                         maxWidth: '100%',
-                        maxHeight: 520,
+                        maxHeight: 420,
                         height: 'auto',
                         width: 'auto',
                         objectFit: 'contain',
@@ -387,12 +403,6 @@ const DatMecanico: React.FC = () => {
                   <RadioGroup
                     value={answers[q.id] || ''}
                     onChange={(e) => handleChange(q.id, e.target.value)}
-                    row
-                    sx={{
-                      flexWrap: 'nowrap',
-                      width: '100%',
-                      justifyContent: 'space-between'
-                    }}
                   >
                     {opts.map((opt) => (
                       <FormControlLabel
@@ -400,7 +410,6 @@ const DatMecanico: React.FC = () => {
                         value={String(opt.id)}
                         control={<Radio color="primary" />}
                         label={opt.answer}
-                        sx={{ mr: 0, flex: 1, justifyContent: 'center' }}
                       />
                     ))}
                   </RadioGroup>
@@ -415,18 +424,22 @@ const DatMecanico: React.FC = () => {
         </Box>
 
         {/* Footer */}
-        <Box
-          sx={{
-            padding: 2,
-            borderTop: '1px solid #e0e0e0',
-            flexShrink: 0,
+        <Box sx={{
+          padding: 2,
+          borderTop: '1px solid #e0e0e0',
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 2
+        }}>
+          <Box sx={{
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: 2
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
+            gap: 1,
+            flexWrap: 'wrap',
+            justifyContent: 'center'
+          }}>
             {Object.keys(groupedQuestions).map((key) => {
               const section = parseInt(key);
               const complete = isSectionComplete(section);
@@ -441,9 +454,17 @@ const DatMecanico: React.FC = () => {
                     height: 36,
                     borderRadius: '50%',
                     color: complete ? '#fff' : isCurrent ? '#fff' : '#333',
-                    backgroundColor: complete ? '#4caf50' : isCurrent ? '#1976d2' : '#f0f0f0',
+                    backgroundColor: complete
+                      ? '#4caf50'
+                      : isCurrent
+                        ? '#1976d2'
+                        : '#f0f0f0',
                     '&:hover': {
-                      backgroundColor: complete ? '#388e3c' : isCurrent ? '#1565c0' : '#e0e0e0',
+                      backgroundColor: complete
+                        ? '#388e3c'
+                        : isCurrent
+                          ? '#1565c0'
+                          : '#e0e0e0',
                     }
                   }}
                 >
@@ -461,7 +482,9 @@ const DatMecanico: React.FC = () => {
                 borderRadius: '50%',
                 backgroundColor: isAllComplete() ? '#0288d1' : '#cfd8dc',
                 color: isAllComplete() ? 'white' : '#757575',
-                '&:hover': { backgroundColor: isAllComplete() ? '#0277bd' : '#cfd8dc' }
+                '&:hover': {
+                  backgroundColor: isAllComplete() ? '#0277bd' : '#cfd8dc',
+                }
               }}
             >
               <CheckIcon fontSize="small" />
@@ -538,16 +561,25 @@ const DatMecanico: React.FC = () => {
             </DialogContent>
           </Box>
           <DialogActions sx={{ justifyContent: 'center', pb: 2, gap: 1 }}>
-            <Button onClick={() => setExitConfirmOpen(false)} variant="outlined" color="primary" sx={{ minWidth: 100 }}>
+            <Button
+              onClick={() => setExitConfirmOpen(false)}
+              variant="outlined"
+              color="primary"
+              sx={{ minWidth: 100 }}
+            >
               Continuar
             </Button>
-            <Button onClick={confirmExit} variant="contained" color="primary" sx={{ minWidth: 100 }}>
+            <Button
+              onClick={confirmExit}
+              variant="contained"
+              color="primary"
+              sx={{ minWidth: 100 }}
+            >
               Salir
             </Button>
           </DialogActions>
         </Dialog>
 
-        {/* Snackbar */}
         <Snackbar
           open={snackbarOpen}
           autoHideDuration={3000}
@@ -563,4 +595,7 @@ const DatMecanico: React.FC = () => {
   );
 };
 
-export default DatMecanico;
+export default DatNumerico;
+
+
+

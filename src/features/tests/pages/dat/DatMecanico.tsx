@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../../../supabaseClient';
 import {
   Box,
   Button,
@@ -25,9 +25,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface Question {
   id: number;
-  question: string;
+  question: string | null;
   section: number;
-  chatype: string;
+  dat_type?: string | null;
+  image_path?: string | null;
 }
 
 interface AnswerOption {
@@ -36,10 +37,23 @@ interface AnswerOption {
   answer: string;
 }
 
-const Chaside: React.FC = () => {
+const DatMecanico: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const navigate = useNavigate();
-  const STORAGE_KEY = `chaside_${user.id || 'anonymous'}`;
+
+  const TEST_ID = 5;
+  const DAT_TYPE = 'razonamiento_mecanico';
+  const MIN_QUESTION_ID = 658;
+
+  const STORAGE_KEY = `dat_mecanico_${user.id || 'anonymous'}`;
+
+  // Bucket público
+  const STORAGE_BUCKET = 'question_images';
+  const getPublicImageUrl = (imagePath?: string | null) => {
+    if (!imagePath) return null;
+    const base = import.meta.env.VITE_SUPABASE_URL;
+    return `${base}/storage/v1/object/public/${STORAGE_BUCKET}/${imagePath}`;
+  };
 
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [answerOptions, setAnswerOptions] = useState<AnswerOption[]>([]);
@@ -47,14 +61,16 @@ const Chaside: React.FC = () => {
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>('');
 
-  // Sistema de guardado manual únicamente
+  // Guardado local
   const saveToLocal = useCallback(() => {
     try {
       const data = {
@@ -62,7 +78,6 @@ const Chaside: React.FC = () => {
         currentSection,
         lastSaved: new Date().toLocaleString()
       };
-      
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       setLastSaved(data.lastSaved);
       return true;
@@ -78,10 +93,9 @@ const Chaside: React.FC = () => {
     setSnackbarOpen(true);
   };
 
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-  };
+  const handleSnackbarClose = () => setSnackbarOpen(false);
 
+  // Agrupar por section
   const groupedQuestions = allQuestions.reduce((acc: { [key: number]: Question[] }, q) => {
     if (!acc[q.section]) acc[q.section] = [];
     acc[q.section].push(q);
@@ -91,25 +105,17 @@ const Chaside: React.FC = () => {
   const questions = groupedQuestions[currentSection] || [];
 
   const getOptionsForQuestion = (questionId: number) =>
-    answerOptions.filter(opt => Number(opt.questionid) === Number(questionId));
+    answerOptions.filter(opt => opt.questionid === questionId);
 
   const handleChange = (id: number, value: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [id]: value
-    }));
+    setAnswers(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleSectionChange = (section: number) => {
-    setCurrentSection(section);
-  };
+  const handleSectionChange = (section: number) => setCurrentSection(section);
 
-  const handleExit = () => {
-    setExitConfirmOpen(true);
-  };
+  const handleExit = () => setExitConfirmOpen(true);
 
   const confirmExit = () => {
-    // Guardar automáticamente al salir
     saveToLocal();
     setExitConfirmOpen(false);
     navigate(-1);
@@ -117,7 +123,10 @@ const Chaside: React.FC = () => {
 
   const handleManualSave = () => {
     const success = saveToLocal();
-    showSnackbar(success ? 'Respuestas guardadas correctamente' : 'Error al guardar', success ? 'success' : 'error');
+    showSnackbar(
+      success ? 'Respuestas guardadas correctamente' : 'Error al guardar',
+      success ? 'success' : 'error'
+    );
   };
 
   const isSectionComplete = (section: number): boolean => {
@@ -144,15 +153,13 @@ const Chaside: React.FC = () => {
       for (const q of allQuestions) {
         await supabase.from('testsanswers').insert({
           clientid: user.id,
-          testid: 3,
+          testid: TEST_ID,
           questionid: q.id,
           answerid: parseInt(answers[q.id])
         });
       }
 
-      // Limpiar datos locales después del envío exitoso
       localStorage.removeItem(STORAGE_KEY);
-
       showSnackbar('Respuestas enviadas correctamente', 'success');
       setTimeout(() => navigate('/client'), 2000);
     } catch (err: any) {
@@ -164,56 +171,76 @@ const Chaside: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        // Primero obtener las preguntas
-        const questionsRes = await supabase
-          .from('questions')
-          .select('id, question, section, chatype')
-          .eq('testid', 3)
-          .order('id');
+      setLoading(true);
 
-        if (questionsRes.error) throw questionsRes.error;
-        
-        const questions = questionsRes.data || [];
-        const questionIds = questions.map(q => q.id);
-        
-        // Luego obtener solo las opciones de respuesta para estas preguntas
-        const optionsRes = await supabase
-          .from('answeroptions')
-          .select('id, questionid, answer')
-          .in('questionid', questionIds)
-          .order('id');
+      // Traer preguntas del mecánico desde id >= 658
+      const questionsRes = await supabase
+        .from('questions')
+        .select('id, question, section, dat_type, image_path')
+        .eq('testid', TEST_ID)
+        .eq('dat_type', DAT_TYPE)
+        .gte('id', MIN_QUESTION_ID)
+        .order('id');
 
-        if (optionsRes.error) throw optionsRes.error;
-
-        setAllQuestions(questions);
-        const cleaned = (optionsRes.data || []).map((opt: any) => ({
-          ...opt,
-          questionid: Number(opt.questionid),
-        }));
-        setAnswerOptions(cleaned);
-
-        // Cargar datos guardados
-        try {
-          const stored = localStorage.getItem(STORAGE_KEY);
-          if (stored) {
-            const localData = JSON.parse(stored);
-            setAnswers(localData.answers || {});
-            setCurrentSection(localData.currentSection || 1);
-            setLastSaved(localData.lastSaved || '');
-            
-            showSnackbar('Respuestas cargadas', 'success');
-          }
-        } catch (error) {
-          console.error('Error loading data:', error);
-        }
-        
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        showSnackbar('Error al cargar los datos', 'error');
-      } finally {
+      if (questionsRes.error) {
+        console.error('questions error:', questionsRes.error);
+        showSnackbar('Error cargando preguntas', 'error');
         setLoading(false);
+        return;
       }
+
+      const qs: Question[] = questionsRes.data || [];
+      setAllQuestions(qs);
+
+      const sectionsSorted = Array.from(new Set(qs.map(q => q.section))).sort((a, b) => a - b);
+      if (sectionsSorted.length > 0) {
+        setCurrentSection(prev => (sectionsSorted.includes(prev) ? prev : sectionsSorted[0]));
+      }
+
+      // Traer opciones solo para esas preguntas
+      const questionIds = qs.map(q => q.id);
+      if (questionIds.length === 0) {
+        setAnswerOptions([]);
+      } else {
+        const CHUNK = 200;
+        const allOpts: AnswerOption[] = [];
+
+        for (let i = 0; i < questionIds.length; i += CHUNK) {
+          const slice = questionIds.slice(i, i + CHUNK);
+          const optsRes = await supabase
+            .from('answeroptions')
+            .select('id, questionid, answer')
+            .in('questionid', slice)
+            .order('id');
+
+          if (optsRes.error) {
+            console.error('answeroptions error:', optsRes.error);
+            showSnackbar('Error cargando opciones', 'error');
+            setAnswerOptions([]);
+            break;
+          }
+
+          allOpts.push(...(optsRes.data || []));
+        }
+
+        setAnswerOptions(allOpts);
+      }
+
+      // Cargar guardado local
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const localData = JSON.parse(stored);
+          setAnswers(localData.answers || {});
+          setCurrentSection(localData.currentSection || (sectionsSorted[0] ?? 1));
+          setLastSaved(localData.lastSaved || '');
+          showSnackbar('Respuestas cargadas', 'success');
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+
+      setLoading(false);
     };
 
     fetchData();
@@ -221,21 +248,19 @@ const Chaside: React.FC = () => {
 
   useEffect(() => {
     const scrollContainer = document.getElementById('scroll-container');
-    if (scrollContainer) {
-      scrollContainer.scrollTop = 0;
-    }
+    if (scrollContainer) scrollContainer.scrollTop = 0;
   }, [currentSection]);
 
   if (loading) {
     return (
-      <Box 
-        sx={{ 
-          width: '100vw', 
-          height: '100vh', 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          background: 'linear-gradient(to right, #f9c9a4, #cafacc)' 
+      <Box
+        sx={{
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'linear-gradient(to right, #f9c9a4, #cafacc)'
         }}
       >
         <CircularProgress />
@@ -244,44 +269,44 @@ const Chaside: React.FC = () => {
   }
 
   return (
-    <Box sx={{ 
-      width: '100vw', 
-      height: '100vh', 
-      background: 'linear-gradient(to right, #f9c9a4, #cafacc)', 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      padding: 2,
-      overflow: 'hidden'
-    }}>
-      <Box sx={{ 
-        width: '100%', 
-        maxWidth: 600, 
-        height: '90vh', 
-        backgroundColor: '#ffffff', 
-        borderRadius: 4, 
-        boxShadow: 3, 
-        display: 'flex', 
-        flexDirection: 'column', 
-        overflow: 'hidden' 
-      }}>
+    <Box
+      sx={{
+        width: '100vw',
+        height: '100vh',
+        background: 'linear-gradient(to right, #f9c9a4, #cafacc)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 2,
+        overflow: 'hidden'
+      }}
+    >
+      <Box
+        sx={{
+          width: '100%',
+          maxWidth: 600,
+          height: '90vh',
+          backgroundColor: '#ffffff',
+          borderRadius: 4,
+          boxShadow: 3,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
+      >
         {/* Header */}
-        <Box sx={{ 
-          padding: 2, 
-          borderBottom: '1px solid #e0e0e0', 
-          flexShrink: 0 
-        }}>
+        <Box sx={{ padding: 2, borderBottom: '1px solid #e0e0e0', flexShrink: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
             <IconButton onClick={handleExit}>
               <ArrowBackIcon />
             </IconButton>
-            
+
             <Button
               variant="outlined"
               size="small"
               startIcon={<SaveIcon />}
               onClick={handleManualSave}
-              sx={{ 
+              sx={{
                 borderColor: '#4caf50',
                 color: '#4caf50',
                 '&:hover': { borderColor: '#388e3c', backgroundColor: '#f1f8e9' }
@@ -291,7 +316,7 @@ const Chaside: React.FC = () => {
             </Button>
           </Box>
 
-          <Typography variant="h5" color="primary">Test: Chaside</Typography>
+          <Typography variant="h5" color="primary">Test: Razonamiento Mecánico</Typography>
           <Typography variant="subtitle1" color="primary">
             Sección {currentSection}
           </Typography>
@@ -305,73 +330,103 @@ const Chaside: React.FC = () => {
         </Box>
 
         {/* Contenido */}
-        <Box 
-          id="scroll-container" 
-          sx={{ 
-            flex: 1, 
-            overflow: 'auto', 
-            padding: 3, 
-            paddingTop: 2 
+        <Box
+          id="scroll-container"
+          sx={{
+            flex: 1,
+            overflow: 'auto',
+            padding: 3,
+            paddingTop: 2
           }}
         >
-          {['interest', 'aptitude'].map(type => {
-            const questionsOfType = questions.filter(q => q.chatype === type);
-            if (questionsOfType.length === 0) return null;
+          {questions.map((q) => {
+            const imgUrl = getPublicImageUrl(q.image_path);
+            const opts = getOptionsForQuestion(q.id);
 
             return (
-              <Box key={type} sx={{ mb: 3 }}>
-                <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 2 }}>
-                  {type === 'interest' ? 'Interés' : 'Aptitud'}
-                </Typography>
-
-                {questionsOfType.map((q) => (
-                  <Box key={q.id} mb={4}>
-                    <Typography variant="body1" fontWeight={500} gutterBottom>
-                      {q.question}
-                    </Typography>
-                    <RadioGroup 
-                      value={answers[q.id] || ''} 
-                      onChange={(e) => handleChange(q.id, e.target.value)}
-                    >
-                      {getOptionsForQuestion(q.id).map((opt) => (
-                        <FormControlLabel
-                          key={opt.id}
-                          value={String(opt.id)}
-                          control={<Radio color="primary" />}
-                          label={opt.answer}
-                        />
-                      ))}
-                      {/* Depurador visual para preguntas sin opciones */}
-                      {getOptionsForQuestion(q.id).length === 0 && (
-                        <Typography variant="caption" color="error">
-                          ⚠️ Esta pregunta no tiene opciones cargadas (ID: {q.id})
-                        </Typography>
-                      )}
-                    </RadioGroup>
+              <Box key={q.id} mb={4}>
+                {/* Imagen (sin zoom / modal) */}
+                {imgUrl && (
+                  <Box
+                    sx={{
+                      mt: 1,
+                      mb: 1.5,
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      backgroundColor: 'rgba(0,0,0,0.02)'
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src={imgUrl}
+                      alt={`Pregunta ${q.id}`}
+                      loading="lazy"
+                      sx={{
+                        display: 'block',
+                        maxWidth: '100%',
+                        maxHeight: 520,
+                        height: 'auto',
+                        width: 'auto',
+                        objectFit: 'contain',
+                        margin: '0 auto'
+                      }}
+                    />
                   </Box>
-                ))}
+                )}
+
+                {/* Texto (si existe) */}
+                {q.question && (
+                  <Typography variant="body1" fontWeight={500} gutterBottom>
+                    {q.question}
+                  </Typography>
+                )}
+
+                {/* Opciones (si existen) */}
+                {opts.length > 0 ? (
+                  <RadioGroup
+                    value={answers[q.id] || ''}
+                    onChange={(e) => handleChange(q.id, e.target.value)}
+                    row
+                    sx={{
+                      flexWrap: 'nowrap',
+                      width: '100%',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    {opts.map((opt) => (
+                      <FormControlLabel
+                        key={opt.id}
+                        value={String(opt.id)}
+                        control={<Radio color="primary" />}
+                        label={opt.answer}
+                        sx={{ mr: 0, flex: 1, justifyContent: 'center' }}
+                      />
+                    ))}
+                  </RadioGroup>
+                ) : (
+                  <Alert severity="info" sx={{ mt: 1 }}>
+                    Esta pregunta no tiene opciones cargadas aún.
+                  </Alert>
+                )}
               </Box>
             );
           })}
         </Box>
 
         {/* Footer */}
-        <Box sx={{
-          padding: 2, 
-          borderTop: '1px solid #e0e0e0', 
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 2
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1, 
-            flexWrap: 'wrap', 
-            justifyContent: 'center' 
-          }}>
+        <Box
+          sx={{
+            padding: 2,
+            borderTop: '1px solid #e0e0e0',
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'center' }}>
             {Object.keys(groupedQuestions).map((key) => {
               const section = parseInt(key);
               const complete = isSectionComplete(section);
@@ -386,17 +441,9 @@ const Chaside: React.FC = () => {
                     height: 36,
                     borderRadius: '50%',
                     color: complete ? '#fff' : isCurrent ? '#fff' : '#333',
-                    backgroundColor: complete 
-                      ? '#4caf50' 
-                      : isCurrent 
-                      ? '#1976d2' 
-                      : '#f0f0f0',
+                    backgroundColor: complete ? '#4caf50' : isCurrent ? '#1976d2' : '#f0f0f0',
                     '&:hover': {
-                      backgroundColor: complete 
-                        ? '#388e3c' 
-                        : isCurrent 
-                        ? '#1565c0' 
-                        : '#e0e0e0',
+                      backgroundColor: complete ? '#388e3c' : isCurrent ? '#1565c0' : '#e0e0e0',
                     }
                   }}
                 >
@@ -414,9 +461,7 @@ const Chaside: React.FC = () => {
                 borderRadius: '50%',
                 backgroundColor: isAllComplete() ? '#0288d1' : '#cfd8dc',
                 color: isAllComplete() ? 'white' : '#757575',
-                '&:hover': {
-                  backgroundColor: isAllComplete() ? '#0277bd' : '#cfd8dc',
-                }
+                '&:hover': { backgroundColor: isAllComplete() ? '#0277bd' : '#cfd8dc' }
               }}
             >
               <CheckIcon fontSize="small" />
@@ -450,20 +495,16 @@ const Chaside: React.FC = () => {
             </DialogContent>
           </Box>
           <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
-            <Button 
-              onClick={() => setConfirmOpen(false)} 
-              variant="outlined" 
-              color="warning"
-            >
+            <Button onClick={() => setConfirmOpen(false)} variant="outlined" color="warning">
               Cancelar
             </Button>
-            <Button 
-              onClick={() => { 
-                setConfirmOpen(false); 
-                handleSubmit(); 
-              }} 
-              variant="contained" 
-              color="warning" 
+            <Button
+              onClick={() => {
+                setConfirmOpen(false);
+                handleSubmit();
+              }}
+              variant="contained"
+              color="warning"
               disabled={saving}
             >
               Confirmar
@@ -497,25 +538,16 @@ const Chaside: React.FC = () => {
             </DialogContent>
           </Box>
           <DialogActions sx={{ justifyContent: 'center', pb: 2, gap: 1 }}>
-            <Button
-              onClick={() => setExitConfirmOpen(false)}
-              variant="outlined"
-              color="primary"
-              sx={{ minWidth: 100 }}
-            >
+            <Button onClick={() => setExitConfirmOpen(false)} variant="outlined" color="primary" sx={{ minWidth: 100 }}>
               Continuar
             </Button>
-            <Button
-              onClick={confirmExit}
-              variant="contained"
-              color="primary"
-              sx={{ minWidth: 100 }}
-            >
+            <Button onClick={confirmExit} variant="contained" color="primary" sx={{ minWidth: 100 }}>
               Salir
             </Button>
           </DialogActions>
         </Dialog>
 
+        {/* Snackbar */}
         <Snackbar
           open={snackbarOpen}
           autoHideDuration={3000}
@@ -531,4 +563,4 @@ const Chaside: React.FC = () => {
   );
 };
 
-export default Chaside;
+export default DatMecanico;

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Typography, useMediaQuery, useTheme } from '@mui/material';
-import logo from '../assets/logo-cvp.png';
+import logo from '../../../../assets/logo-cvp.png';
 
 const DatDashboard: React.FC = () => {
   const [name, setName] = useState('');
@@ -194,10 +194,10 @@ const DatDashboard: React.FC = () => {
               Ortografía
             </Button>
             <Button
-            variant="outlined"
-            fullWidth
-            onClick={() => navigate('/client')}
-            sx={{
+              variant="outlined"
+              fullWidth
+              onClick={() => navigate('/client')}
+              sx={{
                 fontWeight: 800,
                 py: isMobile ? 0.9 : 1.05,
                 textTransform: 'none',
@@ -205,9 +205,9 @@ const DatDashboard: React.FC = () => {
                 borderColor: '#2e7d32',
                 color: '#2e7d32',
                 '&:hover': { backgroundColor: '#e8f5e9' },
-            }}
+              }}
             >
-            Volver
+              Volver
             </Button>
           </Box>
         </Box>

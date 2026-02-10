@@ -1,0 +1,10 @@
+﻿
+> test-vocacional@0.0.0 build
+> tsc -b && vite build
+
+src/features/admin/pages/ClientsReports.tsx(28,42): error TS2307: Cannot find module '../utils/chaside' or its corresponding type declarations.
+src/features/admin/pages/ClientsReports.tsx(29,39): error TS2307: Cannot find module '../utils/ippr' or its corresponding type declarations.
+src/features/tests/pages/dat/DatAbstracto.tsx(2,26): error TS2307: Cannot find module '../../../supabaseClient' or its corresponding type declarations.
+src/features/tests/pages/dat/DatMecanico.tsx(2,26): error TS2307: Cannot find module '../../../supabaseClient' or its corresponding type declarations.
+src/features/tests/pages/dat/DatNumerico.tsx(2,26): error TS2307: Cannot find module '../../../supabaseClient' or its corresponding type declarations.
+src/features/tests/pages/dat/DatVerbal.tsx(2,26): error TS2307: Cannot find module '../../../supabaseClient' or its corresponding type declarations.

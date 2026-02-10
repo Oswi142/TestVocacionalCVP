@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../../supabaseClient';
 import {
   Box, Typography, CircularProgress, IconButton,
   Collapse, Paper, TextField, Avatar, Chip,
@@ -55,8 +55,8 @@ const ClientsAnswers: React.FC = () => {
       ]);
 
       const clientsinfoRows = clientRes.error ? [] : (clientRes.data || []);
-      const userRowsRaw     = userRes.error ? [] : (userRes.data || []);
-      const testsRows       = testRes.error ? [] : (testRes.data || []);
+      const userRowsRaw = userRes.error ? [] : (userRes.data || []);
+      const testsRows = testRes.error ? [] : (testRes.data || []);
 
       const usersDedup = Array.from(new Map(userRowsRaw.map((u: any) => [u.id, u])).values());
 
@@ -66,7 +66,7 @@ const ClientsAnswers: React.FC = () => {
         return {
           userid: u.id,
           birthday: ci?.birthday ?? null,
-          address:  ci?.address  ?? null,
+          address: ci?.address ?? null,
           birthplace: ci?.birthplace ?? null,
         } as ClientView;
       });
@@ -149,13 +149,13 @@ const ClientsAnswers: React.FC = () => {
         const questionLines = splitTextIntoLines(questionText, 80);
         const answerLines = splitTextIntoLines(answerText, 80);
 
-        tableData.push([{ content: `PREGUNTA ${questionNumber}: ${questionLines[0]}`, styles: { fillColor: [232,245,255], textColor: [33,150,243], fontStyle: 'bold', fontSize: 10 } }]);
+        tableData.push([{ content: `PREGUNTA ${questionNumber}: ${questionLines[0]}`, styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
         for (let i = 1; i < questionLines.length; i++) {
-          tableData.push([{ content: questionLines[i], styles: { fillColor: [232,245,255], textColor: [33,150,243], fontStyle: 'bold', fontSize: 10 } }]);
+          tableData.push([{ content: questionLines[i], styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
         }
-        tableData.push([{ content: `RESPUESTA: ${answerLines[0]}`, styles: { fontSize: 10, textColor: [60,60,60] } }]);
+        tableData.push([{ content: `RESPUESTA: ${answerLines[0]}`, styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
         for (let i = 1; i < answerLines.length; i++) {
-          tableData.push([{ content: answerLines[i], styles: { fontSize: 10, textColor: [60,60,60] } }]);
+          tableData.push([{ content: answerLines[i], styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
         }
         tableData.push([{ content: '', styles: { minCellHeight: 3 } }]);
         questionNumber++;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../../supabaseClient';
 
 import {
   Box,
@@ -25,8 +25,8 @@ import GetAppIcon from '@mui/icons-material/GetApp';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 import { useNavigate } from 'react-router-dom';
-import { downloadChasideReportPDF } from '../utils/chaside';
-import { downloadIpprReportPDF } from '../utils/ippr';
+import { downloadChasideReportPDF } from '../../../utils/chaside';
+import { downloadIpprReportPDF } from '../../../utils/ippr';
 
 // ===== Tipos =====
 type ClientView = { userid: number };
@@ -54,7 +54,7 @@ const ClientsReports: React.FC = () => {
       ]);
 
       const userRowsRaw = userRes.error ? [] : (userRes.data || []);
-      const testsRows   = testRes.error ? [] : (testRes.data || []);
+      const testsRows = testRes.error ? [] : (testRes.data || []);
 
       // dedup usuarios
       const usersDedup = Array.from(new Map(userRowsRaw.map((u: any) => [u.id, u])).values());

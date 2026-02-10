@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../services/authService';
+import { login as loginService } from '../../../services/authService';
 import {
   Box,
   Button,
@@ -13,7 +13,9 @@ import {
   IconButton,
   InputAdornment,
 } from '@mui/material';
-import logo from '../assets/logo-cvp.png';
+import { useAuth } from '../../../hooks/useAuth';
+import PageBackground from '../../../components/PageBackground';
+import LogoHeader from '../../../components/LogoHeader';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
@@ -22,6 +24,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { login } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -31,12 +34,12 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      const user = await login(username, password);
-      localStorage.setItem('user', JSON.stringify(user));
+      const userData = await loginService(username, password);
+      login(userData);
 
-      if (user.role === 'admin') {
+      if (userData.role === 'admin') {
         navigate('/admin');
-      } else if (user.role === 'client') {
+      } else if (userData.role === 'client') {
         navigate('/client');
       } else {
         setError('Rol desconocido');
@@ -47,17 +50,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Box
-      sx={{
-        width: '100vw',
-        height: '100vh',
-        background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        p: 2,
-      }}
-    >
+    <PageBackground>
       <Paper
         elevation={6}
         sx={{
@@ -69,32 +62,8 @@ const Login: React.FC = () => {
           backgroundColor: '#fff',
         }}
       >
-        {/* Encabezado sin caret ni selección */}
-        <Box
-          tabIndex={-1}
-          sx={{
-            userSelect: 'none',
-            caretColor: 'transparent',
-            outline: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            mb: 1,
-          }}
-        >
-          <Box
-            component="img"
-            src={logo}
-            alt="Club Vida Plena"
-            draggable={false}
-            sx={{
-              width: isMobile ? 120 : 180,
-              mb: 0,
-              userSelect: 'none',
-              WebkitUserDrag: 'none',
-              pointerEvents: 'none', // el logo no es clickeable
-            }}
-          />
+        <Box sx={{ mb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <LogoHeader height={isMobile ? 120 : 180} />
           <Typography
             variant={isMobile ? 'h6' : 'h5'}
             fontWeight={600}
@@ -161,7 +130,7 @@ const Login: React.FC = () => {
           </Button>
         </form>
       </Paper>
-    </Box>
+    </PageBackground>
   );
 };
 

@@ -1,27 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Typography, useMediaQuery, useTheme } from '@mui/material';
-import logo from '../assets/logo-cvp.png';
+import { useAuth } from '../../../hooks/useAuth';
+import PageBackground from '../../../components/PageBackground';
+import LogoHeader from '../../../components/LogoHeader';
 
 const ClientDashboard: React.FC = () => {
-  const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'tests' | 'account'>('tests');
 
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setName(user.name);
-      setUsername(user.username);
-    } else {
-      navigate('/');
-    }
-  }, [navigate]);
+  const name = user?.name || '';
+  const username = user?.username || '';
 
   // Ajustes para que entre en 1 pantalla (sin scroll) y se vea como tu screenshot
   const sizes = useMemo(() => {
@@ -80,23 +73,11 @@ const ClientDashboard: React.FC = () => {
   });
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/');
+    logout();
   };
 
   return (
-    <Box
-      sx={{
-        width: '100vw',
-        height: '100dvh',     // ✅ ocupa exactamente la pantalla
-        overflow: 'hidden',   // ✅ NO scroll dentro del componente
-        background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        px: `${sizes.outerPad}px`,
-      }}
-    >
+    <PageBackground sx={{ height: '100dvh', px: `${sizes.outerPad}px` }}>
       <Box
         sx={{
           width: '100%',
@@ -107,22 +88,7 @@ const ClientDashboard: React.FC = () => {
           gap: isMobile ? 1.2 : 1.6,
         }}
       >
-        {/* LOGO */}
-        <Box
-          component="img"
-          src={logo}
-          alt="Club Vida Plena"
-          draggable={false}
-          sx={{
-            height: sizes.logoH,
-            maxWidth: '100%',
-            objectFit: 'contain',
-            userSelect: 'none',
-            WebkitUserDrag: 'none',
-            pointerEvents: 'none',
-            caretColor: 'transparent',
-          }}
-        />
+        <LogoHeader height={sizes.logoH} />
 
         {/* Tabs */}
         <Box
@@ -271,7 +237,7 @@ const ClientDashboard: React.FC = () => {
           )}
         </Box>
       </Box>
-    </Box>
+    </PageBackground>
   );
 };
 

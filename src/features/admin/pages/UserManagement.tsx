@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import bcrypt from 'bcryptjs';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../../supabaseClient';
 import {
   Box,
   Button,

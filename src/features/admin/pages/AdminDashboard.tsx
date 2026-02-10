@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -7,31 +7,21 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import logo from '../assets/logo-cvp.png';
+import { useAuth } from '../../../hooks/useAuth';
+import PageBackground from '../../../components/PageBackground';
+import LogoHeader from '../../../components/LogoHeader';
 
 const AdminDashboard: React.FC = () => {
-  const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'acciones' | 'cuenta'>('acciones');
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setName(user.name);
-      setUsername(user.username);
-    } else {
-      navigate('/');
-    }
-  }, []);
+  const name = user?.name || '';
+  const username = user?.username || '';
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/');
-  };
+
 
   const tabButtonStyle = (selected: boolean) => ({
     flex: 1,
@@ -60,18 +50,7 @@ const AdminDashboard: React.FC = () => {
   });
 
   return (
-    <Box
-      sx={{
-        width: '100vw',
-        height: '100vh',
-        background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 2,
-        overflow: 'hidden',
-      }}
-    >
+    <PageBackground>
       <Box
         sx={{
           width: '100%',
@@ -81,22 +60,7 @@ const AdminDashboard: React.FC = () => {
           alignItems: 'center',
         }}
       >
-      <Box
-        component="img"
-        src={logo}
-        alt="Club Vida Plena"
-        draggable={false}
-        sx={{
-          height: 120,
-          maxWidth: '100%',
-          objectFit: 'contain',
-          mb: 3,
-          userSelect: 'none',
-          WebkitUserDrag: 'none',
-          pointerEvents: 'none',
-          caretColor: 'transparent',
-        }}
-      />
+        <LogoHeader sx={{ mb: 3 }} />
 
         {/* Tabs */}
         <Box
@@ -195,7 +159,7 @@ const AdminDashboard: React.FC = () => {
                 variant="outlined"
                 color="error"
                 fullWidth
-                onClick={handleLogout}
+                onClick={logout}
                 sx={{ fontWeight: 600, textTransform: 'none' }}
               >
                 Cerrar sesión
@@ -204,7 +168,7 @@ const AdminDashboard: React.FC = () => {
           )}
         </Box>
       </Box>
-    </Box>
+    </PageBackground>
   );
 };
 
