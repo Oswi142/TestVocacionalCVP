@@ -15,6 +15,9 @@ import DatVerbal from './features/tests/pages/dat/DatVerbal';
 import DatNumerico from './features/tests/pages/dat/DatNumerico';
 import DatAbstracto from './features/tests/pages/dat/DatAbstracto';
 import DatMecanico from './features/tests/pages/dat/DatMecanico';
+import DatEspacial from './features/tests/pages/dat/DatEspacial';
+import DatOrtografia from './features/tests/pages/dat/DatOrtografia';
+
 
 import { AuthProvider } from './components/AuthContext';
 
@@ -38,7 +41,10 @@ function App() {
           <Route path="/dat/numerico" element={<ProtectedRoute requiredRole="client"><DatNumerico /></ProtectedRoute>} />
           <Route path="/dat/abstracto" element={<ProtectedRoute requiredRole="client"><DatAbstracto /></ProtectedRoute>} />
           <Route path="/dat/mecanico" element={<ProtectedRoute requiredRole="client"><DatMecanico /></ProtectedRoute>} />
+          <Route path="/dat/espaciales" element={<ProtectedRoute requiredRole="client"><DatEspacial /></ProtectedRoute>} />
+          <Route path="/dat/ortografia" element={<ProtectedRoute requiredRole="client"><DatOrtografia /></ProtectedRoute>} />
           {/*Nueva ruta */}
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>
