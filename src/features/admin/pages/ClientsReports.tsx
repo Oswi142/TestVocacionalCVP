@@ -27,10 +27,11 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 import { downloadChasideReportPDF } from '../../../utils/chaside';
 import { downloadIpprReportPDF } from '../../../utils/ippr';
+import { downloadDatReportPDF, getCompletedDatCategories, DatType } from '../../../utils/dat';
 
 // ===== Tipos =====
 type ClientView = { userid: number };
-type TestRow = { id: number; testname: string };
+type TestRow = { id: number; testname: string; category?: DatType };
 type TestsAnswerRow = { clientid: number; testid: number };
 
 const ClientsReports: React.FC = () => {
@@ -82,11 +83,12 @@ const ClientsReports: React.FC = () => {
   const getClientInitials = (name: string) =>
     (name || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  const kindOfTest = (testname: string): 'chaside' | 'ippr' | 'maci' | 'other' => {
+  const kindOfTest = (testname: string): 'chaside' | 'ippr' | 'maci' | 'dat' | 'other' => {
     const t = (testname || '').toLowerCase();
     if (t.includes('chaside')) return 'chaside';
     if (t.includes('ipp')) return 'ippr';
     if (t.includes('maci')) return 'maci';
+    if (t.includes('dat')) return 'dat';
     return 'other';
   };
 
@@ -107,10 +109,22 @@ const ClientsReports: React.FC = () => {
         if (error) throw error;
 
         const uniqIds = [...new Set(((rows || []) as TestsAnswerRow[]).map(r => r.testid))];
-        // Mapear a tests **ya filtrados** (sin entrevista)
-        const testsForClient = uniqIds
-          .map(id => tests.find(t => t.id === id))
-          .filter(Boolean) as TestRow[];
+
+        const testsForClient: TestRow[] = [];
+        for (const id of uniqIds) {
+          const baseTest = tests.find(t => t.id === id);
+          if (!baseTest) continue;
+
+          if (kindOfTest(baseTest.testname) === 'dat') {
+            const completedCats = await getCompletedDatCategories(client.userid);
+            testsForClient.push({
+              ...baseTest,
+              testname: `DAT (${completedCats.length} de 6 completados)`
+            });
+          } else {
+            testsForClient.push(baseTest);
+          }
+        }
 
         setClientTestsMap(prev => ({ ...prev, [client.userid]: testsForClient }));
       } catch (e) {
@@ -131,6 +145,10 @@ const ClientsReports: React.FC = () => {
       }
       if (type === 'ippr') {
         await downloadIpprReportPDF(clientId);
+        return;
+      }
+      if (type === 'dat') {
+        await downloadDatReportPDF(clientId);
         return;
       }
       alert('Reporte disponible próximamente para este test.');
@@ -159,7 +177,7 @@ const ClientsReports: React.FC = () => {
             <Typography variant="h5" fontWeight="bold">Descargar Resultados</Typography>
           </Box>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            Descarga los reportes disponibles (CHASIDE e IPP-R interpretados; MACI con puntajes brutos).
+            Descarga los reportes disponibles (CHASIDE, IPP-R e DAT interpretados; MACI con puntajes brutos).
           </Typography>
         </Box>
 
@@ -253,8 +271,8 @@ const ClientsReports: React.FC = () => {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                           {testsForClient.map((test) => {
                             const kind = kindOfTest(test.testname);
-                            const isReadyReport = kind === 'chaside' || kind === 'ippr' || kind === 'maci';
-                            const captionText = kind === 'maci' ? 'Puntajes brutos' : 'Reporte interpretado';
+                            const isReadyReport = kind === 'chaside' || kind === 'ippr' || kind === 'maci' || kind === 'dat';
+                            const captionText = (kind === 'maci' || kind === 'dat') ? 'Puntajes brutos' : 'Reporte interpretado';
 
                             return (
                               <Paper

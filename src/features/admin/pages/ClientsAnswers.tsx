@@ -15,9 +15,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { getCompletedDatCategories, DAT_LABELS, DatType, getDatTestId } from '../../../utils/dat';
 
 // ===== Tipos =====
-type QuestionRow = { id: number; question: string };
+type QuestionRow = { id: number; question: string; dat_type?: string };
 type AnswerOptionRow = { id: number; answer: string };
 type TestsAnswerRow = {
   clientid: number;
@@ -32,6 +33,8 @@ type ClientView = {
   address?: string | null;
   birthplace?: string | null;
 };
+
+type TestRow = { id: number; testname: string; category?: DatType };
 
 const ClientsAnswers: React.FC = () => {
   const [clients, setClients] = useState<ClientView[]>([]);
@@ -81,7 +84,8 @@ const ClientsAnswers: React.FC = () => {
   }, []);
 
   const splitTextIntoLines = (text: string, maxWidth: number = 50): string[] => {
-    const words = (text || '').split(' ');
+    if (!text || !text.trim()) return [''];
+    const words = text.split(' ');
     const lines: string[] = [];
     let currentLine = '';
     words.forEach(word => {
@@ -93,10 +97,12 @@ const ClientsAnswers: React.FC = () => {
   };
 
   // ===== PDF on-demand =====
-  const downloadPDF = async (clientId: number, testId: number) => {
+  const downloadPDF = async (clientId: number, testId: number, category?: DatType) => {
     try {
       const user = users.find(u => u.id === clientId);
       const test = tests.find(t => t.id === testId);
+      const datId = await getDatTestId();
+      const isDat = testId === datId || (test?.testname || '').toLowerCase().includes('dat');
 
       const { data: clientAnswersRaw, error: ansErr } = await supabase
         .from('testsanswers')
@@ -113,7 +119,7 @@ const ClientsAnswers: React.FC = () => {
       const aIds = [...new Set(clientAnswers.map(a => a.answerid).filter((x): x is number => x != null))];
 
       const [{ data: qsRaw, error: qErr }, { data: optsRaw, error: oErr }] = await Promise.all([
-        qIds.length ? supabase.from('questions').select('id,question').in('id', qIds) : Promise.resolve({ data: [] as any[], error: null } as any),
+        qIds.length ? supabase.from('questions').select('id,question,dat_type').in('id', qIds) : Promise.resolve({ data: [] as any[], error: null } as any),
         aIds.length ? supabase.from('answeroptions').select('id,answer').in('id', aIds) : Promise.resolve({ data: [] as any[], error: null } as any),
       ]);
       if (qErr) throw qErr;
@@ -137,28 +143,53 @@ const ClientsAnswers: React.FC = () => {
       doc.text(`Test: ${test?.testname || ''}`, 14, 52);
 
       const tableData: any[] = [];
-      let questionNumber = 1;
 
-      (clientAnswers || []).forEach((ans) => {
-        const questionRow = qMap.get(ans.questionid);
-        const optionRow = ans.answerid != null ? oMap.get(ans.answerid) : undefined;
+      let categoriesToProcess: (DatType | undefined)[] = [category];
+      if (isDat && !category) {
+        const foundCats = new Set<DatType>();
+        clientAnswers.forEach(ans => {
+          const q = qMap.get(ans.questionid);
+          if (q?.dat_type) foundCats.add(q.dat_type as DatType);
+        });
+        const order: DatType[] = ['razonamiento_verbal', 'razonamiento_numerico', 'razonamiento_abstracto', 'razonamiento_mecanico', 'razonamiento_espacial', 'ortografia'];
+        categoriesToProcess = order.filter(c => foundCats.has(c));
+      }
 
-        const questionText = questionRow?.question ?? '';
-        const answerText = optionRow?.answer ?? ans.details ?? '';
-
-        const questionLines = splitTextIntoLines(questionText, 80);
-        const answerLines = splitTextIntoLines(answerText, 80);
-
-        tableData.push([{ content: `PREGUNTA ${questionNumber}: ${questionLines[0]}`, styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
-        for (let i = 1; i < questionLines.length; i++) {
-          tableData.push([{ content: questionLines[i], styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
+      categoriesToProcess.forEach(currentCat => {
+        if (isDat && currentCat) {
+          tableData.push([{
+            content: `SECCIÓN: ${DAT_LABELS[currentCat]}`,
+            styles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 11, halign: 'center' }
+          }]);
         }
-        tableData.push([{ content: `RESPUESTA: ${answerLines[0]}`, styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
-        for (let i = 1; i < answerLines.length; i++) {
-          tableData.push([{ content: answerLines[i], styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
-        }
-        tableData.push([{ content: '', styles: { minCellHeight: 3 } }]);
-        questionNumber++;
+
+        const filteredAnswers = isDat && currentCat ? clientAnswers.filter(ans => qMap.get(ans.questionid)?.dat_type === currentCat) : clientAnswers;
+
+        let questionNumber = 1;
+        filteredAnswers.forEach((ans) => {
+          const questionRow = qMap.get(ans.questionid);
+          const optionRow = ans.answerid != null ? oMap.get(ans.answerid) : undefined;
+
+          let questionText = questionRow?.question || '';
+          if (!questionText.trim()) {
+            questionText = `Pregunta Visual`;
+          }
+          const answerText = optionRow?.answer ?? ans.details ?? '';
+
+          const questionLines = splitTextIntoLines(questionText, 80);
+          const answerLines = splitTextIntoLines(answerText, 80);
+
+          tableData.push([{ content: `PREGUNTA ${questionNumber}: ${questionLines[0]}`, styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
+          for (let i = 1; i < questionLines.length; i++) {
+            tableData.push([{ content: questionLines[i], styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
+          }
+          tableData.push([{ content: `RESPUESTA: ${answerLines[0]}`, styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
+          for (let i = 1; i < answerLines.length; i++) {
+            tableData.push([{ content: answerLines[i], styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
+          }
+          tableData.push([{ content: '', styles: { minCellHeight: 3 } }]);
+          questionNumber++;
+        });
       });
 
       const left = 12, right = 12;
@@ -209,9 +240,25 @@ const ClientsAnswers: React.FC = () => {
         if (error) throw error;
 
         const uniqIds = [...new Set((rows || []).map(r => r.testid))];
-        const testsForClient = uniqIds
-          .map(id => tests.find(t => t.id === id))
-          .filter(Boolean) as any[];
+        const datId = await getDatTestId();
+        const testsForClient: TestRow[] = [];
+
+        for (const id of uniqIds) {
+          const baseTest = tests.find(t => t.id === id);
+          if (!baseTest) continue;
+
+          if (id === datId || (baseTest.testname || '').toLowerCase().includes('dat')) {
+            const completedCats = await getCompletedDatCategories(client.userid);
+            testsForClient.push({
+              ...baseTest,
+              testname: `DAT (${completedCats.length} de 6 completados)`,
+              id: baseTest.id,
+              // No especificamos categoría para descargar todo el set
+            });
+          } else {
+            testsForClient.push(baseTest);
+          }
+        }
 
         setClientTestsMap(prev => ({ ...prev, [client.userid]: testsForClient }));
       } catch (e) {
@@ -358,7 +405,7 @@ const ClientsAnswers: React.FC = () => {
                                   <Tooltip title="Descargar PDF" arrow>
                                     <IconButton
                                       color="primary"
-                                      onClick={() => downloadPDF(client.userid, test.id)}
+                                      onClick={() => downloadPDF(client.userid, test.id, test.category)}
                                       size="small"
                                       sx={{ backgroundColor: 'primary.main', color: 'white', '&:hover': { backgroundColor: 'primary.dark' } }}
                                     >

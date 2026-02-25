@@ -41,7 +41,7 @@ const ClientDashboard: React.FC = () => {
       cardPad: 26,
       titleVariant: 'h5' as const,
       subtitleVariant: 'body1' as const,
-      btnPy: 1.75,       // 🔥 más gorditos
+      btnPy: 1.75,
       btnFont: '1rem',
       btnGap: 14,
       cardRadius: 22,
