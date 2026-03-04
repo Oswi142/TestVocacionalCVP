@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './features/auth/pages/Login';
 import ClientDashboard from './features/dashboard/pages/ClientDashboard';
-import AdminDashboard from './features/admin/pages/AdminDashboard';
-import Entrevista from './features/dashboard/pages/Entrevista';
+import AdminDashboard from './features/dashboard/pages/AdminDashboard';
+import Entrevista from './features/tests/pages/Entrevista';
 import ProtectedRoute from './features/auth/components/ProtectedRoute';
 import UserManagement from './features/admin/pages/UserManagement';
 import IPPR from './features/tests/pages/IPPR';

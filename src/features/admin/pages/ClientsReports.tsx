@@ -1,21 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../../supabaseClient';
-
 import {
-  Box,
-  Typography,
-  CircularProgress,
-  IconButton,
-  Collapse,
-  Paper,
-  TextField,
-  Avatar,
-  Chip,
-  Divider,
-  InputAdornment,
-  Tooltip,
+  Box, Typography, CircularProgress, IconButton, Collapse,
+  Paper, TextField, Avatar, Divider, InputAdornment,
+  Tooltip, useTheme, useMediaQuery,
 } from '@mui/material';
-
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -23,29 +12,47 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import GetAppIcon from '@mui/icons-material/GetApp';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-
 import { useNavigate } from 'react-router-dom';
 import { downloadChasideReportPDF } from '../../../utils/chaside';
 import { downloadIpprReportPDF } from '../../../utils/ippr';
 import { downloadDatReportPDF, getCompletedDatCategories, DatType } from '../../../utils/dat';
 
-// ===== Tipos =====
+const C = {
+  primary: '#f59e0b', dark: '#d97706',
+  bg: 'rgba(245,158,11,0.05)', bgHover: 'rgba(245,158,11,0.1)',
+  border: 'rgba(245,158,11,0.15)', borderHover: 'rgba(245,158,11,0.35)',
+  spinner: '#f59e0b', searchFocus: '#f59e0b', searchHover: 'rgba(245,158,11,0.4)',
+};
+
+const AVATAR_PALETTE = [
+  'linear-gradient(135deg,#f59e0b,#d97706)',
+  'linear-gradient(135deg,#3b82f6,#2563eb)',
+  'linear-gradient(135deg,#8b5cf6,#7c3aed)',
+  'linear-gradient(135deg,#10b981,#059669)',
+  'linear-gradient(135deg,#ef4444,#dc2626)',
+  'linear-gradient(135deg,#06b6d4,#0891b2)',
+  'linear-gradient(135deg,#ec4899,#db2777)',
+  'linear-gradient(135deg,#f97316,#ea580c)',
+];
+
+const avatarColor = (id: number) => AVATAR_PALETTE[id % AVATAR_PALETTE.length];
+
 type ClientView = { userid: number };
 type TestRow = { id: number; testname: string; category?: DatType };
 type TestsAnswerRow = { clientid: number; testid: number };
 
 const ClientsReports: React.FC = () => {
   const [clients, setClients] = useState<ClientView[]>([]);
-  const [users, setUsers] = useState<any[]>([]); // solo role=client
+  const [users, setUsers] = useState<any[]>([]);
   const [tests, setTests] = useState<TestRow[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Estado visual/datos
   const [expandedClientId, setExpandedClientId] = useState<number | null>(null);
   const [clientTestsMap, setClientTestsMap] = useState<Record<number, TestRow[]>>({});
   const [loadingTestsForClient, setLoadingTestsForClient] = useState<Record<number, boolean>>({});
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -53,31 +60,22 @@ const ClientsReports: React.FC = () => {
         supabase.from('users').select('id,name').eq('role', 'client').range(0, 9999),
         supabase.from('tests').select('id, testname').range(0, 9999),
       ]);
-
       const userRowsRaw = userRes.error ? [] : (userRes.data || []);
       const testsRows = testRes.error ? [] : (testRes.data || []);
-
-      // dedup usuarios
       const usersDedup = Array.from(new Map(userRowsRaw.map((u: any) => [u.id, u])).values());
       setUsers(usersDedup);
       setClients(usersDedup.map((u: any) => ({ userid: u.id })));
-
-      // **Excluir ENTREVISTA** desde la fuente
-      const filteredTests = (testsRows as TestRow[]).filter(t =>
-        !((t.testname || '').toLowerCase().includes('entrevista'))
-      );
-      setTests(filteredTests);
-
+      setTests((testsRows as TestRow[]).filter(t => !((t.testname || '').toLowerCase().includes('entrevista'))));
       setLoading(false);
     };
-
     fetchAll();
   }, []);
 
   const filteredClients = clients.filter(client => {
+    const q = search.toLowerCase().trim();
+    if (!q) return true;
     const user = users.find(u => u.id === client.userid);
-    const name = (user?.name || '').toLowerCase();
-    return name.includes(search.toLowerCase());
+    return (user?.name || '').toLowerCase().split(' ').some((w: string) => w.startsWith(q));
   });
 
   const getClientInitials = (name: string) =>
@@ -92,115 +90,71 @@ const ClientsReports: React.FC = () => {
     return 'other';
   };
 
-  // Expand/collapse y carga on-demand de tests respondidos (excluyendo entrevista)
   const handleToggleClient = async (client: ClientView) => {
     setExpandedClientId(prev => (prev === client.userid ? null : client.userid));
-
     if (!clientTestsMap[client.userid]) {
       try {
         setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: true }));
-        // Traer testid de respuestas del cliente
-        const { data: rows, error } = await supabase
-          .from('testsanswers')
-          .select('testid,clientid')
-          .eq('clientid', client.userid)
-          .range(0, 99999);
-
+        const { data: rows, error } = await supabase.from('testsanswers').select('testid,clientid').eq('clientid', client.userid).range(0, 99999);
         if (error) throw error;
-
         const uniqIds = [...new Set(((rows || []) as TestsAnswerRow[]).map(r => r.testid))];
-
         const testsForClient: TestRow[] = [];
         for (const id of uniqIds) {
           const baseTest = tests.find(t => t.id === id);
           if (!baseTest) continue;
-
           if (kindOfTest(baseTest.testname) === 'dat') {
             const completedCats = await getCompletedDatCategories(client.userid);
-            testsForClient.push({
-              ...baseTest,
-              testname: `DAT (${completedCats.length} de 6 completados)`
-            });
-          } else {
-            testsForClient.push(baseTest);
-          }
+            testsForClient.push({ ...baseTest, testname: `DAT (${completedCats.length} de 6 completados)` });
+          } else { testsForClient.push(baseTest); }
         }
-
         setClientTestsMap(prev => ({ ...prev, [client.userid]: testsForClient }));
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: false }));
-      }
+      } catch (e) { console.error(e); }
+      finally { setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: false })); }
     }
   };
 
-  // ← ahora con try/catch para ver los errores en UI
   const handleDownload = async (clientId: number, test: TestRow) => {
     try {
       const type = kindOfTest(test.testname);
-      if (type === 'chaside') {
-        await downloadChasideReportPDF(clientId);
-        return;
-      }
-      if (type === 'ippr') {
-        await downloadIpprReportPDF(clientId);
-        return;
-      }
-      if (type === 'dat') {
-        await downloadDatReportPDF(clientId);
-        return;
-      }
+      if (type === 'chaside') { await downloadChasideReportPDF(clientId); return; }
+      if (type === 'ippr') { await downloadIpprReportPDF(clientId); return; }
+      if (type === 'dat') { await downloadDatReportPDF(clientId); return; }
       alert('Reporte disponible próximamente para este test.');
-    } catch (err: any) {
-      console.error(err);
-      alert(`No se pudo generar el reporte: ${err?.message ?? 'Error desconocido'}`);
-    }
+    } catch (err: any) { console.error(err); alert(`No se pudo generar el reporte: ${err?.message ?? 'Error desconocido'}`); }
   };
 
-  if (loading) {
-    return (
-      <Box sx={{ width: '100vw', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(to right, #f9c9a4, #cafacc)' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ width: '100vw', height: '100vh', background: 'linear-gradient(to right, #f9c9a4, #cafacc)', display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
-      <Box sx={{ width: '100%', maxWidth: 880, height: '90vh', backgroundColor: '#ffffff', borderRadius: 4, boxShadow: 3, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <Box sx={{ width: '100%', minHeight: '100vh', background: 'linear-gradient(135deg,#f9c9a4 0%,#cafacc 100%)', display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 1 : 3, boxSizing: 'border-box', overflowX: 'hidden' }}>
+      <Box sx={{ width: '100%', maxWidth: 1000, height: '90vh', backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', borderRadius: '32px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box' }}>
+
         {/* Header */}
-        <Box sx={{ p: 3, borderBottom: '1px solid #e0e0e0', background: 'white', color: 'primary.main' }}>
+        <Box sx={{ p: isMobile ? 3 : 4, borderBottom: '1px solid rgba(0,0,0,0.05)', backgroundColor: 'rgba(255,255,255,0.3)' }}>
           <Box display="flex" alignItems="center" mb={1} gap={2}>
-            <IconButton onClick={() => navigate(-1)} sx={{ color: 'primary.main' }} size="small"><ArrowBackIcon /></IconButton>
-            <PersonIcon sx={{ fontSize: 32 }} />
-            <Typography variant="h5" fontWeight="bold">Descargar Resultados</Typography>
+            <IconButton onClick={() => navigate(-1)} size="small" sx={{ color: '#64748b', backgroundColor: 'rgba(0,0,0,0.03)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.08)', transform: 'translateX(-3px)' }, transition: 'all 0.2s' }}>
+              <ArrowBackIcon />
+            </IconButton>
+            <AssignmentIcon sx={{ fontSize: 32, color: C.primary }} />
+            <Typography variant={isMobile ? 'h5' : 'h4'} fontWeight={800} color="#1e293b">Resultados y Perfiles</Typography>
           </Box>
-          <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            Descarga los reportes disponibles (CHASIDE, IPP-R e DAT interpretados; MACI con puntajes brutos).
-          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Análisis interpretativo, puntajes y perfiles vocacionales generados.</Typography>
+          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <TextField placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} variant="outlined" size="small"
+              InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ fontSize: 16, color: '#94a3b8' }} /></InputAdornment>), sx: { borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', '& fieldset': { borderColor: 'rgba(0,0,0,0.08)' }, '&:hover fieldset': { borderColor: `${C.searchHover} !important` }, '&.Mui-focused fieldset': { borderColor: `${C.searchFocus} !important` }, height: '34px' } }}
+              sx={{ width: 220 }} />
+            <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600 }}>{filteredClients.length} perfil{filteredClients.length !== 1 ? 'es' : ''}</Typography>
+          </Box>
         </Box>
 
-        {/* Search */}
-        <Box sx={{ p: 3, borderBottom: '1px solid #e0e0e0' }}>
-          <TextField
-            fullWidth
-            placeholder="Buscar cliente por nombre..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            variant="outlined"
-            size="small"
-            InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon color="primary" /></InputAdornment>) }}
-            sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: 2, backgroundColor: '#f8f9fa', '&:hover': { backgroundColor: '#e9ecef' } } }}
-          />
-          <Chip icon={<PersonIcon />} label={`${filteredClients.length} cliente${filteredClients.length !== 1 ? 's' : ''} encontrado${filteredClients.length !== 1 ? 's' : ''}`} color="primary" variant="outlined" size="small" />
-        </Box>
-
-        {/* Clients List */}
+        {/* List */}
         <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {filteredClients.length === 0 ? (
+          {loading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
+              <CircularProgress size={40} thickness={5} sx={{ color: C.spinner }} />
+              <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>Cargando perfiles...</Typography>
+            </Box>
+          ) : filteredClients.length === 0 ? (
             <Box sx={{ textAlign: 'center', p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <PersonIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+              <PersonIcon sx={{ fontSize: 48, color: '#cbd5e1', mb: 2 }} />
               <Typography variant="h6" color="text.secondary">No se encontraron clientes</Typography>
               <Typography variant="body2" color="text.secondary" mt={1}>Intenta con otro término de búsqueda</Typography>
             </Box>
@@ -209,111 +163,55 @@ const ClientsReports: React.FC = () => {
               const user = users.find(u => u.id === client.userid);
               const isExpanded = expandedClientId === client.userid;
               const testsForClient = clientTestsMap[client.userid] || [];
-
               return (
-                <Paper
-                  key={client.userid}
-                  elevation={1}
-                  sx={{
-                    borderRadius: 3,
-                    p: 1,
-                    transition: 'box-shadow 0.2s ease, transform 0.05s ease',
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
-                    '&:hover': { boxShadow: '0 6px 18px rgba(0,0,0,0.12)' }
-                  }}
-                >
-                  {/* Header de cliente */}
-                  <Box
-                    onClick={() => handleToggleClient(client)}
-                    sx={{
-                      px: 2, py: 1.5,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      borderRadius: 2,
-                      '&:hover': { backgroundColor: '#f8f9fa' }
-                    }}
-                  >
+                <Paper key={client.userid} elevation={0} sx={{ borderRadius: '20px', backgroundColor: isExpanded ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)', transition: 'all 0.2s', '&:hover': { backgroundColor: 'rgba(255,255,255,0.85)', boxShadow: '0 4px 16px rgba(0,0,0,0.07)' } }}>
+                  <Box onClick={() => handleToggleClient(client)} sx={{ px: 3, py: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
                     <Box display="flex" alignItems="center" gap={2}>
-                      <Avatar sx={{ bgcolor: 'primary.main', width: 42, height: 42, fontSize: '0.95rem', fontWeight: 'bold' }}>
+                      <Avatar sx={{ background: avatarColor(client.userid), width: 44, height: 44, fontSize: '0.95rem', fontWeight: 800 }}>
                         {getClientInitials(user?.name || 'SC')}
                       </Avatar>
-                      <Box>
-                        <Typography variant="subtitle1" fontWeight="600" color="text.primary">
-                          {user?.name || 'Sin nombre'}
-                        </Typography>
-                      </Box>
+                      <Typography variant="subtitle1" fontWeight={700} color="#1e293b">{user?.name || 'Sin nombre'}</Typography>
                     </Box>
-
-                    <IconButton color="primary" size="small">
-                      {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    <IconButton size="small" sx={{ pointerEvents: 'none' }}>
+                      {isExpanded ? <ExpandLessIcon sx={{ color: C.primary }} /> : <ExpandMoreIcon sx={{ color: '#94a3b8' }} />}
                     </IconButton>
                   </Box>
-
-                  {/* Contenido expandido */}
                   <Collapse in={isExpanded} unmountOnExit>
-                    <Box sx={{ px: 2, pb: 2 }}>
+                    <Box sx={{ px: 3, pb: 3 }}>
                       <Divider sx={{ mb: 2 }} />
-                      <Typography variant="subtitle2" gutterBottom color="primary" sx={{ mb: 2 }}>
-                        {testsForClient.length > 0 ? 'Evaluaciones disponibles' : 'No hay evaluaciones respondidas'}
-                      </Typography>
-
                       {loadingTestsForClient[client.userid] ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                          Cargando evaluaciones...
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
+                          <CircularProgress size={20} thickness={5} sx={{ color: C.spinner }} />
+                          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Cargando reportes...</Typography>
+                        </Box>
                       ) : testsForClient.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                          Aún no hay respuestas para este cliente
-                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic', py: 1 }}>No hay diagnósticos completados para este usuario.</Typography>
                       ) : (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                           {testsForClient.map((test) => {
                             const kind = kindOfTest(test.testname);
-                            const isReadyReport = kind === 'chaside' || kind === 'ippr' || kind === 'maci' || kind === 'dat';
-                            const captionText = (kind === 'maci' || kind === 'dat') ? 'Puntajes brutos' : 'Reporte interpretado';
-
+                            const isReady = kind === 'chaside' || kind === 'ippr' || kind === 'maci' || kind === 'dat';
+                            const caption = (kind === 'maci' || kind === 'dat') ? 'Puntajes brutos registrados' : 'Perfil vocacional interpretado';
                             return (
-                              <Paper
-                                key={test.id}
-                                variant="outlined"
-                                sx={{
-                                  borderRadius: 2,
-                                  transition: 'all 0.2s ease',
-                                  '&:hover': { borderColor: 'primary.main', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }
-                                }}
-                              >
-                                <Box display="flex" justifyContent="space-between" alignItems="center" p={1.5}>
-                                  <Box display="flex" alignItems="center" gap={1.5}>
-                                    <AssignmentIcon color="primary" sx={{ fontSize: 20 }} />
-                                    <Box>
-                                      <Typography variant="body2" fontWeight="500">{test.testname}</Typography>
-                                      <Typography variant="caption" color="text.secondary">
-                                        {isReadyReport ? captionText : 'Reporte próximamente'}
-                                      </Typography>
-                                    </Box>
+                              <Box key={test.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: '14px', backgroundColor: C.bg, border: `1px solid ${C.border}`, transition: 'all 0.2s', '&:hover': { backgroundColor: C.bgHover, borderColor: C.borderHover } }}>
+                                <Box display="flex" alignItems="center" gap={1.5}>
+                                  <Box sx={{ p: 0.8, borderRadius: '10px', backgroundColor: 'rgba(245,158,11,0.12)', display: 'flex' }}>
+                                    <AssignmentIcon sx={{ fontSize: 18, color: C.dark }} />
                                   </Box>
-
-                                  <Tooltip title={isReadyReport ? 'Descargar reporte' : 'Disponible próximamente'} arrow>
-                                    <span>
-                                      <IconButton
-                                        color="primary"
-                                        disabled={!isReadyReport}
-                                        onClick={() => handleDownload(client.userid, test)}
-                                        size="small"
-                                        sx={{
-                                          backgroundColor: isReadyReport ? 'primary.main' : undefined,
-                                          color: isReadyReport ? 'white' : undefined,
-                                          '&:hover': isReadyReport ? { backgroundColor: 'primary.dark' } : undefined
-                                        }}
-                                      >
-                                        <GetAppIcon sx={{ fontSize: 18 }} />
-                                      </IconButton>
-                                    </span>
-                                  </Tooltip>
+                                  <Box>
+                                    <Typography variant="body2" fontWeight={700} color="#334155">{test.testname}</Typography>
+                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 500 }}>{isReady ? caption : 'Reporte próximamente'}</Typography>
+                                  </Box>
                                 </Box>
-                              </Paper>
+                                <Tooltip title={isReady ? 'Descargar reporte' : 'En desarrollo'} arrow placement="left">
+                                  <span>
+                                    <IconButton disabled={!isReady} onClick={() => handleDownload(client.userid, test)} size="small"
+                                      sx={{ backgroundColor: isReady ? '#1e293b' : 'rgba(0,0,0,0.06)', color: isReady ? 'white' : 'rgba(0,0,0,0.25)', borderRadius: '10px', width: 34, height: 34, '&:hover': isReady ? { backgroundColor: '#0f172a', transform: 'translateY(-2px)' } : {}, transition: 'all 0.2s' }}>
+                                      <GetAppIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
+                              </Box>
                             );
                           })}
                         </Box>

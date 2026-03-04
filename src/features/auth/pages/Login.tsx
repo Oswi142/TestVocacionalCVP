@@ -52,22 +52,26 @@ const Login: React.FC = () => {
   return (
     <PageBackground>
       <Paper
-        elevation={6}
+        elevation={0} // Disable default material elevation to use custom shadow
         sx={{
           p: 4,
-          borderRadius: 4,
+          borderRadius: 6, // More rounded (Efecto píldora/Soft UI)
           width: '100%',
           maxWidth: 420,
           textAlign: 'center',
-          backgroundColor: '#fff',
+          backgroundColor: 'rgba(255, 255, 255, 0.65)', // Semi-transparent white
+          backdropFilter: 'blur(12px)', // Glassmorphism blur
+          WebkitBackdropFilter: 'blur(12px)', // Safari support
+          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)', // Soft, large shadow
+          border: '1px solid rgba(255, 255, 255, 0.4)', // Subtle border highlight for glass effect
         }}
       >
         <Box sx={{ mb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <LogoHeader height={isMobile ? 120 : 180} />
           <Typography
             variant={isMobile ? 'h6' : 'h5'}
-            fontWeight={600}
-            color="#2E7D32"
+            fontWeight={800} // Bolder typography
+            color="#1e293b" // Darker, sleeker slate-gray instead of pure green
             gutterBottom
             sx={{ mt: 1 }}
           >
@@ -76,7 +80,7 @@ const Login: React.FC = () => {
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 2, borderRadius: 3 }}>
             {error}
           </Alert>
         )}
@@ -90,6 +94,17 @@ const Login: React.FC = () => {
             onChange={(e) => setUsername(e.target.value)}
             required
             inputProps={{ 'data-testid': 'username-input' }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 3, // Rounded inputs
+                backgroundColor: 'rgba(255, 255, 255, 0.8)', // Slightly opaque backgrounds for inputs
+                transition: 'all 0.3s ease',
+                '&.Mui-focused': {
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                }
+              }
+            }}
           />
 
           <TextField
@@ -101,6 +116,17 @@ const Login: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
             required
             inputProps={{ 'data-testid': 'password-input' }}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 3,
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                transition: 'all 0.3s ease',
+                '&.Mui-focused': {
+                  backgroundColor: '#ffffff',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                }
+              }
+            }}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -118,12 +144,22 @@ const Login: React.FC = () => {
             variant="contained"
             fullWidth
             sx={{
-              mt: 2,
-              py: 1,
-              fontWeight: 'bold',
+              mt: 3,
+              py: 1.5,
+              borderRadius: 3,
+              fontWeight: 800,
               fontSize: '1.1rem',
               backgroundColor: '#FF6F00',
-              '&:hover': { backgroundColor: '#EF6C00' },
+              transition: 'all 0.3s ease-in-out',
+              boxShadow: '0 6px 15px rgba(255, 111, 0, 0.3)',
+              '&:hover': {
+                backgroundColor: '#E65100',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 20px rgba(255, 111, 0, 0.4)'
+              },
+              '&:active': {
+                transform: 'translateY(1px)',
+              }
             }}
           >
             Entrar

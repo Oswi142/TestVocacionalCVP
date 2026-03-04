@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Typography, useMediaQuery, useTheme, IconButton } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import logo from '../../../../assets/logo-cvp.png';
 
 const DatDashboard: React.FC = () => {
@@ -17,6 +18,17 @@ const DatDashboard: React.FC = () => {
     } else {
       navigate('/');
     }
+
+    const handlePopState = () => {
+      navigate('/client', { replace: true });
+    };
+
+    window.history.pushState(null, '', window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [navigate]);
 
   const sizes = useMemo(() => {
@@ -48,16 +60,22 @@ const DatDashboard: React.FC = () => {
     };
   }, [isMobile]);
 
-  const buttonStyle = (gradient: string) => ({
+  const buttonStyle = (gradient: string, shadowColor: string) => ({
     background: gradient,
     color: '#fff',
-    fontWeight: 700,
+    fontWeight: 800,
     py: sizes.btnPy,
-    borderRadius: 2,
+    borderRadius: 4,
     textTransform: 'none',
     fontSize: sizes.btnFont,
     lineHeight: 1.1,
-    '&:hover': { opacity: 0.92 },
+    boxShadow: `0 4px 15px ${shadowColor}`,
+    transition: 'all 0.3s ease-in-out',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: `0 8px 25px ${shadowColor}`,
+    },
+    '&:active': { transform: 'translateY(1px)' }
   });
 
   return (
@@ -104,8 +122,12 @@ const DatDashboard: React.FC = () => {
         <Box
           sx={{
             width: '100%',
-            backgroundColor: '#ffffff',
-            boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.1)',
+            backgroundColor: 'rgba(255, 255, 255, 0.65)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.4)',
+            boxShadow: '0px 12px 40px rgba(0, 0, 0, 0.08)',
+            position: 'relative', // Para el botón volver absoluto
             borderRadius: `${sizes.cardRadius}px`,
             p: `${sizes.cardPad}px`,
             textAlign: 'center',
@@ -117,10 +139,30 @@ const DatDashboard: React.FC = () => {
             maxHeight: `calc(100dvh - ${sizes.logoH}px - 56px)`,
           }}
         >
+          <IconButton
+            onClick={() => navigate('/client', { replace: true })}
+            sx={{
+              position: 'absolute',
+              top: isMobile ? 12 : 20,
+              left: isMobile ? 12 : 20,
+              color: '#64748b',
+              backgroundColor: 'rgba(255, 255, 255, 0.5)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              transition: 'all 0.2s',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                transform: 'scale(1.05)',
+                color: '#1e293b'
+              }
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+
           <Typography
             variant={sizes.titleVariant}
             fontWeight={800}
-            color="green"
+            color="#1e293b"
             gutterBottom
             sx={{ mb: 0.5 }}
           >
@@ -149,7 +191,7 @@ const DatDashboard: React.FC = () => {
             <Button
               fullWidth
               onClick={() => navigate('/dat/verbal')}
-              sx={buttonStyle('linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)')}
+              sx={buttonStyle('linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)', 'rgba(127, 127, 213, 0.3)')}
             >
               Razonamiento Verbal
             </Button>
@@ -157,7 +199,7 @@ const DatDashboard: React.FC = () => {
             <Button
               fullWidth
               onClick={() => navigate('/dat/numerico')}
-              sx={buttonStyle('linear-gradient(90deg, #ff758c, #ff7eb3)')}
+              sx={buttonStyle('linear-gradient(90deg, #ff758c, #ff7eb3)', 'rgba(255, 117, 140, 0.3)')}
             >
               Razonamiento Numérico
             </Button>
@@ -165,7 +207,7 @@ const DatDashboard: React.FC = () => {
             <Button
               fullWidth
               onClick={() => navigate('/dat/abstracto')}
-              sx={buttonStyle('linear-gradient(90deg, #ff6a00, #ee0979)')}
+              sx={buttonStyle('linear-gradient(90deg, #ff6a00, #ee0979)', 'rgba(255, 106, 0, 0.3)')}
             >
               Razonamiento Abstracto
             </Button>
@@ -173,7 +215,7 @@ const DatDashboard: React.FC = () => {
             <Button
               fullWidth
               onClick={() => navigate('/dat/mecanico')}
-              sx={buttonStyle('linear-gradient(90deg, #43cea2, #185a9d)')}
+              sx={buttonStyle('linear-gradient(90deg, #43cea2, #185a9d)', 'rgba(67, 206, 162, 0.3)')}
             >
               Razonamiento Mecánico
             </Button>
@@ -181,7 +223,7 @@ const DatDashboard: React.FC = () => {
             <Button
               fullWidth
               onClick={() => navigate('/dat/espaciales')}
-              sx={buttonStyle('linear-gradient(90deg, #00c6ff, #0072ff)')}
+              sx={buttonStyle('linear-gradient(90deg, #00c6ff, #0072ff)', 'rgba(0, 198, 255, 0.3)')}
             >
               Relaciones Espaciales
             </Button>
@@ -189,25 +231,9 @@ const DatDashboard: React.FC = () => {
             <Button
               fullWidth
               onClick={() => navigate('/dat/ortografia')}
-              sx={buttonStyle('linear-gradient(90deg, #f7971e, #ffd200)')}
+              sx={buttonStyle('linear-gradient(90deg, #f7971e, #ffd200)', 'rgba(247, 151, 30, 0.3)')}
             >
               Ortografía
-            </Button>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={() => navigate('/client')}
-              sx={{
-                fontWeight: 800,
-                py: isMobile ? 0.9 : 1.05,
-                textTransform: 'none',
-                fontSize: sizes.btnFont,
-                borderColor: '#2e7d32',
-                color: '#2e7d32',
-                '&:hover': { backgroundColor: '#e8f5e9' },
-              }}
-            >
-              Volver
             </Button>
           </Box>
         </Box>
