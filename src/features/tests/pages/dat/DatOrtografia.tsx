@@ -18,15 +18,16 @@ const DatOrtografia: React.FC = () => {
         saving,
         lastSaved,
         snackbar,
-        handleSnackbarClose,
         dialogs,
         setDialogs,
-        submitTest,
-        saveToLocal,
         groupedQuestions,
         isSectionComplete,
-        navigate,
-        showSnackbar,
+        onExitClick,
+        onSaveClick,
+        onConfirmExit,
+        onConfirmSubmit,
+        onSubmitClick,
+        onSnackbarClose,
     } = useTestLogic<Question>(5, 'dat_ortografia', {
         datType: 'ortografia',
         questionsPerSection: 10,
@@ -47,18 +48,15 @@ const DatOrtografia: React.FC = () => {
             groupedQuestions={groupedQuestions}
             isSectionComplete={isSectionComplete}
             onSectionChange={setCurrentSection}
-            onExitClick={() => setDialogs((prev) => ({ ...prev, exit: true }))}
-            onSaveClick={() => {
-                const success = saveToLocal();
-                showSnackbar(success ? 'Respuestas guardadas' : 'Error al guardar', success ? 'success' : 'error');
-            }}
-            onSubmitClick={() => setDialogs((prev) => ({ ...prev, confirm: true }))}
-            onSnackbarClose={handleSnackbarClose}
+            onExitClick={onExitClick}
+            onSaveClick={onSaveClick}
+            onSubmitClick={onSubmitClick}
+            onSnackbarClose={onSnackbarClose}
             snackbar={snackbar}
             dialogs={dialogs}
             setDialogs={setDialogs}
-            onConfirmExit={() => navigate('/dat', { replace: true })}
-            onConfirmSubmit={submitTest}
+            onConfirmExit={onConfirmExit}
+            onConfirmSubmit={onConfirmSubmit}
         >
             {questions.map((q) => (
                 <QuestionRenderer

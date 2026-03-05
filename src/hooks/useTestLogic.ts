@@ -60,6 +60,7 @@ export const useTestLogic = <T extends BaseQuestion>(
   });
   const [dialogs, setDialogs] = useState({ confirm: false, exit: false });
 
+
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'warning' | 'info' = 'success') => {
     setSnackbar({ open: true, message, severity });
   }, []);
@@ -251,9 +252,9 @@ export const useTestLogic = <T extends BaseQuestion>(
   }, [setDialogs]);
 
   const submitTest = async () => {
-    const unanswered = allQuestions.filter((q) => !answers[q.id]);
+    const unanswered = allQuestions.filter((q) => !answers[q.id] && shouldDisplayQuestion(q.id));
     if (unanswered.length > 0) {
-      showSnackbar('Debes responder todas las preguntas antes de finalizar.', 'error');
+      showSnackbar('Debes responder todas las preguntas visibles antes de finalizar.', 'error');
       return;
     }
 
@@ -264,18 +265,23 @@ export const useTestLogic = <T extends BaseQuestion>(
       answerid: parseInt(answers[q.id]),
     }));
 
+    const visiblePayload = payload.filter(p => !conditionalVisibility || shouldDisplayQuestion(p.questionid));
+
+    setDialogs((prev) => ({ ...prev, confirm: false }));
     setSaving(true);
     try {
       if (!navigator.onLine) {
         throw new Error('Offline');
       }
 
-      await testService.submitAnswers(payload);
+      await testService.submitAnswers(visiblePayload);
 
       localStorage.removeItem(STORAGE_KEY);
+      setDialogs((prev) => ({ ...prev, confirm: false }));
       showSnackbar('Respuestas enviadas correctamente', 'success');
-      setTimeout(() => navigate(navigateOnSubmit, { replace: true }), 2000);
+      setTimeout(() => navigate(navigateOnSubmit, { replace: true, state: { showConfetti: true } }), 500);
     } catch (err: any) {
+
       if (!navigator.onLine || err.message === 'Offline' || err.message?.includes('fetch')) {
         // Guardar en cola de pendientes
         const pending = JSON.parse(localStorage.getItem('pending_submissions') || '[]');
@@ -336,17 +342,29 @@ export const useTestLogic = <T extends BaseQuestion>(
     loading,
     saving,
     lastSaved,
+    onExitClick: () => setDialogs((prev) => ({ ...prev, exit: true })),
+    onSaveClick: handleManualSave,
+    onConfirmExit: () => {
+      saveToLocal();
+      setDialogs((prev) => ({ ...prev, exit: false }));
+      navigate(testId === 5 ? '/dat' : '/client', { replace: true });
+    },
+    onConfirmSubmit: () => {
+      setDialogs((prev) => ({ ...prev, confirm: false }));
+      submitTest();
+    },
+    onSubmitClick: () => setDialogs((prev) => ({ ...prev, confirm: true })),
+    onSnackbarClose: handleSnackbarClose,
     snackbar,
-    handleSnackbarClose,
     dialogs,
     setDialogs,
-    handleManualSave,
-    submitTest,
-    saveToLocal,
+    setSaving,
     groupedQuestions,
     shouldDisplayQuestion,
     isSectionComplete,
     navigate,
     showSnackbar,
+    saveToLocal, // Keep for pages with very custom needs if any
   };
 };
+

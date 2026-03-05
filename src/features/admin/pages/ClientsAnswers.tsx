@@ -4,7 +4,7 @@ import {
   Box, Typography, CircularProgress, IconButton,
   Collapse, Paper, TextField,
   Avatar, Divider, InputAdornment, Tooltip, useTheme, useMediaQuery,
-  Select, MenuItem, FormControl
+  Select, MenuItem, FormControl, Snackbar, Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
@@ -49,6 +49,7 @@ const ClientsAnswers: React.FC = () => {
   const [clientTestsMap, setClientTestsMap] = useState<Record<number, Test[]>>({});
   const [loadingTestsForClient, setLoadingTestsForClient] = useState<Record<number, boolean>>({});
   const [search, setSearch] = useState('');
+  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -70,6 +71,10 @@ const ClientsAnswers: React.FC = () => {
     };
     fetchAll();
   }, []);
+
+  const showToast = (message: string, severity: 'success' | 'error' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   const splitTextIntoLines = (text: string, maxWidth: number = 50): string[] => {
     if (!text || !text.trim()) return [''];
@@ -156,7 +161,7 @@ const ClientsAnswers: React.FC = () => {
       });
       autoTable(doc, { startY: 62, body: tableData, theme: 'plain', styles: { fontSize: 10, cellPadding: 2, overflow: 'linebreak', valign: 'top', halign: 'left' }, columnStyles: { 0: { cellWidth: 'wrap' } }, tableWidth: 'auto', margin: { left: 12, right: 12 }, showHead: false, pageBreak: 'auto', rowPageBreak: 'avoid' });
       doc.save(`Resultados_${client?.name || 'Cliente'}_${test?.testname || 'Test'}.pdf`);
-    } catch (e) { console.error(e); alert('Ocurrió un error generando el PDF.'); }
+    } catch (e) { console.error(e); showToast('Ocurrió un error generando el PDF.', 'error'); }
   };
 
   const filteredClients = clients.filter(client => {
@@ -346,6 +351,27 @@ const ClientsAnswers: React.FC = () => {
           )}
         </Box>
       </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{
+            width: '100%',
+            borderRadius: '12px',
+            fontWeight: 600,
+            boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
+          }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

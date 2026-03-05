@@ -18,6 +18,7 @@ import DatMecanico from './features/tests/pages/dat/DatMecanico';
 import DatEspacial from './features/tests/pages/dat/DatEspacial';
 import DatOrtografia from './features/tests/pages/dat/DatOrtografia';
 
+import Introduccion from './features/tests/pages/Introduccion';
 
 import { AuthProvider } from './components/AuthContext';
 
@@ -37,6 +38,7 @@ function App() {
           <Route path="/" element={<Login />} />
           <Route path="/client" element={<ProtectedRoute requiredRole="client"><ClientDashboard /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/introduccion" element={<ProtectedRoute requiredRole="client"><Introduccion /></ProtectedRoute>} />
           <Route path="/entrevista" element={<ProtectedRoute requiredRole="client"><Entrevista /></ProtectedRoute>} />
           <Route path="/gestion-usuarios" element={<ProtectedRoute requiredRole="admin"><UserManagement /></ProtectedRoute>} />
           <Route path="/ippr" element={<ProtectedRoute requiredRole="client"><IPPR /></ProtectedRoute>} />

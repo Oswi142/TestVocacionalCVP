@@ -696,9 +696,19 @@ const UserManagement: React.FC = () => {
         open={showSnackbar}
         autoHideDuration={4000}
         onClose={() => setShowSnackbar(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert severity={messageType} variant="filled" sx={{ width: '100%' }}>
+        <Alert
+          onClose={() => setShowSnackbar(false)}
+          severity={messageType}
+          variant="filled"
+          sx={{
+            width: '100%',
+            borderRadius: '12px',
+            fontWeight: 600,
+            boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
+          }}
+        >
           {message}
         </Alert>
       </Snackbar>

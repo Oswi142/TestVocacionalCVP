@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, Button, Typography, useMediaQuery, useTheme, CircularProgress, Fade } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LockIcon from '@mui/icons-material/Lock';
@@ -9,20 +9,26 @@ import { useAuth } from '../../../hooks/useAuth';
 import { testService } from '../../../services/testService';
 import LogoHeader from '../../../components/LogoHeader';
 import LogoutDialog from '../../../components/LogoutDialog';
+import Confetti from 'react-confetti';
+import { useWindowSize } from 'react-use';
 
 const ClientDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'tests' | 'account'>('tests');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(true);
-  const [progress, setProgress] = useState<{ completedMainTestIds: number[], completedDatTypes: string[] }>({
+  const [progress, setProgress] = useState<{ hasCompletedIntro: boolean, completedMainTestIds: number[], completedDatTypes: string[] }>({
+    hasCompletedIntro: false,
     completedMainTestIds: [],
     completedDatTypes: []
   });
 
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { width, height } = useWindowSize();
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -56,6 +62,21 @@ const ClientDashboard: React.FC = () => {
   }, [user?.id]);
 
   useEffect(() => {
+    // Verificar si venimos de terminar un test y debemos mostrar confeti
+    if (location.state?.showConfetti) {
+      setShowConfetti(true);
+      // Limpiamos el estado para que si recarga no vuelva a salir
+      navigate(location.pathname, { replace: true, state: {} });
+
+      const timer = setTimeout(() => {
+        setShowConfetti(false);
+      }, 5000); // 5 segundos de fiesta
+
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, navigate, location.pathname]);
+
+  useEffect(() => {
     // Pre-descargar todos los tests para uso offline al entrar al dashboard
     if (navigator.onLine) {
       testService.prefetchAllTests();
@@ -71,14 +92,14 @@ const ClientDashboard: React.FC = () => {
       return {
         maxWidth: 420,
         logoH: 70,
-        outerPad: 12,     // px
-        tabsH: 42,        // px
-        cardPad: 18,      // px
+        outerPad: 12,
+        tabsH: 42,
+        cardPad: 18,
         titleVariant: 'h6' as const,
         subtitleVariant: 'body2' as const,
-        btnPy: 1.55,      // 🔥 más gorditos
+        btnPy: 1.55,
         btnFont: '0.95rem',
-        btnGap: 12,       // px
+        btnGap: 12,
         cardRadius: 18,
       };
     }
@@ -146,6 +167,16 @@ const ClientDashboard: React.FC = () => {
 
   return (
     <Box sx={{ position: 'relative', width: '100vw', height: '100dvh', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', px: `${sizes.outerPad}px` }}>
+      {showConfetti && (
+        <Confetti
+          width={width}
+          height={height}
+          recycle={false}
+          numberOfPieces={600}
+          gravity={0.12}
+          style={{ position: 'fixed', top: 0, left: 0, zIndex: 9999 }}
+        />
+      )}
       <Box
         sx={{
           width: '100%',
@@ -224,6 +255,19 @@ const ClientDashboard: React.FC = () => {
               >
                 {loadingProgress ? (
                   <CircularProgress color="primary" />
+                ) : !progress.hasCompletedIntro ? (
+                  <>
+                    <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', mb: 1 }}>
+                      Pero antes de comenzar, necesitamos conocerte mejor
+                    </Typography>
+                    <Button
+                      fullWidth
+                      onClick={() => navigate('/introduccion')}
+                      sx={buttonStyle('linear-gradient(90deg, #91e257ff, #ff823aff)', 'rgba(144, 142, 75, 0.79)', 'active')}
+                    >
+                      👋 INTRODUCCIÓN
+                    </Button>
+                  </>
                 ) : (
                   <>
                     {(() => {

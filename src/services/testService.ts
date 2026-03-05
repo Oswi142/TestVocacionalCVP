@@ -98,6 +98,15 @@ export const testService = {
 
         if (error) throw error;
 
+        // Verificar si completó la introducción (tiene registro en clientsinfo)
+        const { data: clientInfo, error: infoError } = await supabase
+            .from('clientsinfo')
+            .select('userid')
+            .eq('userid', clientId)
+            .single();
+
+        const hasCompletedIntro = !infoError && !!clientInfo;
+
         let completedMainTestIds: number[] = [];
         let completedDatTypes: string[] = [];
         const answeredQuestionIds = new Set<number>();
@@ -137,6 +146,7 @@ export const testService = {
         }
 
         return {
+            hasCompletedIntro,
             completedMainTestIds,
             completedDatTypes
         };

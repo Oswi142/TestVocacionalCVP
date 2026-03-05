@@ -1,46 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { supabase } from '../../../supabaseClient';
 import { useTestLogic } from '../../../hooks/useTestLogic';
 import { useAuth } from '../../../hooks/useAuth';
 import { Question } from '../../../types/test';
 import TestLayout from '../components/TestLayout';
 import QuestionRenderer from '../components/QuestionRenderer';
-import PersonalDataForm from '../components/PersonalDataForm';
 import { Alert, Box } from '@mui/material';
-import dayjs from 'dayjs';
 
 const Entrevista: React.FC = () => {
   const { user } = useAuth();
-  const [schoolName, setSchoolName] = useState<string>('');
-  const [birthdayDate, setBirthdayDate] = useState<dayjs.Dayjs | null>(null);
-
-  const testLogicOptions = useMemo(() => ({
-    onSaveExtra: () => ({
-      schoolName,
-      birthdayDate: birthdayDate ? birthdayDate.toISOString() : null,
-    }),
-    onLoadExtra: (extra: any) => {
-      if (extra.schoolName) setSchoolName(extra.schoolName);
-      if (extra.birthdayDate) setBirthdayDate(dayjs(extra.birthdayDate));
-    },
-    conditionalVisibility: {
-      17: 16,
-      20: 19,
-      27: 26,
-    },
-    customIsSectionComplete: (section: number, answers: { [key: number]: string }, grouped: { [key: number]: Question[] }, shouldDisplayFn: (id: number) => boolean) => {
-      const questions = grouped[section] || [];
-      if (questions.length === 0) return false;
-
-      return questions.every((q) => {
-        if (!shouldDisplayFn(q.id)) return true;
-        const qText = q.question?.toLowerCase() || '';
-        if (qText.includes('fecha')) return !!birthdayDate;
-        if (qText.includes('colegio')) return !!schoolName && schoolName.trim() !== '';
-        return !!answers[q.id] && answers[q.id].trim() !== '';
-      });
-    }
-  }), [schoolName, birthdayDate]);
 
   const {
     allQuestions,
@@ -53,16 +21,25 @@ const Entrevista: React.FC = () => {
     saving,
     lastSaved,
     snackbar,
-    handleSnackbarClose,
     dialogs,
     setDialogs,
+    setSaving,
     groupedQuestions,
     shouldDisplayQuestion,
     isSectionComplete,
-    saveToLocal,
-    navigate,
+    onExitClick,
+    onSaveClick,
+    onConfirmExit,
+    onSnackbarClose,
     showSnackbar,
-  } = useTestLogic<Question>(1, 'entrevista', testLogicOptions);
+    navigate,
+  } = useTestLogic<Question>(1, 'entrevista', {
+    conditionalVisibility: {
+      17: 16,
+      20: 19,
+      27: 26,
+    }
+  });
 
   const handleAnswerChange = (id: number, value: string) => {
     setAnswers(prev => ({ ...prev, [id]: value }));
@@ -81,30 +58,10 @@ const Entrevista: React.FC = () => {
     if (!user || !user.id) return;
 
     try {
-      const section1 = (groupedQuestions[1] || []) as Question[];
-      const mapped = {
-        gender: section1[0] ? answers[section1[0].id] || '' : '',
-        birthday: birthdayDate ? birthdayDate.format('YYYY-MM-DD') : '',
-        birthplace: section1[2] ? answers[section1[2].id] || '' : '',
-        address: section1[3] ? answers[section1[3].id] || '' : '',
-        grade: section1[5] ? answers[section1[5].id] || '' : '',
-        hobbies: section1[6] ? answers[section1[6].id] || '' : '',
-      };
+      setDialogs(prev => ({ ...prev, confirm: false }));
+      setSaving(true);
 
-      const { error: infoError } = await supabase.from('clientsinfo').upsert({
-        userid: user.id,
-        gender: mapped.gender,
-        birthday: mapped.birthday,
-        birthplace: mapped.birthplace,
-        address: mapped.address,
-        school: schoolName,
-        grade: mapped.grade,
-        hobbies: mapped.hobbies,
-      });
-
-      if (infoError) throw infoError;
-
-      const allVisible = allQuestions.filter((q: Question) => q.section > 1 && shouldDisplayQuestion(q.id));
+      const allVisible = allQuestions.filter((q: Question) => shouldDisplayQuestion(q.id));
       const entries = allVisible.map((q: Question) => {
         const value = answers[q.id];
         const options = answerOptions.filter(opt => opt.questionid === q.id);
@@ -129,11 +86,14 @@ const Entrevista: React.FC = () => {
       const STORAGE_KEY = `entrevista_${user.id || 'anonymous'}`;
       localStorage.removeItem(STORAGE_KEY);
       showSnackbar('Respuestas enviadas correctamente', 'success');
-      setTimeout(() => navigate('/client', { replace: true }), 2000);
+      setTimeout(() => navigate('/client', { replace: true, state: { showConfetti: true } }), 500);
+
 
     } catch (err: any) {
       console.error('Error submitting test:', err);
       showSnackbar('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -157,22 +117,15 @@ const Entrevista: React.FC = () => {
       groupedQuestions={groupedQuestions}
       isSectionComplete={isSectionComplete}
       onSectionChange={setCurrentSection}
-      onExitClick={() => setDialogs(prev => ({ ...prev, exit: true }))}
-      onSaveClick={() => {
-        const success = saveToLocal();
-        showSnackbar(success ? 'Respuestas guardadas' : 'Error al guardar', success ? 'success' : 'error');
-      }}
+      onExitClick={onExitClick}
+      onSaveClick={onSaveClick}
       onSubmitClick={() => setDialogs(prev => ({ ...prev, confirm: true }))}
-      onSnackbarClose={handleSnackbarClose}
+      onSnackbarClose={onSnackbarClose}
       snackbar={snackbar}
       dialogs={dialogs}
       setDialogs={setDialogs}
-      onConfirmExit={() => {
-        saveToLocal();
-        setDialogs(prev => ({ ...prev, exit: false }));
-        navigate('/client', { replace: true });
-      }}
-      onConfirmSubmit={() => { handleSubmit(); }}
+      onConfirmExit={onConfirmExit}
+      onConfirmSubmit={handleSubmit}
     >
       {sectionAlerts[currentSection] && (
         <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
@@ -180,31 +133,19 @@ const Entrevista: React.FC = () => {
         </Alert>
       )}
 
-      {currentSection === 1 ? (
-        <PersonalDataForm
-          questions={(groupedQuestions[1] || []) as unknown as Question[]}
-          answers={answers}
-          onAnswerChange={handleAnswerChange}
-          schoolName={schoolName}
-          onSchoolChange={setSchoolName}
-          birthdayDate={birthdayDate}
-          onDateChange={setBirthdayDate}
-        />
-      ) : (
-        <Box>
-          {(groupedQuestions[currentSection] || []).map((q) => (
-            shouldDisplayQuestion(q.id) && (
-              <QuestionRenderer
-                key={q.id}
-                question={q}
-                options={answerOptions.filter(opt => opt.questionid === q.id)}
-                currentAnswer={answers[q.id]}
-                onAnswerChange={(qid, val) => handleAnswerChange(qid, val)}
-              />
-            )
-          ))}
-        </Box>
-      )}
+      <Box>
+        {(groupedQuestions[currentSection] || []).map((q) => (
+          shouldDisplayQuestion(q.id) && (
+            <QuestionRenderer
+              key={q.id}
+              question={q}
+              options={answerOptions.filter(opt => opt.questionid === q.id)}
+              currentAnswer={answers[q.id]}
+              onAnswerChange={(qid, val) => handleAnswerChange(qid, val)}
+            />
+          )
+        ))}
+      </Box>
     </TestLayout>
   );
 };

@@ -4,7 +4,7 @@ import {
   Box, Typography, CircularProgress, IconButton, Collapse,
   Paper, TextField, Avatar, Divider, InputAdornment,
   Tooltip, useTheme, useMediaQuery,
-  Select, MenuItem, FormControl
+  Select, MenuItem, FormControl, Snackbar, Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
@@ -50,6 +50,7 @@ const ClientsReports: React.FC = () => {
   const [clientTestsMap, setClientTestsMap] = useState<Record<number, TestRow[]>>({});
   const [loadingTestsForClient, setLoadingTestsForClient] = useState<Record<number, boolean>>({});
   const [search, setSearch] = useState('');
+  const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' | 'info' }>({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -155,6 +156,10 @@ const ClientsReports: React.FC = () => {
     }
   };
 
+  const showToast = (message: string, severity: 'success' | 'error' | 'info' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
   const handleAttemptChange = (clientId: number, testId: number, attempt: string) => {
     setClientTestsMap(prev => {
       const clientTests = prev[clientId] || [];
@@ -170,8 +175,8 @@ const ClientsReports: React.FC = () => {
       if (type === 'chaside') { await downloadChasideReportPDF(clientId, attempt); return; }
       if (type === 'ippr') { await downloadIpprReportPDF(clientId, attempt); return; }
       if (type === 'dat') { await downloadDatReportPDF(clientId, attempt); return; }
-      alert('Reporte disponible próximamente para este test.');
-    } catch (err: any) { console.error(err); alert(`No se pudo generar el reporte: ${err?.message ?? 'Error desconocido'}`); }
+      showToast('Reporte disponible próximamente para este test.', 'info');
+    } catch (err: any) { console.error(err); showToast(`No se pudo generar el reporte: ${err?.message ?? 'Error desconocido'}`, 'error'); }
   };
 
   return (
@@ -293,6 +298,27 @@ const ClientsReports: React.FC = () => {
           )}
         </Box>
       </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{
+            width: '100%',
+            borderRadius: '12px',
+            fontWeight: 600,
+            boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
+          }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
