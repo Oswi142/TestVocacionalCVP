@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from '../../../supabaseClient';
 import {
   Box, Typography, CircularProgress, IconButton,
   Collapse, Paper, TextField,
-  Avatar, Divider, InputAdornment, Tooltip, useTheme, useMediaQuery
+  Avatar, Divider, InputAdornment, Tooltip, useTheme, useMediaQuery,
+  Select, MenuItem, FormControl
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
@@ -16,7 +18,6 @@ import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getCompletedDatCategories, DAT_LABELS, DatType, getDatTestId } from '../../../utils/dat';
 import { adminService } from '../../../services/adminService';
-import { testService } from '../../../services/testService';
 import { UnifiedClient } from '../../../types/user';
 import { Question as QuestionRow, AnswerOption as AnswerOptionRow, Test, TestAnswer as TestsAnswerRow } from '../../../types/test';
 
@@ -83,13 +84,28 @@ const ClientsAnswers: React.FC = () => {
     return lines;
   };
 
-  const downloadPDF = async (clientId: number, testId: number, category?: DatType) => {
+  const getAttemptLabel = (prefix: string) => {
+    if (prefix === 'active') return 'Intento Actual (Activo)';
+    const match = prefix.match(/\[HIST_(.+)\]/);
+    if (match) return `Historial: ${match[1].replace(/-/g, ':')}`;
+    return 'Intento Anterior';
+  };
+
+  const downloadPDF = async (clientId: number, testId: number, category?: DatType, attemptId: string = 'active') => {
     try {
       const client = clients.find(c => c.userid === clientId);
       const test = tests.find(t => t.id === testId);
       const datId = await getDatTestId();
       const isDat = testId === datId || (test?.testname || '').toLowerCase().includes('dat');
-      const clientAnswers = (await adminService.getClientAnswers(clientId, testId)) as TestsAnswerRow[];
+
+      // Obtener todas las respuestas y filtrar por el intento seleccionado
+      const allAnswers = (await adminService.getClientAnswers(clientId, testId)) as TestsAnswerRow[];
+      const clientAnswers = allAnswers.filter(ans => {
+        const details = ans.details || '';
+        if (attemptId === 'active') return !details.startsWith('[HIST_');
+        return details.startsWith(attemptId);
+      });
+
       const qIds = [...new Set(clientAnswers.map(a => a.questionid))];
       const aIds = [...new Set(clientAnswers.map(a => a.answerid).filter((x): x is number => x != null))];
       const [qsRaw, optsRaw] = await Promise.all([
@@ -105,17 +121,22 @@ const ClientsAnswers: React.FC = () => {
       doc.setFontSize(12);
       doc.text(`Fecha de generación: ${now}`, 14, 30);
       doc.text(`Nombre: ${client?.name || ''}`, 14, 38);
-      doc.setFontSize(14); doc.text(`Test: ${test?.testname || ''}`, 14, 52);
+      if (client?.school) {
+        doc.text(`Colegio: ${client.school}`, 14, 45);
+        doc.setFontSize(14); doc.text(`Test: ${test?.testname || ''}`, 14, 55);
+      } else {
+        doc.setFontSize(14); doc.text(`Test: ${test?.testname || ''}`, 14, 52);
+      }
       const tableData: any[] = [];
       let categoriesToProcess: (DatType | undefined)[] = [category];
       if (isDat && !category) {
         const foundCats = new Set<DatType>();
         clientAnswers.forEach(ans => { const q = qMap.get(ans.questionid); if (q?.dat_type) foundCats.add(q.dat_type as DatType); });
-        const order: DatType[] = ['razonamiento_verbal','razonamiento_numerico','razonamiento_abstracto','razonamiento_mecanico','razonamiento_espacial','ortografia'];
+        const order: DatType[] = ['razonamiento_verbal', 'razonamiento_numerico', 'razonamiento_abstracto', 'razonamiento_mecanico', 'razonamiento_espacial', 'ortografia'];
         categoriesToProcess = order.filter(c => foundCats.has(c));
       }
       categoriesToProcess.forEach(currentCat => {
-        if (isDat && currentCat) tableData.push([{ content: `SECCIÓN: ${DAT_LABELS[currentCat]}`, styles: { fillColor: [41,128,185], textColor: [255,255,255], fontStyle: 'bold', fontSize: 11, halign: 'center' } }]);
+        if (isDat && currentCat) tableData.push([{ content: `SECCIÓN: ${DAT_LABELS[currentCat]}`, styles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 11, halign: 'center' } }]);
         const filteredAnswers = isDat && currentCat ? clientAnswers.filter(ans => qMap.get(ans.questionid)?.dat_type === currentCat) : clientAnswers;
         let n = 1;
         filteredAnswers.forEach(ans => {
@@ -125,10 +146,10 @@ const ClientsAnswers: React.FC = () => {
           const aText = oRow?.answer ?? ans.details ?? '';
           const qLines = splitTextIntoLines(qText, 80);
           const aLines = splitTextIntoLines(aText, 80);
-          tableData.push([{ content: `PREGUNTA ${n}: ${qLines[0]}`, styles: { fillColor: [232,245,255], textColor: [33,150,243], fontStyle: 'bold', fontSize: 10 } }]);
-          for (let i = 1; i < qLines.length; i++) tableData.push([{ content: qLines[i], styles: { fillColor: [232,245,255], textColor: [33,150,243], fontStyle: 'bold', fontSize: 10 } }]);
-          tableData.push([{ content: `RESPUESTA: ${aLines[0]}`, styles: { fontSize: 10, textColor: [60,60,60] } }]);
-          for (let i = 1; i < aLines.length; i++) tableData.push([{ content: aLines[i], styles: { fontSize: 10, textColor: [60,60,60] } }]);
+          tableData.push([{ content: `PREGUNTA ${n}: ${qLines[0]}`, styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
+          for (let i = 1; i < qLines.length; i++) tableData.push([{ content: qLines[i], styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
+          tableData.push([{ content: `RESPUESTA: ${aLines[0]}`, styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
+          for (let i = 1; i < aLines.length; i++) tableData.push([{ content: aLines[i], styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
           tableData.push([{ content: '', styles: { minCellHeight: 3 } }]);
           n++;
         });
@@ -152,16 +173,54 @@ const ClientsAnswers: React.FC = () => {
     if (!clientTestsMap[client.userid]) {
       try {
         setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: true }));
-        const uniqIds = await testService.getCompletedTestIds(client.userid);
+
+        // 1. Obtener todos los test IDs donde el usuario tiene respuestas (incluyendo históricos)
+        const { data: allAnswersRaw } = await supabase
+          .from('testsanswers')
+          .select('testid, details')
+          .eq('clientid', client.userid);
+
+        const answers = (allAnswersRaw || []) as any[];
+        const uniqTestIds = [...new Set(answers.map(a => a.testid))];
+
         const datId = await getDatTestId();
-        const testsForClient: Test[] = [];
-        for (const id of uniqIds) {
+        const testsForClient: any[] = [];
+
+        for (const id of uniqTestIds) {
           const baseTest = tests.find(t => t.id === id);
           if (!baseTest) continue;
+
+          // Encontrar intentos únicos para este test
+          const testAnswers = answers.filter(a => a.testid === id);
+          const attempts = new Set<string>();
+          testAnswers.forEach(a => {
+            const d = a.details || '';
+            const match = d.match(/^\[HIST_[^\]]+\]/);
+            if (match) attempts.add(match[0]);
+            else attempts.add('active');
+          });
+
+          const sortedAttempts = Array.from(attempts).sort((a, b) => {
+            if (a === 'active') return -1;
+            if (b === 'active') return 1;
+            return b.localeCompare(a); // Más recientes primero
+          });
+
           if (id === datId || (baseTest.testname || '').toLowerCase().includes('dat')) {
             const completedCats = await getCompletedDatCategories(client.userid);
-            testsForClient.push({ ...baseTest, testname: `DAT (${completedCats.length} de 6 completados)` });
-          } else { testsForClient.push(baseTest); }
+            testsForClient.push({
+              ...baseTest,
+              testname: `DAT (${completedCats.length} de 6 completados)`,
+              attempts: sortedAttempts,
+              selectedAttempt: sortedAttempts[0]
+            });
+          } else {
+            testsForClient.push({
+              ...baseTest,
+              attempts: sortedAttempts,
+              selectedAttempt: sortedAttempts[0]
+            });
+          }
         }
         setClientTestsMap(prev => ({ ...prev, [client.userid]: testsForClient }));
       } catch (e) { console.error('Error fetching tests for client:', e); }
@@ -169,8 +228,16 @@ const ClientsAnswers: React.FC = () => {
     }
   };
 
+  const handleAttemptChange = (clientId: number, testId: number, attempt: string) => {
+    setClientTestsMap(prev => {
+      const clientTests = prev[clientId] || [];
+      const updated = clientTests.map(t => t.id === testId ? { ...t, selectedAttempt: attempt } : t);
+      return { ...prev, [clientId]: updated };
+    });
+  };
+
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh', background: 'linear-gradient(135deg,#f9c9a4 0%,#cafacc 100%)', display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 1 : 3, boxSizing: 'border-box', overflowX: 'hidden' }}>
+    <Box sx={{ width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 1 : 3, boxSizing: 'border-box', overflowX: 'hidden' }}>
       <Box sx={{ width: '100%', maxWidth: 1000, height: '90vh', backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', borderRadius: '32px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box' }}>
 
         {/* Header */}
@@ -241,11 +308,29 @@ const ClientsAnswers: React.FC = () => {
                                 </Box>
                                 <Box>
                                   <Typography variant="body2" fontWeight={700} color="#334155">{test.testname}</Typography>
-                                  <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 500 }}>Respaldo técnico de respuestas</Typography>
+                                  {test.attempts && test.attempts.length > 1 ? (
+                                    <FormControl size="small" variant="standard" sx={{ minWidth: 150 }}>
+                                      <Select
+                                        value={test.selectedAttempt}
+                                        onChange={(e) => handleAttemptChange(client.userid, test.id, e.target.value as string)}
+                                        sx={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}
+                                      >
+                                        {test.attempts.map((att: string) => (
+                                          <MenuItem key={att} value={att} sx={{ fontSize: '0.75rem' }}>
+                                            {getAttemptLabel(att)}
+                                          </MenuItem>
+                                        ))}
+                                      </Select>
+                                    </FormControl>
+                                  ) : (
+                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 500 }}>
+                                      {test.selectedAttempt && test.selectedAttempt !== 'active' ? getAttemptLabel(test.selectedAttempt) : 'Intento Actual'}
+                                    </Typography>
+                                  )}
                                 </Box>
                               </Box>
                               <Tooltip title="Descargar respaldo PDF" arrow placement="left">
-                                <IconButton onClick={() => downloadPDF(client.userid, test.id, test.category)} size="small" sx={{ backgroundColor: '#1e293b', color: 'white', borderRadius: '10px', width: 34, height: 34, '&:hover': { backgroundColor: '#0f172a', transform: 'translateY(-2px)' }, transition: 'all 0.2s' }}>
+                                <IconButton onClick={() => downloadPDF(client.userid, test.id, test.category, test.selectedAttempt)} size="small" sx={{ backgroundColor: '#1e293b', color: 'white', borderRadius: '10px', width: 34, height: 34, '&:hover': { backgroundColor: '#0f172a', transform: 'translateY(-2px)' }, transition: 'all 0.2s' }}>
                                   <GetAppIcon sx={{ fontSize: 16 }} />
                                 </IconButton>
                               </Tooltip>

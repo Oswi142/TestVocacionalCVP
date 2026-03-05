@@ -27,7 +27,7 @@ const DatEspacial: React.FC = () => {
         isSectionComplete,
         navigate,
         showSnackbar,
-    } = useTestLogic<Question>(5, 'dat_relaciones_espaciales', {
+    } = useTestLogic<Question>(5, 'dat_razonamiento_espacial', {
         datType: 'razonamiento_espacial',
         questionsPerSection: 10,
         navigateOnSubmit: '/dat',

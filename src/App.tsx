@@ -21,9 +21,17 @@ import DatOrtografia from './features/tests/pages/dat/DatOrtografia';
 
 import { AuthProvider } from './components/AuthContext';
 
+import { useOnlineStatus } from './hooks/useOnlineStatus';
+import WifiOffIcon from '@mui/icons-material/WifiOff';
+import { Box, Tooltip, Zoom } from '@mui/material';
+import AnimatedBackground from './components/AnimatedBackground';
+
 function App() {
+  const isOnline = useOnlineStatus();
+
   return (
     <AuthProvider>
+      <AnimatedBackground />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
@@ -47,6 +55,31 @@ function App() {
 
         </Routes>
       </BrowserRouter>
+
+      {/* Indicador de Offline sutil */}
+      <Zoom in={!isOnline}>
+        <Tooltip title="Sin conexión - Trabajando localmente" arrow placement="left">
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 20,
+              right: 20,
+              zIndex: 9999,
+              backgroundColor: 'rgba(255, 111, 0, 0.9)',
+              color: 'white',
+              p: 1.5,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(255, 111, 0, 0.4)',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            <WifiOffIcon />
+          </Box>
+        </Tooltip>
+      </Zoom>
     </AuthProvider>
   );
 }

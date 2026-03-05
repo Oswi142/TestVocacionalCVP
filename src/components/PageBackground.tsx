@@ -11,7 +11,7 @@ const PageBackground: React.FC<PageBackgroundProps> = ({ children, sx, ...props 
             sx={{
                 width: '100vw',
                 height: '100vh',
-                background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
+                background: 'transparent',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',

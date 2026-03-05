@@ -31,7 +31,7 @@ interface TestLayoutProps {
     onSaveClick: () => void;
     onSubmitClick: () => void;
     onSnackbarClose: () => void;
-    snackbar: { open: boolean; message: string; severity: 'success' | 'error' };
+    snackbar: { open: boolean; message: string; severity: 'success' | 'error' | 'warning' | 'info' };
     dialogs: { confirm: boolean; exit: boolean };
     setDialogs: React.Dispatch<React.SetStateAction<{ confirm: boolean; exit: boolean }>>;
     onConfirmExit: () => void;
@@ -81,7 +81,6 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    background: 'linear-gradient(to right, #f9c9a4, #cafacc)',
                 }}
             >
                 <CircularProgress />
@@ -94,7 +93,6 @@ const TestLayout: React.FC<TestLayoutProps> = ({
             sx={{
                 width: '100vw',
                 height: '100vh',
-                background: 'linear-gradient(to right, #f9c9a4, #cafacc)',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',

@@ -13,6 +13,7 @@ export interface ClientInfo {
     birthday: string | null;
     address: string | null;
     birthplace: string | null;
+    school?: string | null;
 }
 
 export interface UnifiedClient extends ClientInfo {

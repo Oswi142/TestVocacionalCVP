@@ -4,6 +4,7 @@ import {
   Box, Typography, CircularProgress, IconButton, Collapse,
   Paper, TextField, Avatar, Divider, InputAdornment,
   Tooltip, useTheme, useMediaQuery,
+  Select, MenuItem, FormControl
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
@@ -39,7 +40,6 @@ const avatarColor = (id: number) => AVATAR_PALETTE[id % AVATAR_PALETTE.length];
 
 type ClientView = { userid: number };
 type TestRow = { id: number; testname: string; category?: DatType };
-type TestsAnswerRow = { clientid: number; testid: number };
 
 const ClientsReports: React.FC = () => {
   const [clients, setClients] = useState<ClientView[]>([]);
@@ -90,41 +90,92 @@ const ClientsReports: React.FC = () => {
     return 'other';
   };
 
+  const getAttemptLabel = (prefix: string) => {
+    if (prefix === 'active') return 'Intento Actual (Activo)';
+    const match = prefix.match(/\[HIST_(.+)\]/);
+    if (match) return `Historial: ${match[1].replace(/-/g, ':')}`;
+    return 'Intento Anterior';
+  };
+
   const handleToggleClient = async (client: ClientView) => {
     setExpandedClientId(prev => (prev === client.userid ? null : client.userid));
     if (!clientTestsMap[client.userid]) {
       try {
         setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: true }));
-        const { data: rows, error } = await supabase.from('testsanswers').select('testid,clientid').eq('clientid', client.userid).range(0, 99999);
-        if (error) throw error;
-        const uniqIds = [...new Set(((rows || []) as TestsAnswerRow[]).map(r => r.testid))];
-        const testsForClient: TestRow[] = [];
-        for (const id of uniqIds) {
+
+        // 1. Obtener todos los test IDs donde el usuario tiene respuestas (incluyendo históricos)
+        const { data: allAnswersRaw } = await supabase
+          .from('testsanswers')
+          .select('testid, details')
+          .eq('clientid', client.userid);
+
+        const answers = (allAnswersRaw || []) as any[];
+        const uniqTestIds = [...new Set(answers.map(a => a.testid))];
+
+        const testsForClient: any[] = [];
+        for (const id of uniqTestIds) {
           const baseTest = tests.find(t => t.id === id);
           if (!baseTest) continue;
+
+          // Encontrar intentos únicos para este test
+          const testAnswers = answers.filter(a => a.testid === id);
+          const attempts = new Set<string>();
+          testAnswers.forEach(a => {
+            const d = a.details || '';
+            const match = d.match(/^\[HIST_[^\]]+\]/);
+            if (match) attempts.add(match[0]);
+            else attempts.add('active');
+          });
+
+          const sortedAttempts = Array.from(attempts).sort((a, b) => {
+            if (a === 'active') return -1;
+            if (b === 'active') return 1;
+            return b.localeCompare(a); // Más recientes primero
+          });
+
           if (kindOfTest(baseTest.testname) === 'dat') {
-            const completedCats = await getCompletedDatCategories(client.userid);
-            testsForClient.push({ ...baseTest, testname: `DAT (${completedCats.length} de 6 completados)` });
-          } else { testsForClient.push(baseTest); }
+            const completedCats = await getCompletedDatCategories(client.userid, sortedAttempts[0]);
+            testsForClient.push({
+              ...baseTest,
+              testname: `DAT (${completedCats.length} de 6 completados)`,
+              attempts: sortedAttempts,
+              selectedAttempt: sortedAttempts[0]
+            });
+          } else {
+            testsForClient.push({
+              ...baseTest,
+              attempts: sortedAttempts,
+              selectedAttempt: sortedAttempts[0]
+            });
+          }
         }
         setClientTestsMap(prev => ({ ...prev, [client.userid]: testsForClient }));
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error('Error fetching tests for client:', e); }
       finally { setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: false })); }
     }
+  };
+
+  const handleAttemptChange = (clientId: number, testId: number, attempt: string) => {
+    setClientTestsMap(prev => {
+      const clientTests = prev[clientId] || [];
+      const updated = clientTests.map(t => t.id === testId ? { ...t, selectedAttempt: attempt } : t);
+      return { ...prev, [clientId]: updated };
+    });
   };
 
   const handleDownload = async (clientId: number, test: TestRow) => {
     try {
       const type = kindOfTest(test.testname);
-      if (type === 'chaside') { await downloadChasideReportPDF(clientId); return; }
-      if (type === 'ippr') { await downloadIpprReportPDF(clientId); return; }
-      if (type === 'dat') { await downloadDatReportPDF(clientId); return; }
+      const attempt = (test as any).selectedAttempt || 'active';
+      if (type === 'chaside') { await downloadChasideReportPDF(clientId, attempt); return; }
+      if (type === 'ippr') { await downloadIpprReportPDF(clientId, attempt); return; }
+      if (type === 'dat') { await downloadDatReportPDF(clientId, attempt); return; }
       alert('Reporte disponible próximamente para este test.');
     } catch (err: any) { console.error(err); alert(`No se pudo generar el reporte: ${err?.message ?? 'Error desconocido'}`); }
   };
 
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh', background: 'linear-gradient(135deg,#f9c9a4 0%,#cafacc 100%)', display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 1 : 3, boxSizing: 'border-box', overflowX: 'hidden' }}>
+    <Box sx={{ width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 1 : 3, boxSizing: 'border-box', overflowX: 'hidden' }}>
       <Box sx={{ width: '100%', maxWidth: 1000, height: '90vh', backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', borderRadius: '32px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box' }}>
 
         {/* Header */}
@@ -188,7 +239,7 @@ const ClientsReports: React.FC = () => {
                         <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic', py: 1 }}>No hay diagnósticos completados para este usuario.</Typography>
                       ) : (
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                          {testsForClient.map((test) => {
+                          {testsForClient.map((test: any) => {
                             const kind = kindOfTest(test.testname);
                             const isReady = kind === 'chaside' || kind === 'ippr' || kind === 'maci' || kind === 'dat';
                             const caption = (kind === 'maci' || kind === 'dat') ? 'Puntajes brutos registrados' : 'Perfil vocacional interpretado';
@@ -200,7 +251,25 @@ const ClientsReports: React.FC = () => {
                                   </Box>
                                   <Box>
                                     <Typography variant="body2" fontWeight={700} color="#334155">{test.testname}</Typography>
-                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 500 }}>{isReady ? caption : 'Reporte próximamente'}</Typography>
+                                    {test.attempts && test.attempts.length > 1 ? (
+                                      <FormControl size="small" variant="standard" sx={{ minWidth: 150 }}>
+                                        <Select
+                                          value={test.selectedAttempt}
+                                          onChange={(e) => handleAttemptChange(client.userid, test.id, e.target.value as string)}
+                                          sx={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}
+                                        >
+                                          {test.attempts.map((att: string) => (
+                                            <MenuItem key={att} value={att} sx={{ fontSize: '0.75rem' }}>
+                                              {getAttemptLabel(att)}
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
+                                    ) : (
+                                      <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 500 }}>
+                                        {isReady ? caption : 'Reporte próximamente'}
+                                      </Typography>
+                                    )}
                                   </Box>
                                 </Box>
                                 <Tooltip title={isReady ? 'Descargar reporte' : 'En desarrollo'} arrow placement="left">

@@ -40,6 +40,7 @@ export type ChasideScore = {
   clientId: number;
   testId: number;
   userName: string | null;
+  schoolName: string | null;
   counts: RawCounts;
   totals: { interest: number; aptitude: number; overall: Record<Band, number> };
   ranking: {
@@ -64,7 +65,7 @@ async function getChasideTestId(): Promise<number> {
   return data.id;
 }
 
-export async function computeChasideScore(clientId: number): Promise<ChasideScore> {
+export async function computeChasideScore(clientId: number, attemptId: string = 'active'): Promise<ChasideScore> {
   const testId = await getChasideTestId();
 
   const { data: urows } = await supabase
@@ -73,6 +74,12 @@ export async function computeChasideScore(clientId: number): Promise<ChasideScor
     .eq('id', clientId)
     .limit(1);
   const userName = (urows && urows[0]?.name) || null;
+  const { data: cirows } = await supabase
+    .from('clientsinfo')
+    .select('school')
+    .eq('userid', clientId)
+    .limit(1);
+  const schoolName = (cirows && cirows[0]?.school) || null;
 
   const { data: qrows, error: qErr } = await supabase
     .from('questions')
@@ -104,6 +111,12 @@ export async function computeChasideScore(clientId: number): Promise<ChasideScor
 
   if (aErr) throw aErr;
 
+  const filteredArows = (arows || []).filter(r => {
+    const d = r.details || '';
+    if (attemptId === 'active') return !d.startsWith('[HIST_');
+    return d.startsWith(attemptId);
+  });
+
   const answerIds = Array.from(
     new Set((arows || []).map((r) => r.answerid).filter((x): x is number => x != null))
   );
@@ -130,7 +143,7 @@ export async function computeChasideScore(clientId: number): Promise<ChasideScor
   let answered = 0;
   let yesCount = 0;
 
-  for (const r of arows || []) {
+  for (const r of filteredArows) {
     const band = qToBand.get(r.questionid);
     const scale = qToScale.get(r.questionid);
     if (!band || !scale) continue;
@@ -167,6 +180,7 @@ export async function computeChasideScore(clientId: number): Promise<ChasideScor
     clientId,
     testId,
     userName,
+    schoolName,
     counts,
     totals: { interest: totalsInterest, aptitude: totalsAptitude, overall },
     ranking,
@@ -175,8 +189,8 @@ export async function computeChasideScore(clientId: number): Promise<ChasideScor
   };
 }
 
-export async function downloadChasideReportPDF(clientId: number): Promise<void> {
-  const score = await computeChasideScore(clientId);
+export async function downloadChasideReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {
+  const score = await computeChasideScore(clientId, attemptId);
 
   const doc = new jsPDF();
   const now = new Date().toLocaleDateString('es-ES');
@@ -187,24 +201,30 @@ export async function downloadChasideReportPDF(clientId: number): Promise<void> 
 
   doc.setFontSize(11);
   doc.text(`Fecha: ${now}`, 14, 26);
-  doc.text(`Cliente: ${score.userName ?? clientId.toString()}`, 14, 33);
+  if (score.schoolName) {
+    doc.text(`Nombre: ${score.userName ?? clientId.toString()}`, 14, 33);
+    doc.text(`Colegio: ${score.schoolName}`, 14, 40);
+  } else {
+    doc.text(`Nombre: ${score.userName ?? clientId.toString()}`, 14, 33);
+  }
 
   doc.setFontSize(10);
-  doc.text('C = Científico',     14, 46);
-  doc.text('H = Humanístico',    14, 51);
-  doc.text('A = Artístico',      14, 56);
-  doc.text('S = Social',         14, 61);
-  doc.text('I = Investigativo',  14, 66);
-  doc.text('D = Directivo',      14, 71);
-  doc.text('E = Emprendedor',    14, 76);
+  const startYList = score.schoolName ? 50 : 43;
+  doc.text('C = Científico', 14, startYList);
+  doc.text('H = Humanístico', 14, startYList + 5);
+  doc.text('A = Artístico', 14, startYList + 10);
+  doc.text('S = Social', 14, startYList + 15);
+  doc.text('I = Investigativo', 14, startYList + 20);
+  doc.text('D = Directivo', 14, startYList + 25);
+  doc.text('E = Emprendedor', 14, startYList + 30);
 
   const bands: Band[] = ['C', 'H', 'A', 'S', 'I', 'D', 'E'];
   const interestRow = ['Interés', ...bands.map((b) => String(score.counts.interest[b]))];
   const aptitudeRow = ['Aptitud', ...bands.map((b) => String(score.counts.aptitude[b]))];
-  const overallRow  = ['Total (I+A)', ...bands.map((b) => String(score.totals.overall[b]))];
+  const overallRow = ['Total (I+A)', ...bands.map((b) => String(score.totals.overall[b]))];
 
   autoTable(doc, {
-    startY: 84,
+    startY: score.schoolName ? 88 : 84,
     head: [['Escala', ...bands]],
     body: [interestRow, aptitudeRow, overallRow],
     styles: { fontSize: 10, cellPadding: 2, halign: 'center' as const },

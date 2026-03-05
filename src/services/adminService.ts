@@ -27,6 +27,7 @@ export const adminService = {
                 birthday: ci?.birthday ?? null,
                 address: ci?.address ?? null,
                 birthplace: ci?.birthplace ?? null,
+                school: ci?.school ?? null,
             };
         });
     },

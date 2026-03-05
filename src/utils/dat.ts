@@ -22,6 +22,7 @@ export const DAT_LABELS: Record<DatType, string> = {
 export type DatResult = {
     clientId: number;
     userName: string | null;
+    schoolName: string | null;
     scores: Record<DatType, { correct: number; answered: number; total: number }>;
     overallCorrect: number;
     totalAnswered: number;
@@ -41,7 +42,7 @@ export async function getDatTestId(): Promise<number> {
     return data.id;
 }
 
-export async function computeDatScore(clientId: number): Promise<DatResult> {
+export async function computeDatScore(clientId: number, attemptId: string = 'active'): Promise<DatResult> {
     const testId = await getDatTestId();
 
     // 1. Get user name
@@ -51,6 +52,12 @@ export async function computeDatScore(clientId: number): Promise<DatResult> {
         .eq('id', clientId)
         .limit(1);
     const userName = (urows && urows[0]?.name) || null;
+    const { data: cirows } = await supabase
+        .from('clientsinfo')
+        .select('school')
+        .eq('userid', clientId)
+        .limit(1);
+    const schoolName = (cirows && cirows[0]?.school) || null;
 
     // 2. Get questions for this test to know the dat_type
     const { data: qrows, error: qErr } = await supabase
@@ -74,14 +81,20 @@ export async function computeDatScore(clientId: number): Promise<DatResult> {
     // 3. Get client answers
     const { data: arows, error: aErr } = await supabase
         .from('testsanswers')
-        .select('questionid, answerid')
+        .select('questionid, answerid, details')
         .eq('clientid', clientId)
         .eq('testid', testId)
         .range(0, 9999);
     if (aErr) throw aErr;
 
+    const filteredArows = (arows || []).filter(r => {
+        const d = r.details || '';
+        if (attemptId === 'active') return !d.startsWith('[HIST_');
+        return d.startsWith(attemptId);
+    });
+
     // 4. Get correct options info
-    const answerIds = (arows || []).map(r => r.answerid).filter(Boolean).filter(id => !isNaN(Number(id)));
+    const answerIds = (filteredArows || []).map(r => r.answerid).filter(Boolean).filter(id => !isNaN(Number(id)));
     let correctSet = new Set<number>();
 
     if (answerIds.length > 0) {
@@ -110,7 +123,7 @@ export async function computeDatScore(clientId: number): Promise<DatResult> {
     let overallCorrect = 0;
     let totalAnswered = 0;
 
-    (arows || []).forEach(r => {
+    filteredArows.forEach(r => {
         const type = qToType.get(r.questionid);
         if (type) {
             totalAnswered++;
@@ -125,13 +138,14 @@ export async function computeDatScore(clientId: number): Promise<DatResult> {
     return {
         clientId,
         userName,
+        schoolName,
         scores,
         overallCorrect,
         totalAnswered,
     };
 }
 
-export async function getCompletedDatCategories(clientId: number): Promise<DatType[]> {
+export async function getCompletedDatCategories(clientId: number, attemptId: string = 'active'): Promise<DatType[]> {
     const testId = await getDatTestId();
 
     // Get questions to map IDs to types
@@ -149,13 +163,19 @@ export async function getCompletedDatCategories(clientId: number): Promise<DatTy
     // Get client answers
     const { data: arows } = await supabase
         .from('testsanswers')
-        .select('questionid')
+        .select('questionid, details')
         .eq('clientid', clientId)
         .eq('testid', testId)
         .range(0, 9999);
 
+    const filteredArows = (arows || []).filter(r => {
+        const d = r.details || '';
+        if (attemptId === 'active') return !d.startsWith('[HIST_');
+        return d.startsWith(attemptId);
+    });
+
     const completedTypes = new Set<DatType>();
-    (arows || []).forEach(r => {
+    filteredArows.forEach(r => {
         const type = qToType.get(r.questionid);
         if (type) completedTypes.add(type);
     });
@@ -163,8 +183,8 @@ export async function getCompletedDatCategories(clientId: number): Promise<DatTy
     return Array.from(completedTypes);
 }
 
-export async function downloadDatReportPDF(clientId: number): Promise<void> {
-    const res = await computeDatScore(clientId);
+export async function downloadDatReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {
+    const res = await computeDatScore(clientId, attemptId);
 
     const doc = new jsPDF();
     const now = new Date().toLocaleDateString('es-ES');
@@ -178,10 +198,16 @@ export async function downloadDatReportPDF(clientId: number): Promise<void> {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text(`Fecha de generación: ${now}`, 14, 28);
-    doc.text(`Cliente: ${res.userName ?? clientId}`, 14, 34);
-
-    doc.setLineWidth(0.5);
-    doc.line(14, 38, 196, 38);
+    if (res.schoolName) {
+        doc.text(`Nombre: ${res.userName ?? clientId}`, 14, 34);
+        doc.text(`Colegio: ${res.schoolName}`, 14, 40);
+        doc.setLineWidth(0.5);
+        doc.line(14, 44, 196, 44);
+    } else {
+        doc.text(`Nombre: ${res.userName ?? clientId}`, 14, 34);
+        doc.setLineWidth(0.5);
+        doc.line(14, 38, 196, 38);
+    }
 
     // Table
     const categories = Object.keys(DAT_LABELS) as DatType[];
@@ -200,7 +226,7 @@ export async function downloadDatReportPDF(clientId: number): Promise<void> {
     });
 
     autoTable(doc, {
-        startY: 45,
+        startY: res.schoolName ? 50 : 45,
         head: [['Aptitud / Categoría', 'Resultado (Aciertos)', 'Porcentaje']],
         body: tableData,
         theme: 'striped',

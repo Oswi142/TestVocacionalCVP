@@ -6,25 +6,23 @@ import {
     MenuItem,
     Select,
     FormControl,
+    Autocomplete,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import 'dayjs/locale/es';
 
 import { Question } from '../../../types/test';
 
-interface School {
-    id: number;
-    schoolname: string;
-}
+// No more School interface needed
 
 interface PersonalDataFormProps {
     questions: Question[];
     answers: { [key: number]: string };
     onAnswerChange: (id: number, value: string) => void;
-    schools: School[];
-    selectedSchoolId: number | null;
-    onSchoolChange: (id: number) => void;
+    schoolName: string;
+    onSchoolChange: (name: string) => void;
     birthdayDate: any;
     onDateChange: (date: any) => void;
 }
@@ -34,18 +32,26 @@ const Departamentos = [
     'Chuquisaca', 'Tarija', 'Beni', 'Pando'
 ];
 
+const COLEGIOS_RECOMENDADOS = [
+    'Colegio San Agustín', 'Colegio Tiquipaya', 'Colegio Don Bosco',
+    'Colegio Cristo Rey', 'Colegio La Salle', 'Colegio Amerinst',
+    'Colegio Saint Andrew\'s', 'Colegio Alemán Santa María', 'Colegio San Rafael',
+    'Colegio San Antonio', 'Colegio Copacabana', 'Colegio San Francisco',
+    'Colegio Pedro Poveda', 'Colegio Saint George', 'Colegio Marista',
+    'Colegio España'
+];
+
 const PersonalDataForm: React.FC<PersonalDataFormProps> = ({
     questions,
     answers,
     onAnswerChange,
-    schools,
-    selectedSchoolId,
+    schoolName,
     onSchoolChange,
     birthdayDate,
     onDateChange,
 }) => {
     return (
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
             <Box>
                 {questions.map((q) => {
                     const qText = q.question || '';
@@ -102,52 +108,74 @@ const PersonalDataForm: React.FC<PersonalDataFormProps> = ({
                                         }
                                     }}
                                 />
-                            ) : lowQ.includes('departamento') ? (
-                                <FormControl fullWidth variant="outlined">
-                                    <Select
-                                        displayEmpty
+                            ) : (lowQ.includes('lugar') || lowQ.includes('nacimiento') || lowQ.includes('departamento')) ? (
+                                <Box>
+                                    <Autocomplete
+                                        freeSolo
+                                        options={Departamentos}
                                         value={answers[q.id] || ''}
-                                        onChange={(e) => onAnswerChange(q.id, e.target.value)}
-                                        sx={{
-                                            borderRadius: 3,
-                                            backgroundColor: 'rgba(255, 255, 255, 0.65)',
-                                            transition: 'all 0.3s ease',
-                                            '&.Mui-focused': {
-                                                backgroundColor: '#ffffff',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                                            }
-                                        }}
-                                    >
-                                        <MenuItem value="" disabled>Departamento</MenuItem>
-                                        {Departamentos.map((dep) => (
-                                            <MenuItem key={dep} value={dep}>{dep}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
+                                        onInputChange={(_: any, newValue: string) => onAnswerChange(q.id, newValue)}
+                                        renderInput={(params: any) => (
+                                            <TextField
+                                                {...params}
+                                                fullWidth
+                                                variant="outlined"
+                                                placeholder="Tu departamento o ciudad..."
+                                                helperText="Selecciona tu lugar de nacimiento"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderRadius: 3,
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.65)',
+                                                        transition: 'all 0.3s ease',
+                                                        '&.Mui-focused': {
+                                                            backgroundColor: '#ffffff',
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                                        }
+                                                    },
+                                                    '& .MuiFormHelperText-root': {
+                                                        color: '#64748b',
+                                                        fontWeight: 500,
+                                                        mt: 1
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    />
+                                </Box>
                             ) : lowQ.includes('colegio') ? (
-                                <FormControl fullWidth variant="outlined">
-                                    <Select
-                                        displayEmpty
-                                        value={selectedSchoolId !== null ? String(selectedSchoolId) : ''}
-                                        onChange={(e) => onSchoolChange(Number(e.target.value))}
-                                        sx={{
-                                            borderRadius: 3,
-                                            backgroundColor: 'rgba(255, 255, 255, 0.65)',
-                                            transition: 'all 0.3s ease',
-                                            '&.Mui-focused': {
-                                                backgroundColor: '#ffffff',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                                            }
-                                        }}
-                                    >
-                                        <MenuItem value="" disabled>Selecciona tu colegio</MenuItem>
-                                        {schools.map((school) => (
-                                            <MenuItem key={school.id} value={school.id}>
-                                                {school.schoolname}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
+                                <Box>
+                                    <Autocomplete
+                                        freeSolo
+                                        options={COLEGIOS_RECOMENDADOS}
+                                        value={schoolName}
+                                        onInputChange={(_: any, newValue: string) => onSchoolChange(newValue)}
+                                        renderInput={(params: any) => (
+                                            <TextField
+                                                {...params}
+                                                fullWidth
+                                                variant="outlined"
+                                                placeholder="Nombre de tu colegio..."
+                                                helperText="Busca tu colegio o registralo tú mism@"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderRadius: 3,
+                                                        backgroundColor: 'rgba(255, 255, 255, 0.65)',
+                                                        transition: 'all 0.3s ease',
+                                                        '&.Mui-focused': {
+                                                            backgroundColor: '#ffffff',
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                                        }
+                                                    },
+                                                    '& .MuiFormHelperText-root': {
+                                                        color: '#64748b',
+                                                        fontWeight: 500,
+                                                        mt: 1
+                                                    }
+                                                }}
+                                            />
+                                        )}
+                                    />
+                                </Box>
                             ) : (
                                 <TextField
                                     fullWidth

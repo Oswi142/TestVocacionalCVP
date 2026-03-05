@@ -1,11 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, useMediaQuery, useTheme, IconButton } from '@mui/material';
+import { Box, Button, Typography, useMediaQuery, useTheme, IconButton, CircularProgress } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LockIcon from '@mui/icons-material/Lock';
+import { testService } from '../../../../services/testService';
 import logo from '../../../../assets/logo-cvp.png';
 
 const DatDashboard: React.FC = () => {
   const [name, setName] = useState('');
+  const [userId, setUserId] = useState<number | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(true);
+  const [completedDatTypes, setCompletedDatTypes] = useState<string[]>([]);
+
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -15,6 +22,7 @@ const DatDashboard: React.FC = () => {
     if (storedUser) {
       const user = JSON.parse(storedUser);
       setName(user.name);
+      setUserId(user.id);
     } else {
       navigate('/');
     }
@@ -30,6 +38,22 @@ const DatDashboard: React.FC = () => {
       window.removeEventListener('popstate', handlePopState);
     };
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      if (userId) {
+        try {
+          const data = await testService.getDetailedProgress(userId);
+          setCompletedDatTypes(data.completedDatTypes);
+        } catch (error) {
+          console.error('Error fetching DAT progress:', error);
+        } finally {
+          setLoadingProgress(false);
+        }
+      }
+    };
+    fetchProgress();
+  }, [userId]);
 
   const sizes = useMemo(() => {
     if (isMobile) {
@@ -60,22 +84,29 @@ const DatDashboard: React.FC = () => {
     };
   }, [isMobile]);
 
-  const buttonStyle = (gradient: string, shadowColor: string) => ({
-    background: gradient,
-    color: '#fff',
+  const buttonStyle = (gradient: string, shadowColor: string, status: 'locked' | 'active' | 'completed') => ({
+    background: status === 'locked' ? '#e2e8f0' : (status === 'completed' ? '#f0fdf4' : gradient),
+    color: status === 'locked' ? '#94a3b8' : (status === 'completed' ? '#166534' : '#fff'),
     fontWeight: 800,
     py: sizes.btnPy,
     borderRadius: 4,
     textTransform: 'none',
     fontSize: sizes.btnFont,
     lineHeight: 1.1,
-    boxShadow: `0 4px 15px ${shadowColor}`,
+    boxShadow: status === 'active' ? `0 4px 15px ${shadowColor}` : 'none',
+    border: status === 'completed' ? '2px solid #bbf7d0' : 'none',
+    cursor: status === 'active' ? 'pointer' : 'default',
     transition: 'all 0.3s ease-in-out',
-    '&:hover': {
+    pointerEvents: status === 'active' ? 'auto' : 'none',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 1.5,
+    '&:hover': status === 'active' ? {
       transform: 'translateY(-2px)',
       boxShadow: `0 8px 25px ${shadowColor}`,
-    },
-    '&:active': { transform: 'translateY(1px)' }
+    } : {},
+    '&:active': status === 'active' ? { transform: 'translateY(1px)' } : {}
   });
 
   return (
@@ -84,7 +115,6 @@ const DatDashboard: React.FC = () => {
         width: '100vw',
         height: '100dvh',   // ✅ mejor para móvil
         overflow: 'hidden', // ✅ sin scroll
-        background: 'linear-gradient(to right, rgb(249, 201, 164), rgb(202, 250, 204))',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -139,35 +169,35 @@ const DatDashboard: React.FC = () => {
             maxHeight: `calc(100dvh - ${sizes.logoH}px - 56px)`,
           }}
         >
-          <IconButton
-            onClick={() => navigate('/client', { replace: true })}
-            sx={{
-              position: 'absolute',
-              top: isMobile ? 12 : 20,
-              left: isMobile ? 12 : 20,
-              color: '#64748b',
-              backgroundColor: 'rgba(255, 255, 255, 0.5)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-              transition: 'all 0.2s',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                transform: 'scale(1.05)',
-                color: '#1e293b'
-              }
-            }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
+          <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+            <IconButton
+              onClick={() => navigate('/client', { replace: true })}
+              sx={{
+                position: 'absolute',
+                left: -8, // ajustado para que no se pegue al borde pero no robe espacio al centro
+                color: '#64748b',
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  transform: 'scale(1.05)',
+                  color: '#1e293b'
+                }
+              }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
 
-          <Typography
-            variant={sizes.titleVariant}
-            fontWeight={800}
-            color="#1e293b"
-            gutterBottom
-            sx={{ mb: 0.5 }}
-          >
-            DAT — Selecciona un apartado
-          </Typography>
+            <Typography
+              variant={sizes.titleVariant}
+              fontWeight={800}
+              color="#1e293b"
+              sx={{ px: 5, textAlign: 'center' }} // px asegura que el texto no toque el botón
+            >
+              DAT — Selecciona un apartado
+            </Typography>
+          </Box>
 
           <Typography
             variant={sizes.subtitleVariant}
@@ -186,55 +216,54 @@ const DatDashboard: React.FC = () => {
               gap: `${sizes.gap}px`,
               width: '100%',
               mt: isMobile ? 1 : 1.5,
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: loadingProgress ? 200 : 'auto',
             }}
           >
-            <Button
-              fullWidth
-              onClick={() => navigate('/dat/verbal')}
-              sx={buttonStyle('linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)', 'rgba(127, 127, 213, 0.3)')}
-            >
-              Razonamiento Verbal
-            </Button>
+            {loadingProgress ? (
+              <CircularProgress color="primary" />
+            ) : (
+              <>
+                {(() => {
+                  const subtests = [
+                    { type: 'razonamiento_verbal', label: 'Razonamiento Verbal', path: '/dat/verbal', gradient: 'linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)', shadow: 'rgba(127, 127, 213, 0.3)' },
+                    { type: 'razonamiento_numerico', label: 'Razonamiento Numérico', path: '/dat/numerico', gradient: 'linear-gradient(90deg, #ff758c, #ff7eb3)', shadow: 'rgba(255, 117, 140, 0.3)' },
+                    { type: 'razonamiento_abstracto', label: 'Razonamiento Abstracto', path: '/dat/abstracto', gradient: 'linear-gradient(90deg, #ff6a00, #ee0979)', shadow: 'rgba(255, 106, 0, 0.3)' },
+                    { type: 'razonamiento_mecanico', label: 'Razonamiento Mecánico', path: '/dat/mecanico', gradient: 'linear-gradient(90deg, #43cea2, #185a9d)', shadow: 'rgba(67, 206, 162, 0.3)' },
+                    { type: 'razonamiento_espacial', label: 'Relaciones Espaciales', path: '/dat/espaciales', gradient: 'linear-gradient(90deg, #00c6ff, #0072ff)', shadow: 'rgba(0, 198, 255, 0.3)' },
+                    { type: 'ortografia', label: 'Ortografía', path: '/dat/ortografia', gradient: 'linear-gradient(90deg, #f7971e, #ffd200)', shadow: 'rgba(247, 151, 30, 0.3)' },
+                  ];
 
-            <Button
-              fullWidth
-              onClick={() => navigate('/dat/numerico')}
-              sx={buttonStyle('linear-gradient(90deg, #ff758c, #ff7eb3)', 'rgba(255, 117, 140, 0.3)')}
-            >
-              Razonamiento Numérico
-            </Button>
+                  return subtests.map((s, idx) => {
+                    const isCompleted = completedDatTypes.includes(s.type);
 
-            <Button
-              fullWidth
-              onClick={() => navigate('/dat/abstracto')}
-              sx={buttonStyle('linear-gradient(90deg, #ff6a00, #ee0979)', 'rgba(255, 106, 0, 0.3)')}
-            >
-              Razonamiento Abstracto
-            </Button>
+                    let isEnabled = false;
+                    if (idx === 0) {
+                      isEnabled = !isCompleted;
+                    } else {
+                      const prevCompleted = completedDatTypes.includes(subtests[idx - 1].type);
+                      isEnabled = prevCompleted && !isCompleted;
+                    }
 
-            <Button
-              fullWidth
-              onClick={() => navigate('/dat/mecanico')}
-              sx={buttonStyle('linear-gradient(90deg, #43cea2, #185a9d)', 'rgba(67, 206, 162, 0.3)')}
-            >
-              Razonamiento Mecánico
-            </Button>
+                    const status = isCompleted ? 'completed' : (isEnabled ? 'active' : 'locked');
 
-            <Button
-              fullWidth
-              onClick={() => navigate('/dat/espaciales')}
-              sx={buttonStyle('linear-gradient(90deg, #00c6ff, #0072ff)', 'rgba(0, 198, 255, 0.3)')}
-            >
-              Relaciones Espaciales
-            </Button>
-
-            <Button
-              fullWidth
-              onClick={() => navigate('/dat/ortografia')}
-              sx={buttonStyle('linear-gradient(90deg, #f7971e, #ffd200)', 'rgba(247, 151, 30, 0.3)')}
-            >
-              Ortografía
-            </Button>
+                    return (
+                      <Button
+                        key={s.type}
+                        fullWidth
+                        onClick={() => navigate(s.path)}
+                        sx={buttonStyle(s.gradient, s.shadow, status)}
+                      >
+                        {status === 'locked' && <LockIcon sx={{ fontSize: '1.1rem' }} />}
+                        {s.label}
+                        {status === 'completed' && <CheckCircleIcon sx={{ fontSize: '1.1rem' }} />}
+                      </Button>
+                    );
+                  });
+                })()}
+              </>
+            )}
           </Box>
         </Box>
       </Box>

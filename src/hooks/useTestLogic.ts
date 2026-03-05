@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './useAuth';
 import { testService } from '../services/testService';
@@ -23,11 +23,23 @@ export const useTestLogic = <T extends BaseQuestion>(
     minQuestionId = null,
     questionsPerSection = null,
     navigateOnSubmit = '/client',
-    onSaveExtra,
-    onLoadExtra,
-    customIsSectionComplete,
     conditionalVisibility,
   } = options;
+
+  // Use a ref for callbacks to avoid re-triggering effects/memos when they change
+  const callbacksRef = useRef({
+    onSaveExtra: options.onSaveExtra,
+    onLoadExtra: options.onLoadExtra,
+    customIsSectionComplete: options.customIsSectionComplete
+  });
+
+  useEffect(() => {
+    callbacksRef.current = {
+      onSaveExtra: options.onSaveExtra,
+      onLoadExtra: options.onLoadExtra,
+      customIsSectionComplete: options.customIsSectionComplete
+    };
+  }, [options.onSaveExtra, options.onLoadExtra, options.customIsSectionComplete]);
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -44,11 +56,11 @@ export const useTestLogic = <T extends BaseQuestion>(
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
-    severity: 'success' as 'success' | 'error',
+    severity: 'success' as 'success' | 'error' | 'warning' | 'info',
   });
   const [dialogs, setDialogs] = useState({ confirm: false, exit: false });
 
-  const showSnackbar = useCallback((message: string, severity: 'success' | 'error' = 'success') => {
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'warning' | 'info' = 'success') => {
     setSnackbar({ open: true, message, severity });
   }, []);
 
@@ -61,8 +73,8 @@ export const useTestLogic = <T extends BaseQuestion>(
         currentSection,
         lastSaved: new Date().toLocaleString(),
       };
-      if (onSaveExtra) {
-        data.extra = onSaveExtra(answers);
+      if (callbacksRef.current.onSaveExtra) {
+        data.extra = callbacksRef.current.onSaveExtra(answers);
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       setLastSaved(data.lastSaved);
@@ -82,8 +94,8 @@ export const useTestLogic = <T extends BaseQuestion>(
           setAnswers(localData.answers || {});
           setCurrentSection(localData.currentSection || (sectionsSorted[0] ?? 1));
           setLastSaved(localData.lastSaved || '');
-          if (onLoadExtra && localData.extra) {
-            onLoadExtra(localData.extra);
+          if (callbacksRef.current.onLoadExtra && localData.extra) {
+            callbacksRef.current.onLoadExtra(localData.extra);
           }
           showSnackbar('Respuestas cargadas', 'success');
         } else if (sectionsSorted.length > 0) {
@@ -96,7 +108,80 @@ export const useTestLogic = <T extends BaseQuestion>(
     [STORAGE_KEY, showSnackbar]
   );
 
-  const fetchData = async () => {
+  useEffect(() => {
+    const checkAvailability = async () => {
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) {
+        navigate('/');
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+      try {
+        const progress = await testService.getDetailedProgress(user.id);
+
+        // Determinar orden de tests principales
+        const mainOrder = [1, 2, 3, 4, 5];
+        const datOrder = [
+          'razonamiento_verbal',
+          'razonamiento_numerico',
+          'razonamiento_abstracto',
+          'razonamiento_mecanico',
+          'razonamiento_espacial',
+          'ortografia'
+        ];
+
+        const isMainCompleted = progress.completedMainTestIds.includes(testId);
+        const isDatCompleted = datType ? progress.completedDatTypes.includes(datType) : false;
+
+        // Si ya está completado, redirigir fuera (opcional, pero recomendado según requerimiento "se bloquea")
+        if (isMainCompleted && testId !== 5) {
+          navigate('/client', { replace: true });
+          return;
+        }
+        if (isDatCompleted) {
+          navigate('/dat', { replace: true });
+          return;
+        }
+
+        // Verificar si el anterior está hecho
+        if (testId === 1) return; // Entrevista siempre abierta si no está hecha
+
+        const currentIdx = mainOrder.indexOf(testId);
+        if (currentIdx > 0) {
+          const prevTestId = mainOrder[currentIdx - 1];
+          let prevCompleted = progress.completedMainTestIds.includes(prevTestId);
+
+          // Caso especial: para entrar al DAT (5), el MACI (4) debe estar hecho
+          // Para entrar a un SUBTEST del DAT, el anterior subtest debe estar hecho
+          if (testId === 5 && datType) {
+            if (!prevCompleted) {
+              navigate('/client', { replace: true });
+              return;
+            }
+            const subIdx = datOrder.indexOf(datType);
+            if (subIdx > 0) {
+              const prevSub = datOrder[subIdx - 1];
+              if (!progress.completedDatTypes.includes(prevSub)) {
+                navigate('/dat', { replace: true });
+                return;
+              }
+            }
+          } else if (!prevCompleted) {
+            navigate('/client', { replace: true });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking test availability:', error);
+      }
+    };
+
+    if (!loading) {
+      checkAvailability();
+    }
+  }, [testId, datType, navigate, loading]);
+
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const qs = (await testService.getQuestions(testId, { datType, minQuestionId })) as T[];
@@ -134,11 +219,11 @@ export const useTestLogic = <T extends BaseQuestion>(
     } finally {
       setLoading(false);
     }
-  };
+  }, [testId, datType, questionsPerSection, minQuestionId, loadFromLocal, showSnackbar]);
 
   useEffect(() => {
     if (user) fetchData();
-  }, [user, testId, datType]);
+  }, [user, fetchData]);
 
   const handleManualSave = () => {
     const success = saveToLocal();
@@ -172,22 +257,41 @@ export const useTestLogic = <T extends BaseQuestion>(
       return;
     }
 
+    const payload: TestAnswer[] = allQuestions.map((q) => ({
+      clientid: user?.id as number,
+      testid: testId,
+      questionid: q.id,
+      answerid: parseInt(answers[q.id]),
+    }));
+
     setSaving(true);
     try {
-      const entries: TestAnswer[] = allQuestions.map((q) => ({
-        clientid: user?.id as number,
-        testid: testId,
-        questionid: q.id,
-        answerid: parseInt(answers[q.id]),
-      }));
+      if (!navigator.onLine) {
+        throw new Error('Offline');
+      }
 
-      await testService.submitAnswers(entries);
+      await testService.submitAnswers(payload);
 
       localStorage.removeItem(STORAGE_KEY);
       showSnackbar('Respuestas enviadas correctamente', 'success');
       setTimeout(() => navigate(navigateOnSubmit, { replace: true }), 2000);
     } catch (err: any) {
-      showSnackbar('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');
+      if (!navigator.onLine || err.message === 'Offline' || err.message?.includes('fetch')) {
+        // Guardar en cola de pendientes
+        const pending = JSON.parse(localStorage.getItem('pending_submissions') || '[]');
+        pending.push({
+          id: Date.now(),
+          payload,
+          storageKey: STORAGE_KEY
+        });
+        localStorage.setItem('pending_submissions', JSON.stringify(pending));
+
+        showSnackbar('Sin conexión. Las respuestas se enviarán automáticamente cuando vuelvas a estar online.', 'warning');
+        localStorage.removeItem(STORAGE_KEY);
+        setTimeout(() => navigate(navigateOnSubmit, { replace: true }), 3000);
+      } else {
+        showSnackbar('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');
+      }
     } finally {
       setSaving(false);
     }
@@ -215,8 +319,8 @@ export const useTestLogic = <T extends BaseQuestion>(
   };
 
   const isSectionComplete = (section: number): boolean => {
-    if (customIsSectionComplete) {
-      return customIsSectionComplete(section, answers, groupedQuestions, shouldDisplayQuestion);
+    if (callbacksRef.current.customIsSectionComplete) {
+      return callbacksRef.current.customIsSectionComplete(section, answers, groupedQuestions, shouldDisplayQuestion);
     }
     const sectionQuestions = groupedQuestions[section] || [];
     return sectionQuestions.length > 0 && sectionQuestions.every((q) => !!answers[q.id]);

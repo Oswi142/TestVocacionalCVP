@@ -3,35 +3,74 @@ import { Question, AnswerOption, TestAnswer } from '../types/test';
 
 export const testService = {
     async getQuestions(testId: number, options: { datType?: string | null; minQuestionId?: number | null } = {}) {
-        let query = supabase.from('questions').select('*').eq('testid', testId);
+        const cacheKey = `cache_questions_${testId}_${options.datType || 'all'}`;
 
-        if (options.datType) query = query.eq('dat_type', options.datType);
-        if (options.minQuestionId) query = query.gte('id', options.minQuestionId);
+        try {
+            if (!navigator.onLine) {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) return JSON.parse(cached) as Question[];
+                throw new Error('Offline and no cache');
+            }
 
-        const { data, error } = await query.order('id');
-        if (error) throw error;
-        return (data || []) as Question[];
+            let query = supabase.from('questions').select('*').eq('testid', testId);
+
+            if (options.datType) query = query.eq('dat_type', options.datType);
+            if (options.minQuestionId) query = query.gte('id', options.minQuestionId);
+
+            const { data, error } = await query.order('id');
+            if (error) throw error;
+
+            const questions = (data || []) as Question[];
+            localStorage.setItem(cacheKey, JSON.stringify(questions));
+            return questions;
+        } catch (error) {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) return JSON.parse(cached) as Question[];
+            throw error;
+        }
     },
 
     async getAnswerOptions(questionIds: number[]) {
         if (questionIds.length === 0) return [];
 
-        const CHUNK = 200;
-        const allOpts: AnswerOption[] = [];
+        try {
+            if (!navigator.onLine) {
+                const cached = localStorage.getItem('cache_all_options');
+                if (cached) {
+                    const allCached = JSON.parse(cached) as AnswerOption[];
+                    return allCached.filter(opt => questionIds.includes(opt.questionid));
+                }
+            }
 
-        for (let i = 0; i < questionIds.length; i += CHUNK) {
-            const slice = questionIds.slice(i, i + CHUNK);
-            const { data, error } = await supabase
-                .from('answeroptions')
-                .select('*')
-                .in('questionid', slice)
-                .order('id');
+            const CHUNK = 200;
+            const allOpts: AnswerOption[] = [];
 
-            if (error) throw error;
-            allOpts.push(...(data || []));
+            for (let i = 0; i < questionIds.length; i += CHUNK) {
+                const slice = questionIds.slice(i, i + CHUNK);
+                const { data, error } = await supabase
+                    .from('answeroptions')
+                    .select('*')
+                    .in('questionid', slice)
+                    .order('id');
+
+                if (error) throw error;
+                allOpts.push(...(data || []));
+            }
+
+            // Guardar en un cache global de opciones para simplificar offline
+            const existing = JSON.parse(localStorage.getItem('cache_all_options') || '[]');
+            const updated = [...existing.filter((opt: any) => !questionIds.includes(opt.questionid)), ...allOpts];
+            localStorage.setItem('cache_all_options', JSON.stringify(updated.slice(-2000))); // Limitar tamaño
+
+            return allOpts;
+        } catch (error) {
+            const cached = localStorage.getItem('cache_all_options');
+            if (cached) {
+                const allCached = JSON.parse(cached) as AnswerOption[];
+                return allCached.filter(opt => questionIds.includes(opt.questionid));
+            }
+            throw error;
         }
-
-        return allOpts;
     },
 
     async submitAnswers(answers: TestAnswer[]) {
@@ -47,5 +86,155 @@ export const testService = {
 
         if (error) throw error;
         return [...new Set((data || []).map(r => r.testid))];
+    },
+
+    async getDetailedProgress(clientId: number) {
+        // 1. Obtener progreso de la base de datos (Supabase)
+        const { data: dbData, error } = await supabase
+            .from('testsanswers')
+            .select('testid, questionid, details')
+            .eq('clientid', clientId)
+            .not('details', 'ilike', '[HIST_%');
+
+        if (error) throw error;
+
+        let completedMainTestIds: number[] = [];
+        let completedDatTypes: string[] = [];
+        const answeredQuestionIds = new Set<number>();
+
+        if (dbData) {
+            dbData.forEach(r => {
+                completedMainTestIds.push(r.testid);
+                answeredQuestionIds.add(r.questionid);
+            });
+        }
+
+        // 2. Obtener progreso de la cola offline (para que la interfaz avance sin señal)
+        const pending = JSON.parse(localStorage.getItem('pending_submissions') || '[]');
+        pending.forEach((payload: any[]) => {
+            if (payload.length > 0 && payload[0].clientid === clientId) {
+                completedMainTestIds.push(payload[0].testid);
+                payload.forEach(ans => answeredQuestionIds.add(ans.questionid));
+            }
+        });
+
+        // Limpiar duplicados de IDs de test
+        completedMainTestIds = [...new Set(completedMainTestIds)];
+
+        // 3. Resolver dat_types para el test 5 (DAT)
+        const datQuestionIds = Array.from(answeredQuestionIds);
+
+        if (datQuestionIds.length > 0) {
+            const { data: qData, error: qError } = await supabase
+                .from('questions')
+                .select('dat_type')
+                .in('id', datQuestionIds)
+                .eq('testid', 5);
+
+            if (!qError && qData) {
+                completedDatTypes = [...new Set(qData.map(q => q.dat_type).filter(t => !!t))] as string[];
+            }
+        }
+
+        return {
+            completedMainTestIds,
+            completedDatTypes
+        };
+    },
+
+    async prefetchAllTests() {
+        if (!navigator.onLine) return;
+
+        try {
+            // Lista de tests principales
+            const mainTests = [
+                { id: 1, type: null }, // Entrevista
+                { id: 2, type: null }, // IPPR
+                { id: 3, type: null }, // CHASIDE
+                { id: 4, type: null }, // MACI
+            ];
+
+            // Subtests del DAT (5)
+            const datSubtests = [
+                'razonamiento_verbal',
+                'razonamiento_numerico',
+                'razonamiento_abstracto',
+                'razonamiento_mecanico',
+                'razonamiento_espacial',
+                'ortografia'
+            ];
+
+            console.log('Iniciando pre-descarga de tests para uso offline...');
+
+            // 1. Descargar tests principales
+            for (const test of mainTests) {
+                const qs = await this.getQuestions(test.id);
+                if (qs.length > 0) {
+                    await this.getAnswerOptions(qs.map(q => q.id));
+                }
+            }
+
+            // 2. Descargar subtests del DAT
+            for (const type of datSubtests) {
+                const qs = await this.getQuestions(5, { datType: type });
+                if (qs.length > 0) {
+                    await this.getAnswerOptions(qs.map(q => q.id));
+                }
+            }
+
+            console.log('Pre-descarga completada. El sistema está listo para uso offline.');
+        } catch (error) {
+            console.error('Error durante la pre-descarga de tests:', error);
+        }
+    },
+
+    async archiveTest(clientId: number, testId: number, datType?: string) {
+        // 1. Obtener las respuestas actuales para este test
+        let query = supabase
+            .from('testsanswers')
+            .select('id, details')
+            .eq('clientid', clientId)
+            .eq('testid', testId)
+            .not('details', 'ilike', '[HIST_%');
+
+        if (datType) {
+            // Si es DAT, necesitamos filtrar por tipo. Las respuestas no tienen dat_type, 
+            // así que hay que filtrar por las preguntas.
+            const { data: qData } = await supabase
+                .from('questions')
+                .select('id')
+                .eq('testid', 5)
+                .eq('dat_type', datType);
+
+            if (qData && qData.length > 0) {
+                const qIds = qData.map(q => q.id);
+                query = query.in('questionid', qIds);
+            }
+        }
+
+        const { data: answers, error: fetchError } = await query;
+
+        if (fetchError) throw fetchError;
+        if (!answers || answers.length === 0) return;
+
+        // 2. Marcar cada respuesta como histórica
+        const timestamp = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '').replace(/:/g, '-');
+        const prefix = `[HIST_${timestamp}]`;
+
+        const updates = answers.map(ans => ({
+            id: ans.id,
+            details: prefix + (ans.details || '')
+        }));
+
+        // Supabase update masivo basándose en IDs (con upsert si la tabla tiene ID único)
+        // O más simple: una serie de promesas o un rpc si fuera necesario. 
+        // Aquí usaremos una actualización individual para asegurar consistencia si no hay ID compuesto simple.
+        for (const update of updates) {
+            const { error: updateError } = await supabase
+                .from('testsanswers')
+                .update({ details: update.details })
+                .eq('id', update.id);
+            if (updateError) console.error('Error archiving record:', updateError);
+        }
     }
 };

@@ -2,20 +2,20 @@ import { supabase } from '../supabaseClient';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-type SectionId = 1|2|3|4|5|6|7|8|9|10|11|12|13|14|15;
+type SectionId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
 
 type SectionScore = Record<SectionId, number>;
 
 const SECTION_LABELS: Record<SectionId, string> = {
-  1:  'Ciencias naturales y medio ambiente',
-  2:  'Ingeniería y arquitectura',
-  3:  'Ciencias de la salud',
-  4:  'Humanidades y ciencias sociales',
-  5:  'Derecho, criminología y RR. LL./RR. HH.',
-  6:  'Comunicación, publicidad y audiovisuales',
-  7:  'Educación y pedagogía',
-  8:  'Administración, economía y negocios',
-  9:  'Informática y telemática/multimedia',
+  1: 'Ciencias naturales y medio ambiente',
+  2: 'Ingeniería y arquitectura',
+  3: 'Ciencias de la salud',
+  4: 'Humanidades y ciencias sociales',
+  5: 'Derecho, criminología y RR. LL./RR. HH.',
+  6: 'Comunicación, publicidad y audiovisuales',
+  7: 'Educación y pedagogía',
+  8: 'Administración, economía y negocios',
+  9: 'Informática y telemática/multimedia',
   10: 'Agropecuaria y recursos naturales',
   11: 'Diseño, artes plásticas y restauración',
   12: 'Artes escénicas y música',
@@ -38,6 +38,7 @@ type IpprResult = {
   clientId: number;
   testId: number;
   userName: string | null;
+  schoolName: string | null;
   sectionScores: SectionScore;
   totalAnswered: number;
   totalScore: number;
@@ -57,7 +58,7 @@ async function getIpprTestId(): Promise<number> {
   return data.id;
 }
 
-export async function computeIpprScore(clientId: number): Promise<IpprResult> {
+export async function computeIpprScore(clientId: number, attemptId: string = 'active'): Promise<IpprResult> {
   const testId = await getIpprTestId();
 
   const { data: urows } = await supabase
@@ -66,6 +67,12 @@ export async function computeIpprScore(clientId: number): Promise<IpprResult> {
     .eq('id', clientId)
     .limit(1);
   const userName = (urows && urows[0]?.name) || null;
+  const { data: cirows } = await supabase
+    .from('clientsinfo')
+    .select('school')
+    .eq('userid', clientId)
+    .limit(1);
+  const schoolName = (cirows && cirows[0]?.school) || null;
 
   const { data: qrows, error: qErr } = await supabase
     .from('questions')
@@ -89,6 +96,12 @@ export async function computeIpprScore(clientId: number): Promise<IpprResult> {
     .range(0, 999999);
   if (aErr) throw aErr;
 
+  const filteredArows = (arows || []).filter(r => {
+    const d = r.details || '';
+    if (attemptId === 'active') return !d.startsWith('[HIST_');
+    return d.startsWith(attemptId);
+  });
+
   const answerIds = Array.from(
     new Set((arows || []).map((r) => r.answerid).filter((x): x is number => x != null))
   );
@@ -105,12 +118,12 @@ export async function computeIpprScore(clientId: number): Promise<IpprResult> {
   }
 
   const sectionScores: SectionScore = {
-    1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0, 10:0, 11:0, 12:0, 13:0, 14:0, 15:0,
+    1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 13: 0, 14: 0, 15: 0,
   };
 
   let totalAnswered = 0;
 
-  for (const r of arows || []) {
+  for (const r of filteredArows) {
     const sec = qToSection.get(r.questionid);
     if (!sec) continue;
 
@@ -130,6 +143,7 @@ export async function computeIpprScore(clientId: number): Promise<IpprResult> {
     clientId,
     testId,
     userName,
+    schoolName,
     sectionScores,
     totalAnswered,
     totalScore,
@@ -137,8 +151,8 @@ export async function computeIpprScore(clientId: number): Promise<IpprResult> {
   };
 }
 
-export async function downloadIpprReportPDF(clientId: number): Promise<void> {
-  const res = await computeIpprScore(clientId);
+export async function downloadIpprReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {
+  const res = await computeIpprScore(clientId, attemptId);
 
   const doc = new jsPDF();
   const now = new Date().toLocaleDateString('es-ES');
@@ -149,7 +163,12 @@ export async function downloadIpprReportPDF(clientId: number): Promise<void> {
 
   doc.setFontSize(11);
   doc.text(`Fecha: ${now}`, 14, 26);
-  doc.text(`Cliente: ${res.userName ?? clientId.toString()}`, 14, 33);
+  if (res.schoolName) {
+    doc.text(`Nombre: ${res.userName || 'N/A'}`, 14, 33);
+    doc.text(`Colegio: ${res.schoolName}`, 14, 40);
+  } else {
+    doc.text(`Nombre: ${res.userName || 'N/A'}`, 14, 33);
+  }
 
   const body = (Object.keys(SECTION_LABELS) as unknown as SectionId[]).map((s) => ([
     String(s),
@@ -158,11 +177,11 @@ export async function downloadIpprReportPDF(clientId: number): Promise<void> {
   ]));
 
   autoTable(doc, {
-    startY: 42,
+    startY: res.schoolName ? 48 : 42,
     head: [['#', 'Campo (sección)', 'Puntaje (0–36)']],
     body,
     styles: { fontSize: 10, cellPadding: 2 },
-    headStyles: { fillColor: [30,136,229], textColor: 255 },
+    headStyles: { fillColor: [30, 136, 229], textColor: 255 },
     columnStyles: { 0: { halign: 'center' }, 2: { halign: 'center' } },
     theme: 'grid',
     margin: { left: 12, right: 12 },
@@ -176,7 +195,7 @@ export async function downloadIpprReportPDF(clientId: number): Promise<void> {
 
   const top5 = res.ranking.slice(0, 5);
   top5.forEach((r, i) => {
-    doc.text(`${i+1}) ${r.label} — ${r.value}/36`, 14, y);
+    doc.text(`${i + 1}) ${r.label} — ${r.value}/36`, 14, y);
     y += 5;
   });
 

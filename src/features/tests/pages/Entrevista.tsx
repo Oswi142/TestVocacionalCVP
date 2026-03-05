@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { useTestLogic } from '../../../hooks/useTestLogic';
 import { useAuth } from '../../../hooks/useAuth';
@@ -9,15 +9,38 @@ import PersonalDataForm from '../components/PersonalDataForm';
 import { Alert, Box } from '@mui/material';
 import dayjs from 'dayjs';
 
-interface School {
-  id: number;
-  schoolname: string;
-}
-
 const Entrevista: React.FC = () => {
-  const [schools, setSchools] = useState<School[]>([]);
-  const [selectedSchoolId, setSelectedSchoolId] = useState<number | null>(null);
+  const { user } = useAuth();
+  const [schoolName, setSchoolName] = useState<string>('');
   const [birthdayDate, setBirthdayDate] = useState<dayjs.Dayjs | null>(null);
+
+  const testLogicOptions = useMemo(() => ({
+    onSaveExtra: () => ({
+      schoolName,
+      birthdayDate: birthdayDate ? birthdayDate.toISOString() : null,
+    }),
+    onLoadExtra: (extra: any) => {
+      if (extra.schoolName) setSchoolName(extra.schoolName);
+      if (extra.birthdayDate) setBirthdayDate(dayjs(extra.birthdayDate));
+    },
+    conditionalVisibility: {
+      17: 16,
+      20: 19,
+      27: 26,
+    },
+    customIsSectionComplete: (section: number, answers: { [key: number]: string }, grouped: { [key: number]: Question[] }, shouldDisplayFn: (id: number) => boolean) => {
+      const questions = grouped[section] || [];
+      if (questions.length === 0) return false;
+
+      return questions.every((q) => {
+        if (!shouldDisplayFn(q.id)) return true;
+        const qText = q.question?.toLowerCase() || '';
+        if (qText.includes('fecha')) return !!birthdayDate;
+        if (qText.includes('colegio')) return !!schoolName && schoolName.trim() !== '';
+        return !!answers[q.id] && answers[q.id].trim() !== '';
+      });
+    }
+  }), [schoolName, birthdayDate]);
 
   const {
     allQuestions,
@@ -39,45 +62,7 @@ const Entrevista: React.FC = () => {
     saveToLocal,
     navigate,
     showSnackbar,
-  } = useTestLogic<Question>(1, 'entrevista', {
-    onSaveExtra: () => ({
-      selectedSchoolId,
-      birthdayDate: birthdayDate ? birthdayDate.toISOString() : null,
-    }),
-    onLoadExtra: (extra) => {
-      if (extra.selectedSchoolId) setSelectedSchoolId(extra.selectedSchoolId);
-      if (extra.birthdayDate) setBirthdayDate(dayjs(extra.birthdayDate));
-    },
-    conditionalVisibility: {
-      17: 16,
-      20: 19,
-      27: 26,
-    },
-    customIsSectionComplete: (section, answers, grouped, shouldDisplayFn) => {
-      const questions = grouped[section] || [];
-      if (questions.length === 0) return false;
-
-      return questions.every((q) => {
-        // use the hook's display logic via callback argument
-        if (!shouldDisplayFn(q.id)) return true;
-        const qText = q.question?.toLowerCase() || '';
-        if (qText.includes('fecha')) return !!birthdayDate;
-        if (qText.includes('colegio')) return selectedSchoolId !== null;
-        return !!answers[q.id] && answers[q.id].trim() !== '';
-      });
-    }
-  });
-
-  const { user } = useAuth();
-
-  // Fetch only schools metadata
-  useEffect(() => {
-    const fetchSchools = async () => {
-      const { data } = await supabase.from('schools').select('id, schoolname').order('schoolname');
-      if (data) setSchools(data);
-    };
-    fetchSchools();
-  }, []);
+  } = useTestLogic<Question>(1, 'entrevista', testLogicOptions);
 
   const handleAnswerChange = (id: number, value: string) => {
     setAnswers(prev => ({ ...prev, [id]: value }));
@@ -96,7 +81,6 @@ const Entrevista: React.FC = () => {
     if (!user || !user.id) return;
 
     try {
-      // 1. Submit clientsinfo
       const section1 = (groupedQuestions[1] || []) as Question[];
       const mapped = {
         gender: section1[0] ? answers[section1[0].id] || '' : '',
@@ -113,19 +97,18 @@ const Entrevista: React.FC = () => {
         birthday: mapped.birthday,
         birthplace: mapped.birthplace,
         address: mapped.address,
-        schoolid: selectedSchoolId,
+        school: schoolName,
         grade: mapped.grade,
         hobbies: mapped.hobbies,
       });
 
       if (infoError) throw infoError;
 
-      // 2. Submit testanswers (Sections 2-8)
       const allVisible = allQuestions.filter((q: Question) => q.section > 1 && shouldDisplayQuestion(q.id));
       const entries = allVisible.map((q: Question) => {
         const value = answers[q.id];
         const options = answerOptions.filter(opt => opt.questionid === q.id);
-        const data: Record<string, string | number> = {
+        const data: any = {
           clientid: user.id,
           testid: 1,
           questionid: q.id
@@ -148,10 +131,9 @@ const Entrevista: React.FC = () => {
       showSnackbar('Respuestas enviadas correctamente', 'success');
       setTimeout(() => navigate('/client', { replace: true }), 2000);
 
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error('Error submitting test:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      showSnackbar('Error al enviar: ' + errorMessage, 'error');
+      showSnackbar('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');
     }
   };
 
@@ -203,9 +185,8 @@ const Entrevista: React.FC = () => {
           questions={(groupedQuestions[1] || []) as unknown as Question[]}
           answers={answers}
           onAnswerChange={handleAnswerChange}
-          schools={schools}
-          selectedSchoolId={selectedSchoolId}
-          onSchoolChange={setSelectedSchoolId}
+          schoolName={schoolName}
+          onSchoolChange={setSchoolName}
           birthdayDate={birthdayDate}
           onDateChange={setBirthdayDate}
         />

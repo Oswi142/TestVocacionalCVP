@@ -6,6 +6,8 @@ import './index.css';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import theme from './theme'; // <- Importa el tema que creaste
 
+import { processPendingSubmissions } from './utils/offlineSync';
+
 const rootElement = document.getElementById('root')!;
 const root = ReactDOM.createRoot(rootElement);
 
@@ -18,6 +20,7 @@ root.render(
   </React.StrictMode>
 );
 
+// Offline logic
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
@@ -26,3 +29,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       .catch((err) => console.error('❌ Error al registrar el SW:', err));
   });
 }
+
+// Reintentar envíos pendientes al cargar o al volver a estar online
+window.addEventListener('online', processPendingSubmissions);
+window.addEventListener('load', processPendingSubmissions);

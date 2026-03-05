@@ -1,8 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Typography, useMediaQuery, useTheme, CircularProgress, Fade } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LockIcon from '@mui/icons-material/Lock';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import PartyModeIcon from '@mui/icons-material/Celebration';
 import { useAuth } from '../../../hooks/useAuth';
-import PageBackground from '../../../components/PageBackground';
+import { testService } from '../../../services/testService';
 import LogoHeader from '../../../components/LogoHeader';
 import LogoutDialog from '../../../components/LogoutDialog';
 
@@ -10,6 +14,11 @@ const ClientDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'tests' | 'account'>('tests');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(true);
+  const [progress, setProgress] = useState<{ completedMainTestIds: number[], completedDatTypes: string[] }>({
+    completedMainTestIds: [],
+    completedDatTypes: []
+  });
 
   const navigate = useNavigate();
   const theme = useTheme();
@@ -26,9 +35,31 @@ const ClientDashboard: React.FC = () => {
     window.history.pushState(null, '', window.location.pathname);
     window.addEventListener('popstate', handlePopState);
 
+    const fetchProgress = async () => {
+      if (user?.id) {
+        try {
+          const data = await testService.getDetailedProgress(user.id);
+          setProgress(data);
+        } catch (error) {
+          console.error('Error fetching progress:', error);
+        } finally {
+          setLoadingProgress(false);
+        }
+      }
+    };
+
+    fetchProgress();
+
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
+  }, [user?.id]);
+
+  useEffect(() => {
+    // Pre-descargar todos los tests para uso offline al entrar al dashboard
+    if (navigator.onLine) {
+      testService.prefetchAllTests();
+    }
   }, []);
 
   const name = user?.name || '';
@@ -66,22 +97,29 @@ const ClientDashboard: React.FC = () => {
     };
   }, [isMobile]);
 
-  const buttonStyle = (gradient: string, shadowColor: string) => ({
-    background: gradient,
-    color: '#fff',
+  const buttonStyle = (gradient: string, shadowColor: string, status: 'locked' | 'active' | 'completed') => ({
+    background: status === 'locked' ? '#e2e8f0' : (status === 'completed' ? '#f0fdf4' : gradient),
+    color: status === 'locked' ? '#94a3b8' : (status === 'completed' ? '#166534' : '#fff'),
     fontWeight: 800,
     py: sizes.btnPy,
     borderRadius: 4,
     textTransform: 'none',
     fontSize: sizes.btnFont,
     lineHeight: 1.1,
-    boxShadow: `0 4px 15px ${shadowColor}`,
+    boxShadow: status === 'active' ? `0 4px 15px ${shadowColor}` : 'none',
+    border: status === 'completed' ? '2px solid #bbf7d0' : 'none',
+    cursor: status === 'active' ? 'pointer' : 'default',
     transition: 'all 0.3s ease-in-out',
-    '&:hover': {
+    pointerEvents: status === 'active' ? 'auto' : 'none',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 1.5,
+    '&:hover': status === 'active' ? {
       transform: 'translateY(-2px)',
       boxShadow: `0 8px 25px ${shadowColor}`,
-    },
-    '&:active': { transform: 'translateY(1px)' }
+    } : {},
+    '&:active': status === 'active' ? { transform: 'translateY(1px)' } : {}
   });
 
   const tabButtonStyle = (selected: boolean) => ({
@@ -107,7 +145,7 @@ const ClientDashboard: React.FC = () => {
   };
 
   return (
-    <PageBackground sx={{ height: '100dvh', px: `${sizes.outerPad}px` }}>
+    <Box sx={{ position: 'relative', width: '100vw', height: '100dvh', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', px: `${sizes.outerPad}px` }}>
       <Box
         sx={{
           width: '100%',
@@ -179,47 +217,118 @@ const ClientDashboard: React.FC = () => {
                   gap: `${sizes.btnGap}px`,
                   width: '100%',
                   mt: isMobile ? 1 : 2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: loadingProgress ? 200 : 'auto',
                 }}
               >
-                <Button
-                  fullWidth
-                  onClick={() => navigate('/entrevista')}
-                  sx={buttonStyle('linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)', 'rgba(127, 127, 213, 0.3)')}
-                >
-                  📄 ENTREVISTA
-                </Button>
+                {loadingProgress ? (
+                  <CircularProgress color="primary" />
+                ) : (
+                  <>
+                    {(() => {
+                      const tests = [
+                        { id: 1, label: '📄 ENTREVISTA', path: '/entrevista', gradient: 'linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)', shadow: 'rgba(127, 127, 213, 0.3)' },
+                        { id: 2, label: '🧠 IPPR', path: '/ippr', gradient: 'linear-gradient(90deg, #ff758c, #ff7eb3)', shadow: 'rgba(255, 117, 140, 0.3)' },
+                        { id: 3, label: '🍥 CHASIDE', path: '/chaside', gradient: 'linear-gradient(90deg, #ff6a00, #ee0979)', shadow: 'rgba(255, 106, 0, 0.3)' },
+                        { id: 4, label: '🛠️ MACI', path: '/maci', gradient: 'linear-gradient(90deg, #43cea2, #185a9d)', shadow: 'rgba(67, 206, 162, 0.3)' },
+                        { id: 5, label: '🧩 DAT', path: '/dat', gradient: 'linear-gradient(90deg, #11998e, #38ef7d)', shadow: 'rgba(17, 153, 142, 0.3)' },
+                      ];
 
-                <Button
-                  fullWidth
-                  onClick={() => navigate('/ippr')}
-                  sx={buttonStyle('linear-gradient(90deg, #ff758c, #ff7eb3)', 'rgba(255, 117, 140, 0.3)')}
-                >
-                  🧠 IPPR
-                </Button>
+                      // Un test DAT se considera completado si tiene los 6 subtests
+                      const isDatCompleted = progress.completedDatTypes.length >= 6;
+                      const allFinished = progress.completedMainTestIds.length >= 4 && isDatCompleted;
 
-                <Button
-                  fullWidth
-                  onClick={() => navigate('/chaside')}
-                  sx={buttonStyle('linear-gradient(90deg, #ff6a00, #ee0979)', 'rgba(255, 106, 0, 0.3)')}
-                >
-                  🍥 CHASIDE
-                </Button>
+                      if (allFinished) {
+                        const whatsappMsg = `¡Hola! Soy ${name}. He completado satisfactoriamente todos los tests vocacionales.`;
+                        const whatsappUrl = `https://wa.me/59162733929?text=${encodeURIComponent(whatsappMsg)}`;
 
-                <Button
-                  fullWidth
-                  onClick={() => navigate('/maci')}
-                  sx={buttonStyle('linear-gradient(90deg, #43cea2, #185a9d)', 'rgba(67, 206, 162, 0.3)')}
-                >
-                  🛠️ MACI
-                </Button>
+                        return (
+                          <Fade in timeout={800}>
+                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                              <Box sx={{
+                                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                p: 3,
+                                borderRadius: 6,
+                                border: '2px dashed #4caf50',
+                                position: 'relative',
+                                width: '100%'
+                              }}>
+                                <PartyModeIcon sx={{ fontSize: '3.5rem', color: '#4caf50', mb: 1.5 }} />
+                                <Typography variant="h5" fontWeight={900} color="#2e7d32" gutterBottom>
+                                  ¡Muchas Felicidades! 🎉
+                                </Typography>
+                                <Typography variant="body1" color="#1b5e20" sx={{ mb: 1, fontWeight: 500 }}>
+                                  Has completado todos los tests de manera exitosa.
+                                </Typography>
+                                <Typography variant="body2" color="#388e3c">
+                                  Ahora el siguiente paso es comunicarte con la clínica para que podamos procesar tus resultados.
+                                </Typography>
+                              </Box>
 
-                <Button
-                  fullWidth
-                  onClick={() => navigate('/dat')}
-                  sx={buttonStyle('linear-gradient(90deg, #11998e, #38ef7d)', 'rgba(17, 153, 142, 0.3)')}
-                >
-                  🧩 DAT
-                </Button>
+                              <Button
+                                fullWidth
+                                variant="contained"
+                                startIcon={<WhatsAppIcon />}
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                  background: 'linear-gradient(90deg, #25D366, #128C7E)',
+                                  color: '#fff',
+                                  fontWeight: 800,
+                                  py: 2.2,
+                                  borderRadius: 4,
+                                  fontSize: '1.05rem',
+                                  textTransform: 'none',
+                                  boxShadow: '0 8px 25px rgba(37, 211, 102, 0.3)',
+                                  transition: 'all 0.3s ease',
+                                  '&:hover': {
+                                    transform: 'translateY(-3px)',
+                                    boxShadow: '0 12px 30px rgba(37, 211, 102, 0.4)',
+                                    background: 'linear-gradient(90deg, #128C7E, #25D366)',
+                                  }
+                                }}
+                              >
+                                Notificar a la Clínica
+                              </Button>
+                            </Box>
+                          </Fade>
+                        );
+                      }
+
+                      return tests.map((t, idx) => {
+                        const isCompleted = t.id === 5 ? isDatCompleted : progress.completedMainTestIds.includes(t.id);
+
+                        // Habilitado si es el primero o si el anterior está completado
+                        let isEnabled = false;
+                        if (idx === 0) {
+                          isEnabled = !isCompleted;
+                        } else {
+                          const prevTest = tests[idx - 1];
+                          const prevCompleted = prevTest.id === 5 ? isDatCompleted : progress.completedMainTestIds.includes(prevTest.id);
+                          isEnabled = prevCompleted && !isCompleted;
+                        }
+
+                        // Caso especial: si ya está completado, no está "enabled" para entrar (se bloquea)
+                        const status = isCompleted ? 'completed' : (isEnabled ? 'active' : 'locked');
+
+                        return (
+                          <Button
+                            key={t.id}
+                            fullWidth
+                            onClick={() => navigate(t.path)}
+                            sx={buttonStyle(t.gradient, t.shadow, status)}
+                          >
+                            {status === 'locked' && <LockIcon sx={{ fontSize: '1.1rem' }} />}
+                            {t.id === 5 && isDatCompleted ? '🧩 DAT (CONTINUAR)' : t.label}
+                            {status === 'completed' && <CheckCircleIcon sx={{ fontSize: '1.1rem' }} />}
+                          </Button>
+                        );
+                      });
+                    })()}
+                  </>
+                )}
               </Box>
             </>
           ) : (
@@ -285,13 +394,12 @@ const ClientDashboard: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Modular Logout Confirmation Dialog */}
       <LogoutDialog
         open={showLogoutDialog}
         onClose={() => setShowLogoutDialog(false)}
         onConfirm={confirmLogout}
       />
-    </PageBackground>
+    </Box>
   );
 };
 

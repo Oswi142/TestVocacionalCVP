@@ -28,15 +28,19 @@ import {
   Alert,
   Chip,
   InputAdornment,
-  CircularProgress
+  CircularProgress,
+  Tooltip
 } from '@mui/material';
+import { adminService } from '../../../services/adminService';
 import { useNavigate } from 'react-router-dom';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import SearchIcon from '@mui/icons-material/Search';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import SearchIcon from '@mui/icons-material/Search';
+import ListAltIcon from '@mui/icons-material/ListAlt';
+import UserProgressDialog from '../components/UserProgressDialog';
 
 const UserManagement: React.FC = () => {
   const [name, setName] = useState('');
@@ -55,12 +59,14 @@ const UserManagement: React.FC = () => {
   const [showPasswordCreate, setShowPasswordCreate] = useState(true);
   const [showPasswordEdit, setShowPasswordEdit] = useState(true);
   const [search, setSearch] = useState('');
+  const [openProgressDialog, setOpenProgressDialog] = useState(false);
+  const [selectedUserForProgress, setSelectedUserForProgress] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const loggedUser = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
     fetchUsers();
@@ -72,11 +78,25 @@ const UserManagement: React.FC = () => {
   };
 
   const fetchUsers = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from('users').select();
-    if (!error) setUsers(data);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const data = await adminService.getClients();
+      setUsers(data);
+    } catch (e) {
+      console.error(e);
+      setMessage('Error al cargar usuarios');
+      setMessageType('error');
+      setShowSnackbar(true);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleOpenProgress = (user: any) => {
+    setSelectedUserForProgress(user);
+    setOpenProgressDialog(true);
+  };
+
 
   const handleCreateUser = async () => {
     try {
@@ -134,9 +154,9 @@ const UserManagement: React.FC = () => {
   };
 
 
-  const handleDelete = async () => {
+  const handleDeleteUser = async () => {
     if (!userToDelete) return;
-    if (userToDelete.id === currentUser.id) {
+    if (userToDelete.id === loggedUser.id) {
       showToast('No puedes eliminar tu propio usuario', 'error');
       setOpenConfirmDialog(false);
       return;
@@ -210,7 +230,6 @@ const UserManagement: React.FC = () => {
       sx={{
         width: '100%',
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f9c9a4 0%, #cafacc 100%)',
         p: isMobile ? 2 : 4,
         display: 'flex',
         flexDirection: 'column',
@@ -388,6 +407,14 @@ const UserManagement: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell align="right" sx={{ width: isMobile ? '150px' : '20%' }}>
+                            <Tooltip title="Gestionar Tests" arrow>
+                              <IconButton
+                                sx={{ color: '#0891b2', '&:hover': { backgroundColor: 'rgba(8, 145, 178, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
+                                onClick={() => handleOpenProgress(user)}
+                              >
+                                <ListAltIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
                             <IconButton
                               sx={{ color: '#1976d2', '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
                               onClick={() => handleEdit(user)}
@@ -401,8 +428,8 @@ const UserManagement: React.FC = () => {
                                 transition: 'all 0.2s'
                               }}
                               onClick={() => confirmDelete(user)}
-                              disabled={user.id === currentUser.id}
-                              title={user.id === currentUser.id ? "No puedes eliminar tu propio usuario" : "Eliminar"}>
+                              disabled={user.id === loggedUser.id}
+                              title={user.id === loggedUser.id ? "No puedes eliminar tu propio usuario" : "Eliminar"}>
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </TableCell>
@@ -612,7 +639,7 @@ const UserManagement: React.FC = () => {
         }}
         sx={{
           '& .MuiBackdrop-root': {
-            backgroundColor: 'rgba(0,0,0,0.4)',
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
             backdropFilter: 'blur(4px)',
           }
         }}
@@ -640,7 +667,7 @@ const UserManagement: React.FC = () => {
               Cancelar
             </Button>
             <Button
-              onClick={handleDelete}
+              onClick={handleDeleteUser}
               variant="contained"
               color="error"
               sx={{
@@ -656,6 +683,14 @@ const UserManagement: React.FC = () => {
         </Box>
       </Dialog>
 
+      {/* Gestión de Progreso de Tests */}
+      <UserProgressDialog
+        open={openProgressDialog}
+        onClose={() => setOpenProgressDialog(false)}
+        user={selectedUserForProgress}
+        onShowMessage={showToast}
+      />
+
       {/* Toast */}
       <Snackbar
         open={showSnackbar}
@@ -667,7 +702,7 @@ const UserManagement: React.FC = () => {
           {message}
         </Alert>
       </Snackbar>
-    </Box>
+    </Box >
   );
 };
 
