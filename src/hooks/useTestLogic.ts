@@ -121,6 +121,12 @@ export const useTestLogic = <T extends BaseQuestion>(
       try {
         const progress = await testService.getDetailedProgress(user.id);
 
+        // 1. Force Introducción if not completed (unless we are at Introducción)
+        if (testId !== 0 && !progress.hasCompletedIntro) {
+          navigate('/introduccion', { replace: true });
+          return;
+        }
+
         // Determinar orden de tests principales
         const mainOrder = [1, 2, 3, 4, 5];
         const datOrder = [
@@ -135,7 +141,7 @@ export const useTestLogic = <T extends BaseQuestion>(
         const isMainCompleted = progress.completedMainTestIds.includes(testId);
         const isDatCompleted = datType ? progress.completedDatTypes.includes(datType) : false;
 
-        // Si ya está completado, redirigir fuera (opcional, pero recomendado según requerimiento "se bloquea")
+        // Si ya está completado, redirigir fuera
         if (isMainCompleted && testId !== 5) {
           navigate('/client', { replace: true });
           return;
@@ -145,16 +151,18 @@ export const useTestLogic = <T extends BaseQuestion>(
           return;
         }
 
-        // Verificar si el anterior está hecho
-        if (testId === 1) return; // Entrevista siempre abierta si no está hecha
+        // Verificar si el anterior está hecho (salvo Entrevista que ahora depende de Introducción)
+        if (testId === 0) return;
 
         const currentIdx = mainOrder.indexOf(testId);
-        if (currentIdx > 0) {
+        if (currentIdx >= 0) {
+          if (testId === 1) {
+            // Entrevista (1) ya está validada arriba con hasCompletedIntro
+            return;
+          }
           const prevTestId = mainOrder[currentIdx - 1];
           let prevCompleted = progress.completedMainTestIds.includes(prevTestId);
 
-          // Caso especial: para entrar al DAT (5), el MACI (4) debe estar hecho
-          // Para entrar a un SUBTEST del DAT, el anterior subtest debe estar hecho
           if (testId === 5 && datType) {
             if (!prevCompleted) {
               navigate('/client', { replace: true });
@@ -296,7 +304,7 @@ export const useTestLogic = <T extends BaseQuestion>(
         localStorage.removeItem(STORAGE_KEY);
         setTimeout(() => navigate(navigateOnSubmit, { replace: true }), 3000);
       } else {
-        showSnackbar('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');
+        showSnackbar('Hubo un problema al enviar tus respuestas. Por favor, intenta de nuevo o contacta con soporte.', 'error');
       }
     } finally {
       setSaving(false);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { supabase } from '../../../supabaseClient';
+import { testService } from '../../../services/testService';
 import { useTestLogic } from '../../../hooks/useTestLogic';
 import { useAuth } from '../../../hooks/useAuth';
 import { Question } from '../../../types/test';
@@ -71,27 +71,25 @@ const Entrevista: React.FC = () => {
           questionid: q.id
         };
         if (options.length > 0) {
-          data.answerid = parseInt(value);
+          data.answerid = value ? parseInt(value) : null;
         } else {
-          data.details = value;
+          data.details = value || '';
         }
         return data;
-      }).filter(e => e.answerid || e.details);
+      }).filter(e => e.answerid !== null || e.details !== '');
 
-      for (const entry of entries) {
-        const { error } = await supabase.from('testsanswers').insert(entry);
-        if (error) throw error;
+      if (entries.length > 0) {
+        await testService.submitAnswers(entries);
       }
 
       const STORAGE_KEY = `entrevista_${user.id || 'anonymous'}`;
       localStorage.removeItem(STORAGE_KEY);
-      showSnackbar('Respuestas enviadas correctamente', 'success');
+      showSnackbar('Sesión finalizada con éxito. ¡Gracias!', 'success');
       setTimeout(() => navigate('/client', { replace: true, state: { showConfetti: true } }), 500);
-
 
     } catch (err: any) {
       console.error('Error submitting test:', err);
-      showSnackbar('Error al enviar: ' + (err.message || 'Error desconocido'), 'error');
+      showSnackbar('Hubo un problema al guardar tus datos. Por favor, intenta de nuevo.', 'error');
     } finally {
       setSaving(false);
     }
