@@ -35,9 +35,9 @@ const Entrevista: React.FC = () => {
     navigate,
   } = useTestLogic<Question>(1, 'entrevista', {
     conditionalVisibility: {
-      17: 16,
-      20: 19,
-      27: 26,
+      17: { parentId: 16, expectedAnswer: 'no' },
+      20: { parentId: 19, expectedAnswer: 'no' },
+      27: { parentId: 26, expectedAnswer: 'sí' },
     }
   });
 
@@ -73,7 +73,7 @@ const Entrevista: React.FC = () => {
         };
 
         if (!isVisible) {
-          data.details = "-";
+          data.details = "NO APLICA";
           return data;
         }
 

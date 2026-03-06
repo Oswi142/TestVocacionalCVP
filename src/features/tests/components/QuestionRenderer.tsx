@@ -259,4 +259,13 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     );
 };
 
-export default QuestionRenderer;
+const propsAreEqual = (prevProps: QuestionRendererProps, nextProps: QuestionRendererProps) => {
+    return (
+        prevProps.currentAnswer === nextProps.currentAnswer &&
+        prevProps.question.id === nextProps.question.id &&
+        // Options are assumed static by question length to avoid deep compare
+        prevProps.options.length === nextProps.options.length
+    );
+};
+
+export default React.memo(QuestionRenderer, propsAreEqual);

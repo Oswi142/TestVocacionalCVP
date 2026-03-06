@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './useAuth';
 import { testService } from '../services/testService';
@@ -15,7 +15,7 @@ export const useTestLogic = <T extends BaseQuestion>(
     onSaveExtra?: (answers: { [key: number]: string }) => any;
     onLoadExtra?: (extraData: any) => void;
     customIsSectionComplete?: (section: number, answers: { [key: number]: string }, grouped: { [key: number]: T[] }, shouldDisplayFn: (id: number) => boolean) => boolean;
-    conditionalVisibility?: Record<number, { parentId: number, expectedAnswer: string }>; // childId: { parentId, expectedAnswer }
+    conditionalVisibility?: Record<number, number>; // childId: parentId
   } = {}
 ) => {
   const {
@@ -121,7 +121,7 @@ export const useTestLogic = <T extends BaseQuestion>(
       try {
         const progress = await testService.getDetailedProgress(user.id);
 
-        // 1. Force Introducción if not completed (unless we are at Introducción)
+        // 1. Force Introducci├│n if not completed (unless we are at Introducci├│n)
         if (testId !== 0 && !progress.hasCompletedIntro) {
           navigate('/introduccion', { replace: true });
           return;
@@ -141,7 +141,7 @@ export const useTestLogic = <T extends BaseQuestion>(
         const isMainCompleted = progress.completedMainTestIds.includes(testId);
         const isDatCompleted = datType ? progress.completedDatTypes.includes(datType) : false;
 
-        // Si ya está completado, redirigir fuera
+        // Si ya est├í completado, redirigir fuera
         if (isMainCompleted && testId !== 5) {
           navigate('/client', { replace: true });
           return;
@@ -151,13 +151,13 @@ export const useTestLogic = <T extends BaseQuestion>(
           return;
         }
 
-        // Verificar si el anterior está hecho (salvo Entrevista que ahora depende de Introducción)
+        // Verificar si el anterior est├í hecho (salvo Entrevista que ahora depende de Introducci├│n)
         if (testId === 0) return;
 
         const currentIdx = mainOrder.indexOf(testId);
         if (currentIdx >= 0) {
           if (testId === 1) {
-            // Entrevista (1) ya está validada arriba con hasCompletedIntro
+            // Entrevista (1) ya est├í validada arriba con hasCompletedIntro
             return;
           }
           const prevTestId = mainOrder[currentIdx - 1];
@@ -242,15 +242,15 @@ export const useTestLogic = <T extends BaseQuestion>(
     );
   };
 
-  // Interceptar botón de atrás del navegador
+  // Interceptar bot├│n de atr├ís del navegador
   useEffect(() => {
     const handlePopState = () => {
-      // Bloquear navegación y mostrar diálogo
+      // Bloquear navegaci├│n y mostrar di├ílogo
       window.history.pushState(null, '', window.location.pathname);
       setDialogs((prev) => ({ ...prev, exit: true }));
     };
 
-    // Añadir una entrada inicial al historial para que el primer "atrás" sea capturable
+    // A├▒adir una entrada inicial al historial para que el primer "atr├ís" sea capturable
     window.history.pushState(null, '', window.location.pathname);
     window.addEventListener('popstate', handlePopState);
 
@@ -266,21 +266,14 @@ export const useTestLogic = <T extends BaseQuestion>(
       return;
     }
 
-    const payload: TestAnswer[] = allQuestions.map((q) => {
-      const val = answers[q.id];
-      const parsed = parseInt(val);
-      return {
-        clientid: user?.id as number,
-        testid: testId,
-        questionid: q.id,
-        answerid: Number.isInteger(parsed) ? parsed : null,
-      };
-    });
+    const payload: TestAnswer[] = allQuestions.map((q) => ({
+      clientid: user?.id as number,
+      testid: testId,
+      questionid: q.id,
+      answerid: parseInt(answers[q.id]),
+    }));
 
-    const visiblePayload = payload.filter(p =>
-      (!conditionalVisibility || shouldDisplayQuestion(p.questionid)) &&
-      p.answerid !== null
-    );
+    const visiblePayload = payload.filter(p => !conditionalVisibility || shouldDisplayQuestion(p.questionid));
 
     setDialogs((prev) => ({ ...prev, confirm: false }));
     setSaving(true);
@@ -307,7 +300,7 @@ export const useTestLogic = <T extends BaseQuestion>(
         });
         localStorage.setItem('pending_submissions', JSON.stringify(pending));
 
-        showSnackbar('Sin conexión. Las respuestas se enviarán automáticamente cuando vuelvas a estar online.', 'warning');
+        showSnackbar('Sin conexi├│n. Las respuestas se enviar├ín autom├íticamente cuando vuelvas a estar online.', 'warning');
         localStorage.removeItem(STORAGE_KEY);
         setTimeout(() => navigate(navigateOnSubmit, { replace: true }), 3000);
       } else {
@@ -328,15 +321,15 @@ export const useTestLogic = <T extends BaseQuestion>(
 
   const shouldDisplayQuestion = (questionId: number): boolean => {
     if (!conditionalVisibility) return true;
-    const condition = conditionalVisibility[questionId];
-    if (!condition) return true;
+    const parentId = conditionalVisibility[questionId];
+    if (!parentId) return true;
 
-    const selectedAnswerId = answers[condition.parentId];
+    const selectedAnswerId = answers[parentId];
     if (!selectedAnswerId) return false;
 
-    const parentOptions = answerOptions.filter((opt) => opt.questionid === condition.parentId);
+    const parentOptions = answerOptions.filter((opt) => opt.questionid === parentId);
     const selectedAnswer = parentOptions.find((opt) => String(opt.id) === String(selectedAnswerId));
-    return selectedAnswer?.answer?.toLowerCase() === condition.expectedAnswer.toLowerCase();
+    return selectedAnswer?.answer?.toLowerCase() === 's├¡';
   };
 
   const isSectionComplete = (section: number): boolean => {
@@ -344,8 +337,7 @@ export const useTestLogic = <T extends BaseQuestion>(
       return callbacksRef.current.customIsSectionComplete(section, answers, groupedQuestions, shouldDisplayQuestion);
     }
     const sectionQuestions = groupedQuestions[section] || [];
-    const visibleQuestions = sectionQuestions.filter(q => shouldDisplayQuestion(q.id));
-    return visibleQuestions.length > 0 && visibleQuestions.every((q) => !!answers[q.id]);
+    return sectionQuestions.length > 0 && sectionQuestions.every((q) => !!answers[q.id]);
   };
 
   return {
