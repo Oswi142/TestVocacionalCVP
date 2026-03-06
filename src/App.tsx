@@ -26,63 +26,66 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { Box, Tooltip, Zoom } from '@mui/material';
 import AnimatedBackground from './components/AnimatedBackground';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const isOnline = useOnlineStatus();
 
   return (
-    <AuthProvider>
-      <AnimatedBackground />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/client" element={<ProtectedRoute requiredRole="client"><ClientDashboard /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/introduccion" element={<ProtectedRoute requiredRole="client"><Introduccion /></ProtectedRoute>} />
-          <Route path="/entrevista" element={<ProtectedRoute requiredRole="client"><Entrevista /></ProtectedRoute>} />
-          <Route path="/gestion-usuarios" element={<ProtectedRoute requiredRole="admin"><UserManagement /></ProtectedRoute>} />
-          <Route path="/ippr" element={<ProtectedRoute requiredRole="client"><IPPR /></ProtectedRoute>} />
-          <Route path="/respuestas-clientes" element={<ProtectedRoute requiredRole="admin"><ClientsAnswers /></ProtectedRoute>} />
-          <Route path="/chaside" element={<ProtectedRoute requiredRole="client"><Chaside /></ProtectedRoute>} />
-          <Route path="/maci" element={<ProtectedRoute requiredRole="client"><MACI /></ProtectedRoute>} />
-          <Route path="/reportes-clientes" element={<ProtectedRoute requiredRole="admin"><ClientsReports /></ProtectedRoute>} />
-          <Route path="/dat" element={<ProtectedRoute requiredRole="client"><DatDashboard /></ProtectedRoute>} />
-          <Route path="/dat/verbal" element={<ProtectedRoute requiredRole="client"><DatVerbal /></ProtectedRoute>} />
-          <Route path="/dat/numerico" element={<ProtectedRoute requiredRole="client"><DatNumerico /></ProtectedRoute>} />
-          <Route path="/dat/abstracto" element={<ProtectedRoute requiredRole="client"><DatAbstracto /></ProtectedRoute>} />
-          <Route path="/dat/mecanico" element={<ProtectedRoute requiredRole="client"><DatMecanico /></ProtectedRoute>} />
-          <Route path="/dat/espaciales" element={<ProtectedRoute requiredRole="client"><DatEspacial /></ProtectedRoute>} />
-          <Route path="/dat/ortografia" element={<ProtectedRoute requiredRole="client"><DatOrtografia /></ProtectedRoute>} />
-          {/*Nueva ruta */}
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <AnimatedBackground />
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/client" element={<ProtectedRoute requiredRole="client"><ClientDashboard /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/introduccion" element={<ProtectedRoute requiredRole="client"><Introduccion /></ProtectedRoute>} />
+            <Route path="/entrevista" element={<ProtectedRoute requiredRole="client"><Entrevista /></ProtectedRoute>} />
+            <Route path="/gestion-usuarios" element={<ProtectedRoute requiredRole="admin"><UserManagement /></ProtectedRoute>} />
+            <Route path="/ippr" element={<ProtectedRoute requiredRole="client"><IPPR /></ProtectedRoute>} />
+            <Route path="/respuestas-clientes" element={<ProtectedRoute requiredRole="admin"><ClientsAnswers /></ProtectedRoute>} />
+            <Route path="/chaside" element={<ProtectedRoute requiredRole="client"><Chaside /></ProtectedRoute>} />
+            <Route path="/maci" element={<ProtectedRoute requiredRole="client"><MACI /></ProtectedRoute>} />
+            <Route path="/reportes-clientes" element={<ProtectedRoute requiredRole="admin"><ClientsReports /></ProtectedRoute>} />
+            <Route path="/dat" element={<ProtectedRoute requiredRole="client"><DatDashboard /></ProtectedRoute>} />
+            <Route path="/dat/verbal" element={<ProtectedRoute requiredRole="client"><DatVerbal /></ProtectedRoute>} />
+            <Route path="/dat/numerico" element={<ProtectedRoute requiredRole="client"><DatNumerico /></ProtectedRoute>} />
+            <Route path="/dat/abstracto" element={<ProtectedRoute requiredRole="client"><DatAbstracto /></ProtectedRoute>} />
+            <Route path="/dat/mecanico" element={<ProtectedRoute requiredRole="client"><DatMecanico /></ProtectedRoute>} />
+            <Route path="/dat/espaciales" element={<ProtectedRoute requiredRole="client"><DatEspacial /></ProtectedRoute>} />
+            <Route path="/dat/ortografia" element={<ProtectedRoute requiredRole="client"><DatOrtografia /></ProtectedRoute>} />
+            {/*Nueva ruta */}
 
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
 
-      {/* Indicador de Offline sutil */}
-      <Zoom in={!isOnline}>
-        <Tooltip title="Sin conexión - Trabajando localmente" arrow placement="left">
-          <Box
-            sx={{
-              position: 'fixed',
-              top: 20,
-              right: 20,
-              zIndex: 9999,
-              backgroundColor: 'rgba(255, 111, 0, 0.9)',
-              color: 'white',
-              p: 1.5,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(255, 111, 0, 0.4)',
-              backdropFilter: 'blur(4px)',
-            }}
-          >
-            <WifiOffIcon />
-          </Box>
-        </Tooltip>
-      </Zoom>
-    </AuthProvider>
+        {/* Indicador de Offline sutil */}
+        <Zoom in={!isOnline}>
+          <Tooltip title="Sin conexión - Trabajando localmente" arrow placement="left">
+            <Box
+              sx={{
+                position: 'fixed',
+                top: 20,
+                right: 20,
+                zIndex: 9999,
+                backgroundColor: 'rgba(255, 111, 0, 0.9)',
+                color: 'white',
+                p: 1.5,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(255, 111, 0, 0.4)',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              <WifiOffIcon />
+            </Box>
+          </Tooltip>
+        </Zoom>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

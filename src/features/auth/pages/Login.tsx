@@ -34,7 +34,7 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      const userData = await loginService(username, password);
+      const userData = await loginService(username.trim(), password);
       login(userData);
 
       if (userData.role === 'admin') {

@@ -66,7 +66,14 @@ const UserManagement: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const loggedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const getLoggedUser = () => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch {
+      return {};
+    }
+  };
+  const loggedUser = getLoggedUser();
 
   useEffect(() => {
     fetchUsers();
@@ -104,7 +111,7 @@ const UserManagement: React.FC = () => {
       const { data: existing } = await supabase
         .from('users')
         .select('id')
-        .eq('username', username)
+        .ilike('username', username.trim())
         .single();
 
       if (existing) {
@@ -113,7 +120,12 @@ const UserManagement: React.FC = () => {
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      const { error } = await supabase.from('users').insert({ name, username, password: hashedPassword, role });
+      const { error } = await supabase.from('users').insert({
+        name,
+        username: username.trim(),
+        password: hashedPassword,
+        role
+      });
       if (error) throw error;
 
       handleCloseCreateDialog();
@@ -129,7 +141,7 @@ const UserManagement: React.FC = () => {
       const { data: existing } = await supabase
         .from('users')
         .select('id')
-        .eq('username', username)
+        .ilike('username', username.trim())
         .neq('id', editingUser.id)
         .single();
 
@@ -141,7 +153,12 @@ const UserManagement: React.FC = () => {
       const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
       const { error } = await supabase
         .from('users')
-        .update({ name, username, ...(hashedPassword ? { password: hashedPassword } : {}), role })
+        .update({
+          name,
+          username: username.trim(),
+          ...(hashedPassword ? { password: hashedPassword } : {}),
+          role
+        })
         .eq('id', editingUser.id);
       if (error) throw error;
 

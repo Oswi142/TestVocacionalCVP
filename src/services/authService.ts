@@ -5,7 +5,7 @@ export const login = async (username: string, password: string) => {
   const { data, error } = await supabase
     .from('users')
     .select('*')
-    .eq('username', username)
+    .ilike('username', username.trim())
     .limit(1);
 
   if (error || !data || data.length === 0) {
