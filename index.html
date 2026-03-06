@@ -29,7 +29,66 @@
     <title>Test Vocacional CVP</title>
     <meta name="description" content="Aplicación de Evaluación Vocacional de Club Vida Plena" />
   </head>
-  <body>
+    <!-- Rescue Shield: Detects loading failure before React -->
+    <style>
+      #rescue-shield {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: white;
+        z-index: 9999;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+        font-family: 'Poppins', sans-serif;
+      }
+      .rescue-btn {
+        background: #1976d2;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 50px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 20px;
+        box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+      }
+    </style>
+    <div id="rescue-shield">
+      <h2 style="color: #1e293b;">¿La aplicación no carga?</h2>
+      <p style="color: #64748b;">Parece que hay un problema con la memoria del navegador.</p>
+      <button class="rescue-btn" onclick="forceReset()">Forzar Reinicio y Limpiar Caché</button>
+    </div>
+    <script>
+      // Si en 6 segundos no se ha quitado el shield (React no cargó), mostrarlo
+      var rescueTimeout = setTimeout(function() {
+        document.getElementById('rescue-shield').style.display = 'flex';
+      }, 6000);
+
+      function forceReset() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) { registration.unregister(); }
+          });
+        }
+        caches.keys().then(function(names) {
+          for (let name of names) caches.delete(name);
+        });
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.reload(true);
+      }
+
+      // Esta función será llamada desde App.tsx o main.tsx cuando React esté listo
+      window.markAppAsReady = function() {
+        clearTimeout(rescueTimeout);
+        var shield = document.getElementById('rescue-shield');
+        if (shield) shield.style.display = 'none';
+      };
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

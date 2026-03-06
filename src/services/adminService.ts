@@ -21,7 +21,7 @@ export const adminService = {
         return usersDedup.map((u: any) => {
             const ci = ciMap.get(u.id);
             return {
-                userid: u.id,
+                id: u.id,
                 name: u.name,
                 username: u.username,
                 birthday: ci?.birthday ?? null,

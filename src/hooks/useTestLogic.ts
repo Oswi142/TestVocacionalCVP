@@ -266,14 +266,21 @@ export const useTestLogic = <T extends BaseQuestion>(
       return;
     }
 
-    const payload: TestAnswer[] = allQuestions.map((q) => ({
-      clientid: user?.id as number,
-      testid: testId,
-      questionid: q.id,
-      answerid: parseInt(answers[q.id]),
-    }));
+    const payload: TestAnswer[] = allQuestions.map((q) => {
+      const val = answers[q.id];
+      const parsed = parseInt(val);
+      return {
+        clientid: user?.id as number,
+        testid: testId,
+        questionid: q.id,
+        answerid: Number.isInteger(parsed) ? parsed : null,
+      };
+    });
 
-    const visiblePayload = payload.filter(p => !conditionalVisibility || shouldDisplayQuestion(p.questionid));
+    const visiblePayload = payload.filter(p =>
+      (!conditionalVisibility || shouldDisplayQuestion(p.questionid)) &&
+      p.answerid !== null
+    );
 
     setDialogs((prev) => ({ ...prev, confirm: false }));
     setSaving(true);

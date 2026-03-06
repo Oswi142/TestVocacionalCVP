@@ -11,6 +11,9 @@ import { processPendingSubmissions } from './utils/offlineSync';
 const rootElement = document.getElementById('root')!;
 const root = ReactDOM.createRoot(rootElement);
 
+// Signal UI readiness to Rescue Shield
+if ((window as any).markAppAsReady) (window as any).markAppAsReady();
+
 root.render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>

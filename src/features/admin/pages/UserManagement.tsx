@@ -41,6 +41,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import SearchIcon from '@mui/icons-material/Search';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import UserProgressDialog from '../components/UserProgressDialog';
+import ActionOverlay from '../../../components/ActionOverlay';
 
 const UserManagement: React.FC = () => {
   const [name, setName] = useState('');
@@ -62,6 +63,7 @@ const UserManagement: React.FC = () => {
   const [openProgressDialog, setOpenProgressDialog] = useState(false);
   const [selectedUserForProgress, setSelectedUserForProgress] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionOverlay, setActionOverlay] = useState({ open: false, message: '', submessage: '' });
 
   const navigate = useNavigate();
   const theme = useTheme();
@@ -108,6 +110,8 @@ const UserManagement: React.FC = () => {
   const handleCreateUser = async () => {
     try {
       if (!name || !username || !password || !role) return;
+      setActionOverlay({ open: true, message: 'Creando usuario...', submessage: 'Por favor espera un momento' });
+
       const { data: existing } = await supabase
         .from('users')
         .select('id')
@@ -115,6 +119,7 @@ const UserManagement: React.FC = () => {
         .single();
 
       if (existing) {
+        setActionOverlay({ open: false, message: '', submessage: '' });
         showToast('Ese nombre de usuario ya está en uso', 'error');
         return;
       }
@@ -133,11 +138,16 @@ const UserManagement: React.FC = () => {
       showToast('Usuario creado exitosamente', 'success');
     } catch (err: any) {
       showToast('Error: ' + err.message, 'error');
+    } finally {
+      setActionOverlay({ open: false, message: '', submessage: '' });
     }
   };
 
   const handleUpdateUser = async () => {
     try {
+      if (!editingUser) return;
+      setActionOverlay({ open: true, message: 'Actualizando usuario...', submessage: 'Guardando los cambios' });
+
       const { data: existing } = await supabase
         .from('users')
         .select('id')
@@ -146,6 +156,7 @@ const UserManagement: React.FC = () => {
         .single();
 
       if (existing) {
+        setActionOverlay({ open: false, message: '', submessage: '' });
         showToast('Ese nombre de usuario ya está en uso', 'error');
         return;
       }
@@ -167,9 +178,10 @@ const UserManagement: React.FC = () => {
       showToast('Usuario actualizado', 'success');
     } catch (err: any) {
       showToast('Error: ' + err.message, 'error');
+    } finally {
+      setActionOverlay({ open: false, message: '', submessage: '' });
     }
   };
-
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
@@ -179,13 +191,21 @@ const UserManagement: React.FC = () => {
       return;
     }
 
-    const { error } = await supabase.from('users').delete().eq('id', userToDelete.id);
-    if (!error) {
+    try {
+      setOpenConfirmDialog(false);
+      setActionOverlay({ open: true, message: 'Eliminando usuario...', submessage: 'Esto puede tomar unos segundos' });
+
+      const { error } = await supabase.from('users').delete().eq('id', userToDelete.id);
+      if (error) throw error;
+
       fetchUsers();
       showToast('Usuario eliminado', 'success');
+    } catch (err: any) {
+      showToast('Error: ' + err.message, 'error');
+    } finally {
+      setActionOverlay({ open: false, message: '', submessage: '' });
+      setUserToDelete(null);
     }
-    setOpenConfirmDialog(false);
-    setUserToDelete(null);
   };
 
   const filteredUsers = users.filter((user: any) =>
@@ -379,90 +399,85 @@ const UserManagement: React.FC = () => {
               <CircularProgress size={40} sx={{ color: '#1976d2' }} />
             </Box>
           ) : (
-            <Box sx={{
+            <TableContainer sx={{
               flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              overflowX: 'auto',
-              '&::-webkit-scrollbar': { height: '8px' },
-              '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: '10px' }
+              overflowY: 'auto',
+              '& .MuiTableCell-stickyHeader': {
+                backgroundColor: '#f1f5f9',
+                fontWeight: 700,
+                color: '#475569',
+                zIndex: 2
+              }
             }}>
-              {/* Header estático */}
-              <Table sx={{ tableLayout: 'fixed', minWidth: isMobile ? '700px' : '100%', backgroundColor: '#f1f5f9' }}>
+              <Table stickyHeader sx={{ minWidth: isMobile ? '600px' : '100%' }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', width: isMobile ? '200px' : '35%' }}>Nombre</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', width: isMobile ? '150px' : '25%' }}>Usuario</TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#475569', width: isMobile ? '150px' : '20%' }}>Rol</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, color: '#475569', width: isMobile ? '150px' : '20%' }}>Acciones</TableCell>
+                    <TableCell sx={{ width: '35%' }}>Nombre</TableCell>
+                    <TableCell sx={{ width: '25%' }}>Usuario</TableCell>
+                    <TableCell sx={{ width: '20%' }}>Rol</TableCell>
+                    <TableCell align="right" sx={{ width: '20%' }}>Acciones</TableCell>
                   </TableRow>
                 </TableHead>
-              </Table>
-
-              {/* Cuerpo con scroll vertical */}
-              <TableContainer sx={{ flex: 1, overflowY: 'auto' }}>
-                <Table sx={{ tableLayout: 'fixed', minWidth: isMobile ? '700px' : '100%' }}>
-                  <TableBody>
-                    {filteredUsers.length > 0 ? (
-                      filteredUsers.map((user: any) => (
-                        <TableRow
-                          key={user.id}
-                          hover
-                          sx={{ '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.04)' }, transition: 'background-color 0.2s' }}
-                        >
-                          <TableCell sx={{ color: '#334155', fontWeight: 500, width: isMobile ? '200px' : '35%', wordBreak: 'break-word' }}>{user.name}</TableCell>
-                          <TableCell sx={{ color: '#334155', width: isMobile ? '150px' : '25%', wordBreak: 'break-word' }}>{user.username}</TableCell>
-                          <TableCell sx={{ width: isMobile ? '150px' : '20%' }}>
-                            <Chip
-                              label={user.role === 'admin' ? 'Administrador' : 'Cliente'}
-                              size="small"
-                              sx={{
-                                fontWeight: 600,
-                                backgroundColor: user.role === 'admin' ? '#dcfce7' : '#e0f2fe',
-                                color: user.role === 'admin' ? '#166534' : '#075985'
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell align="right" sx={{ width: isMobile ? '150px' : '20%' }}>
-                            <Tooltip title="Gestionar Tests" arrow>
-                              <IconButton
-                                sx={{ color: '#0891b2', '&:hover': { backgroundColor: 'rgba(8, 145, 178, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
-                                onClick={() => handleOpenProgress(user)}
-                              >
-                                <ListAltIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
+                <TableBody>
+                  {filteredUsers.length > 0 ? (
+                    filteredUsers.map((user: any) => (
+                      <TableRow
+                        key={user.id}
+                        hover
+                        sx={{ '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.04)' }, transition: 'background-color 0.2s' }}
+                      >
+                        <TableCell sx={{ color: '#334155', fontWeight: 500, wordBreak: 'break-word' }}>{user.name}</TableCell>
+                        <TableCell sx={{ color: '#334155', wordBreak: 'break-word' }}>{user.username}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={user.role === 'admin' ? 'Administrador' : 'Cliente'}
+                            size="small"
+                            sx={{
+                              fontWeight: 600,
+                              backgroundColor: user.role === 'admin' ? '#dcfce7' : '#e0f2fe',
+                              color: user.role === 'admin' ? '#166534' : '#075985'
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Tooltip title="Gestionar Tests" arrow>
                             <IconButton
-                              sx={{ color: '#1976d2', '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
-                              onClick={() => handleEdit(user)}
+                              sx={{ color: '#0891b2', '&:hover': { backgroundColor: 'rgba(8, 145, 178, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
+                              onClick={() => handleOpenProgress(user)}
                             >
-                              <EditIcon fontSize="small" />
+                              <ListAltIcon fontSize="small" />
                             </IconButton>
-                            <IconButton
-                              sx={{
-                                color: '#d32f2f',
-                                '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)', transform: 'scale(1.1)' },
-                                transition: 'all 0.2s'
-                              }}
-                              onClick={() => confirmDelete(user)}
-                              disabled={user.id === loggedUser.id}
-                              title={user.id === loggedUser.id ? "No puedes eliminar tu propio usuario" : "Eliminar"}>
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} align="center" sx={{ py: 4, color: '#64748b' }}>
-                          No se encontraron usuarios
+                          </Tooltip>
+                          <IconButton
+                            sx={{ color: '#1976d2', '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
+                            onClick={() => handleEdit(user)}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            sx={{
+                              color: '#d32f2f',
+                              '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.1)', transform: 'scale(1.1)' },
+                              transition: 'all 0.2s'
+                            }}
+                            onClick={() => confirmDelete(user)}
+                            disabled={user.id === loggedUser.id}
+                            title={user.id === loggedUser.id ? "No puedes eliminar tu propio usuario" : "Eliminar"}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} align="center" sx={{ py: 4, color: '#64748b' }}>
+                        No se encontraron usuarios
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
         </Box>
       </Box>
@@ -706,6 +721,13 @@ const UserManagement: React.FC = () => {
         onClose={() => setOpenProgressDialog(false)}
         user={selectedUserForProgress}
         onShowMessage={showToast}
+      />
+
+      {/* Action Overlay */}
+      <ActionOverlay
+        open={actionOverlay.open}
+        message={actionOverlay.message}
+        submessage={actionOverlay.submessage}
       />
 
       {/* Toast */}

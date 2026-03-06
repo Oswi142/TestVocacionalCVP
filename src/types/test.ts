@@ -23,6 +23,6 @@ export interface TestAnswer {
     clientid: number;
     testid: number;
     questionid: number;
-    answerid: number;
+    answerid: number | null;
     details?: string | null;
 }

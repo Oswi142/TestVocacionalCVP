@@ -90,13 +90,15 @@ export const testService = {
 
     async getDetailedProgress(clientId: number) {
         // 1. Obtener progreso de la base de datos (Supabase)
-        const { data: dbData, error } = await supabase
+        const { data: dbRaw, error } = await supabase
             .from('testsanswers')
             .select('testid, questionid, details')
-            .eq('clientid', clientId)
-            .not('details', 'ilike', '[HIST_%');
+            .eq('clientid', clientId);
 
         if (error) throw error;
+
+        // Filtrar localmente para incluir NULLs y excluir históricos
+        const dbData = (dbRaw || []).filter(r => !r.details || !r.details.startsWith('[HIST_'));
 
         // Verificar si completó la introducción (tiene registro en clientsinfo)
         const { data: clientInfo, error: infoError } = await supabase
@@ -120,10 +122,11 @@ export const testService = {
 
         // 2. Obtener progreso de la cola offline (para que la interfaz avance sin señal)
         const pending = JSON.parse(localStorage.getItem('pending_submissions') || '[]');
-        pending.forEach((payload: any[]) => {
+        pending.forEach((item: any) => {
+            const payload = item.payload || [];
             if (payload.length > 0 && payload[0].clientid === clientId) {
                 completedMainTestIds.push(payload[0].testid);
-                payload.forEach(ans => answeredQuestionIds.add(ans.questionid));
+                payload.forEach((ans: any) => answeredQuestionIds.add(ans.questionid));
             }
         });
 
@@ -200,16 +203,19 @@ export const testService = {
 
     async archiveTest(clientId: number, testId: number, datType?: string) {
         // 1. Obtener las respuestas actuales para este test
-        let query = supabase
+        const { data: dbRaw, error: fetchError } = await supabase
             .from('testsanswers')
-            .select('id, details')
+            .select('id, details, questionid')
             .eq('clientid', clientId)
-            .eq('testid', testId)
-            .not('details', 'ilike', '[HIST_%');
+            .eq('testid', testId);
 
-        if (datType) {
-            // Si es DAT, necesitamos filtrar por tipo. Las respuestas no tienen dat_type, 
-            // así que hay que filtrar por las preguntas.
+        if (fetchError) throw fetchError;
+
+        // Filtrar localmente para asegurar consistencia con NULLs
+        let answers = (dbRaw || []).filter(ans => !ans.details || !ans.details.startsWith('[HIST_'));
+
+        if (datType && answers.length > 0) {
+            // Si es DAT, necesitamos filtrar por tipo. 
             const { data: qData } = await supabase
                 .from('questions')
                 .select('id')
@@ -217,14 +223,13 @@ export const testService = {
                 .eq('dat_type', datType);
 
             if (qData && qData.length > 0) {
-                const qIds = qData.map(q => q.id);
-                query = query.in('questionid', qIds);
+                const qIds = new Set(qData.map(q => q.id));
+                answers = answers.filter(ans => qIds.has(ans.questionid));
+            } else {
+                return; // No hay respuestas para este tipo
             }
         }
 
-        const { data: answers, error: fetchError } = await query;
-
-        if (fetchError) throw fetchError;
         if (!answers || answers.length === 0) return;
 
         // 2. Marcar cada respuesta como histórica

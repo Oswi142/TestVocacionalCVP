@@ -61,22 +61,30 @@ const Entrevista: React.FC = () => {
       setDialogs(prev => ({ ...prev, confirm: false }));
       setSaving(true);
 
-      const allVisible = allQuestions.filter((q: Question) => shouldDisplayQuestion(q.id));
-      const entries = allVisible.map((q: Question) => {
+      const entries = allQuestions.map((q: Question) => {
+        const isVisible = shouldDisplayQuestion(q.id);
         const value = answers[q.id];
         const options = answerOptions.filter(opt => opt.questionid === q.id);
+
         const data: any = {
           clientid: user.id,
           testid: 1,
           questionid: q.id
         };
+
+        if (!isVisible) {
+          data.details = "-";
+          return data;
+        }
+
         if (options.length > 0) {
-          data.answerid = value ? parseInt(value) : null;
+          const parsed = parseInt(value);
+          data.answerid = Number.isInteger(parsed) ? parsed : null;
         } else {
           data.details = value || '';
         }
         return data;
-      }).filter(e => e.answerid !== null || e.details !== '');
+      }).filter(e => (e.answerid !== null && !isNaN(e.answerid)) || (e.details !== undefined && e.details !== ''));
 
       if (entries.length > 0) {
         await testService.submitAnswers(entries);
