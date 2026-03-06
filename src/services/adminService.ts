@@ -28,6 +28,8 @@ export const adminService = {
                 address: ci?.address ?? null,
                 birthplace: ci?.birthplace ?? null,
                 school: ci?.school ?? null,
+                gender: ci?.gender ?? null,
+                grade: ci?.grade ?? null,
             };
         });
     },

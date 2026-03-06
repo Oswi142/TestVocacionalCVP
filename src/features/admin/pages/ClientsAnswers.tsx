@@ -76,18 +76,7 @@ const ClientsAnswers: React.FC = () => {
     setSnackbar({ open: true, message, severity });
   };
 
-  const splitTextIntoLines = (text: string, maxWidth: number = 50): string[] => {
-    if (!text || !text.trim()) return [''];
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-    words.forEach(word => {
-      if ((currentLine + word).length <= maxWidth) currentLine += (currentLine ? ' ' : '') + word;
-      else { if (currentLine) { lines.push(currentLine); currentLine = word; } else { lines.push(word); } }
-    });
-    if (currentLine) lines.push(currentLine);
-    return lines;
-  };
+
 
   const getAttemptLabel = (prefix: string) => {
     if (prefix === 'active') return 'Intento Actual (Activo)';
@@ -121,45 +110,135 @@ const ClientsAnswers: React.FC = () => {
       const oMap = new Map<number, AnswerOptionRow>((optsRaw ?? []).map((o: any) => [o.id, o]));
       const doc = new jsPDF();
       const now = new Date().toLocaleDateString('es-ES');
-      doc.setFont('helvetica');
-      doc.setFontSize(16); doc.text('Reporte de Resultados', 14, 20);
-      doc.setFontSize(12);
-      doc.text(`Fecha de generación: ${now}`, 14, 30);
-      doc.text(`Nombre: ${client?.name || ''}`, 14, 38);
-      if (client?.school) {
-        doc.text(`Colegio: ${client.school}`, 14, 45);
-        doc.setFontSize(14); doc.text(`Test: ${test?.testname || ''}`, 14, 55);
-      } else {
-        doc.setFontSize(14); doc.text(`Test: ${test?.testname || ''}`, 14, 52);
+
+      let submitDateStr = now;
+      if (attemptId !== 'active' && clientAnswers.length > 0) {
+        // Encontrar la fecha más reciente dentro de las respuestas de este intento
+        const dates = clientAnswers
+          .map(a => a.created_at ? new Date(a.created_at).getTime() : 0)
+          .filter(t => t > 0);
+
+        if (dates.length > 0) {
+          const maxDate = new Date(Math.max(...dates));
+          submitDateStr = maxDate.toLocaleDateString('es-ES');
+        }
       }
+
+      // Encabezado principal (Más espaciado y elegante)
+      doc.setFillColor(15, 23, 42); // Slate 900, más moderno
+      doc.rect(0, 0, 210, 28, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('REPORTE TÉCNICO DE RESPUESTAS', 14, 17);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(148, 163, 184); // Slate 400
+      doc.text(`Enviado: ${submitDateStr}`, 160, 17);
+
+      // Caja de datos del cliente (Estilo tarjeta)
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(14, 34, 182, 48, 4, 4, 'FD');
+
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Datos del Cliente', 20, 44);
+
+      // Línea divisora sutil
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 47, 188, 47);
+
+      doc.setFontSize(9.5);
+
+      // Columna 1
+      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Nombre:', 20, 54);
+      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.name || 'No registrado', 40, 54);
+
+      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Colegio:', 20, 61);
+      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.school || 'No registrado', 40, 61);
+
+      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Grado:', 20, 68);
+      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.grade || 'No registrado', 40, 68);
+
+      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Test:', 20, 75);
+      doc.setTextColor(16, 185, 129); doc.setFont('helvetica', 'bold'); doc.text(test?.testname || '', 40, 75);
+
+      // Columna 2
+      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('F. Nac.:', 110, 54);
+      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.birthday || 'No registrado', 134, 54);
+
+      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Lugar Nac.:', 110, 61);
+      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.birthplace || 'No registrado', 134, 61);
+
+      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Género:', 110, 68);
+      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.gender || 'No registrado', 134, 68);
+
+      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Intento:', 110, 75);
+      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(getAttemptLabel(attemptId), 134, 75);
+
       const tableData: any[] = [];
       let categoriesToProcess: (DatType | undefined)[] = [category];
+
       if (isDat && !category) {
         const foundCats = new Set<DatType>();
         clientAnswers.forEach(ans => { const q = qMap.get(ans.questionid); if (q?.dat_type) foundCats.add(q.dat_type as DatType); });
         const order: DatType[] = ['razonamiento_verbal', 'razonamiento_numerico', 'razonamiento_abstracto', 'razonamiento_mecanico', 'razonamiento_espacial', 'ortografia'];
         categoriesToProcess = order.filter(c => foundCats.has(c));
       }
+
       categoriesToProcess.forEach(currentCat => {
-        if (isDat && currentCat) tableData.push([{ content: `SECCIÓN: ${DAT_LABELS[currentCat]}`, styles: { fillColor: [41, 128, 185], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 11, halign: 'center' } }]);
+        if (isDat && currentCat) {
+          tableData.push([{ content: `\n♦ SECCIÓN: ${DAT_LABELS[currentCat]}\n`, styles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: 11, halign: 'center' } }]);
+        }
         const filteredAnswers = isDat && currentCat ? clientAnswers.filter(ans => qMap.get(ans.questionid)?.dat_type === currentCat) : clientAnswers;
+
         let n = 1;
         filteredAnswers.forEach(ans => {
           const qRow = qMap.get(ans.questionid);
           const oRow = ans.answerid != null ? oMap.get(ans.answerid) : undefined;
-          let qText = qRow?.question || ''; if (!qText.trim()) qText = 'Pregunta Visual';
-          const aText = oRow?.answer ?? ans.details ?? '';
-          const qLines = splitTextIntoLines(qText, 80);
-          const aLines = splitTextIntoLines(aText, 80);
-          tableData.push([{ content: `PREGUNTA ${n}: ${qLines[0]}`, styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
-          for (let i = 1; i < qLines.length; i++) tableData.push([{ content: qLines[i], styles: { fillColor: [232, 245, 255], textColor: [33, 150, 243], fontStyle: 'bold', fontSize: 10 } }]);
-          tableData.push([{ content: `RESPUESTA: ${aLines[0]}`, styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
-          for (let i = 1; i < aLines.length; i++) tableData.push([{ content: aLines[i], styles: { fontSize: 10, textColor: [60, 60, 60] } }]);
-          tableData.push([{ content: '', styles: { minCellHeight: 3 } }]);
+          let qText = qRow?.question || '';
+          if (!qText.trim()) qText = 'Pregunta Visual (Referente a la imagen del documento)';
+          const aText = oRow?.answer ?? ans.details ?? 'Sin respuesta';
+
+          tableData.push([{
+            content: `${n}. ${qText}`,
+            styles: { fillColor: [255, 255, 255], textColor: [71, 85, 105], fontStyle: 'bold', fontSize: 9.5, cellPadding: { top: 6, bottom: 2, left: 4, right: 4 } }
+          }]);
+
+          tableData.push([{
+            content: `R:  ${aText}`,
+            styles: { fillColor: [255, 255, 255], textColor: [15, 23, 42], fontStyle: 'normal', fontSize: 10, cellPadding: { top: 2, bottom: 6, left: 4, right: 4 } }
+          }]);
+
+          // Separador Invisible
+          tableData.push([{ content: '', styles: { fillColor: [255, 255, 255], minCellHeight: 1, cellPadding: 0 } }]);
           n++;
         });
       });
-      autoTable(doc, { startY: 62, body: tableData, theme: 'plain', styles: { fontSize: 10, cellPadding: 2, overflow: 'linebreak', valign: 'top', halign: 'left' }, columnStyles: { 0: { cellWidth: 'wrap' } }, tableWidth: 'auto', margin: { left: 12, right: 12 }, showHead: false, pageBreak: 'auto', rowPageBreak: 'avoid' });
+
+      autoTable(doc, {
+        startY: 88,
+        body: tableData,
+        theme: 'plain',
+        styles: { font: 'helvetica', fontSize: 10, overflow: 'linebreak', valign: 'middle' },
+        columnStyles: { 0: { cellWidth: 'wrap' } },
+        tableWidth: 'auto',
+        margin: { left: 14, right: 14, bottom: 20 },
+        showHead: false,
+        pageBreak: 'auto',
+        rowPageBreak: 'avoid',
+        didDrawCell: (data) => {
+          // Borde inferior sutil solo para respuestas (filas pares de datos reales)
+          if (data.row.index % 3 === 1 && data.cell.raw !== '') {
+            doc.setDrawColor(241, 245, 249);
+            doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+          }
+        }
+      });
       doc.save(`Resultados_${client?.name || 'Cliente'}_${test?.testname || 'Test'}.pdf`);
     } catch (e) { console.error(e); showToast('Ocurrió un error generando el PDF.', 'error'); }
   };

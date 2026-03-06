@@ -14,6 +14,8 @@ export interface ClientInfo {
     address: string | null;
     birthplace: string | null;
     school?: string | null;
+    gender?: string | null;
+    grade?: string | null;
 }
 
 export interface UnifiedClient extends ClientInfo {

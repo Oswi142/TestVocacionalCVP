@@ -2,16 +2,13 @@ import React, { useEffect, useState } from 'react';
 import {
     Box,
     Typography,
-    IconButton,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
     CircularProgress,
-    Tooltip,
     Button
 } from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { testService } from '../../../services/testService';
@@ -49,20 +46,7 @@ const UserProgressDialog: React.FC<UserProgressDialogProps> = ({ open, onClose, 
         }
     }, [open, user]);
 
-    const handleResetTest = async (testId: number, datType?: string) => {
-        if (!user) return;
-        try {
-            setLoading(true);
-            await testService.archiveTest(user.userid, testId, datType);
-            await fetchProgress();
-            onShowMessage('Test reiniciado correctamente (archivado)', 'success');
-        } catch (e) {
-            console.error(e);
-            onShowMessage('Error al reiniciar test', 'error');
-        } finally {
-            setLoading(false);
-        }
-    };
+
 
     return (
         <Dialog
@@ -90,7 +74,7 @@ const UserProgressDialog: React.FC<UserProgressDialogProps> = ({ open, onClose, 
                 ) : (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <Typography variant="body2" color="#64748b" fontWeight={600} sx={{ mb: 1 }}>
-                            Haga clic en el icono de reinicio para archivar el intento actual y permitir que el usuario repita el test.
+                            Estado actual de los tests del usuario.
                         </Typography>
 
                         {[
@@ -120,18 +104,7 @@ const UserProgressDialog: React.FC<UserProgressDialogProps> = ({ open, onClose, 
                                         <Typography variant="subtitle2" fontWeight={700}>{test.name}</Typography>
                                     </Box>
 
-                                    {test.id !== 5 && progressData?.completedMainTestIds.includes(test.id) && (
-                                        <Tooltip title="Reiniciar Test (Archivar actual)">
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleResetTest(test.id)}
-                                                disabled={loading}
-                                                sx={{ color: '#0891b2', '&:hover': { backgroundColor: 'rgba(8, 145, 178, 0.1)' } }}
-                                            >
-                                                <RefreshIcon fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
-                                    )}
+
                                 </Box>
 
                                 {test.subtests && (
@@ -146,16 +119,7 @@ const UserProgressDialog: React.FC<UserProgressDialogProps> = ({ open, onClose, 
                                                     )}
                                                     <Typography variant="caption" fontWeight={600} color="#334155">{sub.name}</Typography>
                                                 </Box>
-                                                {progressData?.completedDatTypes.includes(sub.id) && (
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleResetTest(5, sub.id)}
-                                                        disabled={loading}
-                                                        sx={{ p: 0.2, color: '#0891b2' }}
-                                                    >
-                                                        <RefreshIcon sx={{ fontSize: 14 }} />
-                                                    </IconButton>
-                                                )}
+
                                             </Box>
                                         ))}
                                     </Box>

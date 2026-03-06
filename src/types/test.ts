@@ -25,4 +25,5 @@ export interface TestAnswer {
     questionid: number;
     answerid: number | null;
     details?: string | null;
+    created_at?: string;
 }
