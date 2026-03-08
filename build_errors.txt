@@ -1,7 +1,0 @@
-﻿
-> test-vocacional@0.0.0 npx
-> tsc -p tsconfig.app.json --noEmit
-
-src/features/tests/pages/Entrevista.tsx(1,38): error TS6133: 'useMemo' is declared but its value is never read.
-src/features/tests/pages/Entrevista.tsx(3,1): error TS6133: 'testService' is declared but its value is never read.
-src/features/tests/pages/Entrevista.tsx(32,5): error TS6133: 'handleManualSave' is declared but its value is never read.

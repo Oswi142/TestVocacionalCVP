@@ -4,7 +4,7 @@ import {
   Box, Typography, CircularProgress, IconButton,
   Collapse, Paper, TextField,
   Avatar, Divider, InputAdornment, Tooltip, useTheme, useMediaQuery,
-  Select, MenuItem, FormControl, Snackbar, Alert
+  Snackbar, Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
@@ -78,12 +78,7 @@ const ClientsAnswers: React.FC = () => {
 
 
 
-  const getAttemptLabel = (prefix: string) => {
-    if (prefix === 'active') return 'Intento Actual (Activo)';
-    const match = prefix.match(/\[HIST_(.+)\]/);
-    if (match) return `Historial: ${match[1].replace(/-/g, ':')}`;
-    return 'Intento Anterior';
-  };
+
 
   const downloadPDF = async (clientId: number, testId: number, category?: DatType, attemptId: string = 'active') => {
     try {
@@ -167,18 +162,25 @@ const ClientsAnswers: React.FC = () => {
       doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Test:', 20, 75);
       doc.setTextColor(16, 185, 129); doc.setFont('helvetica', 'bold'); doc.text(test?.testname || '', 40, 75);
 
+      let formattedBirthday = 'No registrado';
+      if (client?.birthday) {
+        const [year, month, day] = client.birthday.split('-');
+        if (year && month && day) {
+          formattedBirthday = `${day}/${month}/${year}`;
+        } else {
+          formattedBirthday = client.birthday;
+        }
+      }
+
       // Columna 2
       doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('F. Nac.:', 110, 54);
-      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.birthday || 'No registrado', 134, 54);
+      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(formattedBirthday, 134, 54);
 
       doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Lugar Nac.:', 110, 61);
       doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.birthplace || 'No registrado', 134, 61);
 
       doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Género:', 110, 68);
       doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.gender || 'No registrado', 134, 68);
-
-      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Intento:', 110, 75);
-      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(getAttemptLabel(attemptId), 134, 75);
 
       const tableData: any[] = [];
       let categoriesToProcess: (DatType | undefined)[] = [category];
@@ -192,7 +194,7 @@ const ClientsAnswers: React.FC = () => {
 
       categoriesToProcess.forEach(currentCat => {
         if (isDat && currentCat) {
-          tableData.push([{ content: `\n♦ SECCIÓN: ${DAT_LABELS[currentCat]}\n`, styles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: 11, halign: 'center' } }]);
+          tableData.push([{ content: `\nSECCIÓN: ${DAT_LABELS[currentCat]}\n`, styles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: 11, halign: 'center' } }]);
         }
         const filteredAnswers = isDat && currentCat ? clientAnswers.filter(ans => qMap.get(ans.questionid)?.dat_type === currentCat) : clientAnswers;
 
@@ -312,13 +314,7 @@ const ClientsAnswers: React.FC = () => {
     }
   };
 
-  const handleAttemptChange = (clientId: number, testId: number, attempt: string) => {
-    setClientTestsMap(prev => {
-      const clientTests = prev[clientId] || [];
-      const updated = clientTests.map(t => t.id === testId ? { ...t, selectedAttempt: attempt } : t);
-      return { ...prev, [clientId]: updated };
-    });
-  };
+
 
   return (
     <Box sx={{ width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 1 : 3, boxSizing: 'border-box', overflowX: 'hidden' }}>
@@ -392,25 +388,6 @@ const ClientsAnswers: React.FC = () => {
                                 </Box>
                                 <Box>
                                   <Typography variant="body2" fontWeight={700} color="#334155">{test.testname}</Typography>
-                                  {test.attempts && test.attempts.length > 1 ? (
-                                    <FormControl size="small" variant="standard" sx={{ minWidth: 150 }}>
-                                      <Select
-                                        value={test.selectedAttempt}
-                                        onChange={(e) => handleAttemptChange(client.userid, test.id, e.target.value as string)}
-                                        sx={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}
-                                      >
-                                        {test.attempts.map((att: string) => (
-                                          <MenuItem key={att} value={att} sx={{ fontSize: '0.75rem' }}>
-                                            {getAttemptLabel(att)}
-                                          </MenuItem>
-                                        ))}
-                                      </Select>
-                                    </FormControl>
-                                  ) : (
-                                    <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 500 }}>
-                                      {test.selectedAttempt && test.selectedAttempt !== 'active' ? getAttemptLabel(test.selectedAttempt) : 'Intento Actual'}
-                                    </Typography>
-                                  )}
                                 </Box>
                               </Box>
                               <Tooltip title="Descargar respaldo PDF" arrow placement="left">

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:secuencial": "playwright test tests/fillIntroduccionTest.spec.ts --headed --reporter=list && playwright test tests/fillEntrevistaTest.spec.ts --headed --reporter=list && playwright test tests/fillIpprTest.spec.ts --headed --reporter=list && playwright test tests/fillChasideTest.spec.ts --headed --reporter=list && playwright test tests/fillMaciTest.spec.ts --headed --reporter=list && playwright test tests/fillDatTest.spec.ts --headed --reporter=list"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

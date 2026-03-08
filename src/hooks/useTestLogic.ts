@@ -109,57 +109,53 @@ export const useTestLogic = <T extends BaseQuestion>(
     [STORAGE_KEY, showSnackbar]
   );
 
-  useEffect(() => {
-    const checkAvailability = async () => {
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+
       const storedUser = localStorage.getItem('user');
       if (!storedUser) {
         navigate('/');
+        return; // Maintain loading state to prevent flash
+      }
+
+      const userObj = JSON.parse(storedUser);
+      const progress = await testService.getDetailedProgress(userObj.id);
+
+      // 1. Force Introducción if not completed (unless we are at Introducción)
+      if (testId !== 0 && !progress.hasCompletedIntro) {
+        navigate('/introduccion', { replace: true });
         return;
       }
 
-      const user = JSON.parse(storedUser);
-      try {
-        const progress = await testService.getDetailedProgress(user.id);
+      // Determinar orden de tests principales
+      const mainOrder = [1, 2, 3, 4, 5];
+      const datOrder = [
+        'razonamiento_verbal',
+        'razonamiento_numerico',
+        'razonamiento_abstracto',
+        'razonamiento_mecanico',
+        'razonamiento_espacial',
+        'ortografia'
+      ];
 
-        // 1. Force Introducción if not completed (unless we are at Introducción)
-        if (testId !== 0 && !progress.hasCompletedIntro) {
-          navigate('/introduccion', { replace: true });
-          return;
-        }
+      const isMainCompleted = progress.completedMainTestIds.includes(testId);
+      const isDatCompleted = datType ? progress.completedDatTypes.includes(datType) : false;
 
-        // Determinar orden de tests principales
-        const mainOrder = [1, 2, 3, 4, 5];
-        const datOrder = [
-          'razonamiento_verbal',
-          'razonamiento_numerico',
-          'razonamiento_abstracto',
-          'razonamiento_mecanico',
-          'razonamiento_espacial',
-          'ortografia'
-        ];
+      // Si ya está completado, redirigir fuera
+      if (isMainCompleted && testId !== 5) {
+        navigate('/client', { replace: true });
+        return;
+      }
+      if (isDatCompleted) {
+        navigate('/dat', { replace: true });
+        return;
+      }
 
-        const isMainCompleted = progress.completedMainTestIds.includes(testId);
-        const isDatCompleted = datType ? progress.completedDatTypes.includes(datType) : false;
-
-        // Si ya está completado, redirigir fuera
-        if (isMainCompleted && testId !== 5) {
-          navigate('/client', { replace: true });
-          return;
-        }
-        if (isDatCompleted) {
-          navigate('/dat', { replace: true });
-          return;
-        }
-
-        // Verificar si el anterior está hecho (salvo Entrevista que ahora depende de Introducción)
-        if (testId === 0) return;
-
+      // Verificar si el anterior está hecho (salvo Entrevista que ahora depende de Introducción)
+      if (testId !== 0) {
         const currentIdx = mainOrder.indexOf(testId);
-        if (currentIdx >= 0) {
-          if (testId === 1) {
-            // Entrevista (1) ya está validada arriba con hasCompletedIntro
-            return;
-          }
+        if (currentIdx >= 0 && testId !== 1) {
           const prevTestId = mainOrder[currentIdx - 1];
           let prevCompleted = progress.completedMainTestIds.includes(prevTestId);
 
@@ -178,21 +174,12 @@ export const useTestLogic = <T extends BaseQuestion>(
             }
           } else if (!prevCompleted) {
             navigate('/client', { replace: true });
+            return;
           }
         }
-      } catch (error) {
-        console.error('Error checking test availability:', error);
       }
-    };
 
-    if (!loading) {
-      checkAvailability();
-    }
-  }, [testId, datType, navigate, loading]);
-
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
+      // If allowed, fetch the questions
       const qs = (await testService.getQuestions(testId, { datType, minQuestionId })) as T[];
 
       // Limit questions per section if specified
@@ -222,13 +209,15 @@ export const useTestLogic = <T extends BaseQuestion>(
         (a, b) => a - b
       );
       loadFromLocal(sectionsSorted);
+
+      // Only disable loading if we successfully fetched and didn't redirect
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
       showSnackbar('Error al cargar los datos', 'error');
-    } finally {
       setLoading(false);
     }
-  }, [testId, datType, questionsPerSection, minQuestionId, loadFromLocal, showSnackbar]);
+  }, [testId, datType, questionsPerSection, minQuestionId, loadFromLocal, showSnackbar, navigate]);
 
   useEffect(() => {
     if (user) fetchData();

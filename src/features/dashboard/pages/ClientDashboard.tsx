@@ -330,7 +330,7 @@ const ClientDashboard: React.FC = () => {
                                   '&:hover': {
                                     transform: 'translateY(-3px)',
                                     boxShadow: '0 12px 30px rgba(37, 211, 102, 0.4)',
-                                    background: 'linear-gradient(90deg, #128C7E, #25D366)',
+                                    color: '#fff',
                                   }
                                 }}
                               >
