@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:secuencial": "playwright test tests/fillIntroduccionTest.spec.ts --headed --reporter=list && playwright test tests/fillEntrevistaTest.spec.ts --headed --reporter=list && playwright test tests/fillIpprTest.spec.ts --headed --reporter=list && playwright test tests/fillChasideTest.spec.ts --headed --reporter=list && playwright test tests/fillMaciTest.spec.ts --headed --reporter=list && playwright test tests/fillDatTest.spec.ts --headed --reporter=list"
+    "test:secuencial": "playwright test tests/e2e/fillIntroduccionTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillEntrevistaTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillIpprTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillChasideTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillMaciTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillDatTest.spec.ts --headed --reporter=list"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
