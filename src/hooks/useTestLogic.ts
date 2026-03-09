@@ -26,7 +26,6 @@ export const useTestLogic = <T extends BaseQuestion>(
     conditionalVisibility,
   } = options;
 
-  // Use a ref for callbacks to avoid re-triggering effects/memos when they change
   const callbacksRef = useRef({
     onSaveExtra: options.onSaveExtra,
     onLoadExtra: options.onLoadExtra,
@@ -116,19 +115,17 @@ export const useTestLogic = <T extends BaseQuestion>(
       const storedUser = localStorage.getItem('user');
       if (!storedUser) {
         navigate('/');
-        return; // Maintain loading state to prevent flash
+        return;
       }
 
       const userObj = JSON.parse(storedUser);
       const progress = await testService.getDetailedProgress(userObj.id);
 
-      // 1. Force Introducción if not completed (unless we are at Introducción)
       if (testId !== 0 && !progress.hasCompletedIntro) {
         navigate('/introduccion', { replace: true });
         return;
       }
 
-      // Determinar orden de tests principales
       const mainOrder = [1, 2, 3, 4, 5];
       const datOrder = [
         'razonamiento_verbal',
@@ -142,7 +139,6 @@ export const useTestLogic = <T extends BaseQuestion>(
       const isMainCompleted = progress.completedMainTestIds.includes(testId);
       const isDatCompleted = datType ? progress.completedDatTypes.includes(datType) : false;
 
-      // Si ya está completado, redirigir fuera
       if (isMainCompleted && testId !== 5) {
         navigate('/client', { replace: true });
         return;
@@ -152,7 +148,6 @@ export const useTestLogic = <T extends BaseQuestion>(
         return;
       }
 
-      // Verificar si el anterior está hecho (salvo Entrevista que ahora depende de Introducción)
       if (testId !== 0) {
         const currentIdx = mainOrder.indexOf(testId);
         if (currentIdx >= 0 && testId !== 1) {
@@ -179,10 +174,8 @@ export const useTestLogic = <T extends BaseQuestion>(
         }
       }
 
-      // If allowed, fetch the questions
       const qs = (await testService.getQuestions(testId, { datType, minQuestionId })) as T[];
 
-      // Limit questions per section if specified
       let finalQuestions = qs;
       if (questionsPerSection) {
         const acc: T[] = [];
@@ -210,7 +203,6 @@ export const useTestLogic = <T extends BaseQuestion>(
       );
       loadFromLocal(sectionsSorted);
 
-      // Only disable loading if we successfully fetched and didn't redirect
       setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -231,15 +223,12 @@ export const useTestLogic = <T extends BaseQuestion>(
     );
   };
 
-  // Interceptar botón de atrás del navegador
   useEffect(() => {
     const handlePopState = () => {
-      // Bloquear navegación y mostrar diálogo
       window.history.pushState(null, '', window.location.pathname);
       setDialogs((prev) => ({ ...prev, exit: true }));
     };
 
-    // Añadir una entrada inicial al historial para que el primer "atrás" sea capturable
     window.history.pushState(null, '', window.location.pathname);
     window.addEventListener('popstate', handlePopState);
 
@@ -287,7 +276,6 @@ export const useTestLogic = <T extends BaseQuestion>(
     } catch (err: any) {
 
       if (!navigator.onLine || err.message === 'Offline' || err.message?.includes('fetch')) {
-        // Guardar en cola de pendientes
         const pending = JSON.parse(localStorage.getItem('pending_submissions') || '[]');
         pending.push({
           id: Date.now(),
@@ -369,7 +357,7 @@ export const useTestLogic = <T extends BaseQuestion>(
     isSectionComplete,
     navigate,
     showSnackbar,
-    saveToLocal, // Keep for pages with very custom needs if any
+    saveToLocal,
   };
 };
 

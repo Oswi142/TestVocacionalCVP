@@ -87,7 +87,6 @@ const ClientsAnswers: React.FC = () => {
       const datId = await getDatTestId();
       const isDat = testId === datId || (test?.testname || '').toLowerCase().includes('dat');
 
-      // Obtener todas las respuestas y filtrar por el intento seleccionado
       const allAnswers = (await adminService.getClientAnswers(clientId, testId)) as TestsAnswerRow[];
       const clientAnswers = allAnswers.filter(ans => {
         const details = ans.details || '';
@@ -108,7 +107,6 @@ const ClientsAnswers: React.FC = () => {
 
       let submitDateStr = now;
       if (attemptId !== 'active' && clientAnswers.length > 0) {
-        // Encontrar la fecha más reciente dentro de las respuestas de este intento
         const dates = clientAnswers
           .map(a => a.created_at ? new Date(a.created_at).getTime() : 0)
           .filter(t => t > 0);
@@ -119,8 +117,7 @@ const ClientsAnswers: React.FC = () => {
         }
       }
 
-      // Encabezado principal (Más espaciado y elegante)
-      doc.setFillColor(15, 23, 42); // Slate 900, más moderno
+      doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, 210, 28, 'F');
 
       doc.setTextColor(255, 255, 255);
@@ -130,10 +127,9 @@ const ClientsAnswers: React.FC = () => {
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(148, 163, 184); // Slate 400
+      doc.setTextColor(148, 163, 184);
       doc.text(`Enviado: ${submitDateStr}`, 160, 17);
 
-      // Caja de datos del cliente (Estilo tarjeta)
       doc.setFillColor(248, 250, 252);
       doc.setDrawColor(226, 232, 240);
       doc.roundedRect(14, 34, 182, 48, 4, 4, 'FD');
@@ -143,13 +139,11 @@ const ClientsAnswers: React.FC = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('Datos del Cliente', 20, 44);
 
-      // Línea divisora sutil
       doc.setDrawColor(226, 232, 240);
       doc.line(20, 47, 188, 47);
 
       doc.setFontSize(9.5);
 
-      // Columna 1
       doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Nombre:', 20, 54);
       doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.name || 'No registrado', 40, 54);
 
@@ -172,7 +166,6 @@ const ClientsAnswers: React.FC = () => {
         }
       }
 
-      // Columna 2
       doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('F. Nac.:', 110, 54);
       doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(formattedBirthday, 134, 54);
 
@@ -216,7 +209,6 @@ const ClientsAnswers: React.FC = () => {
             styles: { fillColor: [255, 255, 255], textColor: [15, 23, 42], fontStyle: 'normal', fontSize: 10, cellPadding: { top: 2, bottom: 6, left: 4, right: 4 } }
           }]);
 
-          // Separador Invisible
           tableData.push([{ content: '', styles: { fillColor: [255, 255, 255], minCellHeight: 1, cellPadding: 0 } }]);
           n++;
         });
@@ -234,7 +226,6 @@ const ClientsAnswers: React.FC = () => {
         pageBreak: 'auto',
         rowPageBreak: 'avoid',
         didDrawCell: (data) => {
-          // Borde inferior sutil solo para respuestas (filas pares de datos reales)
           if (data.row.index % 3 === 1 && data.cell.raw !== '') {
             doc.setDrawColor(241, 245, 249);
             doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
@@ -260,7 +251,6 @@ const ClientsAnswers: React.FC = () => {
       try {
         setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: true }));
 
-        // 1. Obtener todos los test IDs donde el usuario tiene respuestas (incluyendo históricos)
         const { data: allAnswersRaw } = await supabase
           .from('testsanswers')
           .select('testid, details')
@@ -276,7 +266,6 @@ const ClientsAnswers: React.FC = () => {
           const baseTest = tests.find(t => t.id === id);
           if (!baseTest) continue;
 
-          // Encontrar intentos únicos para este test
           const testAnswers = answers.filter(a => a.testid === id);
           const attempts = new Set<string>();
           testAnswers.forEach(a => {
@@ -289,7 +278,7 @@ const ClientsAnswers: React.FC = () => {
           const sortedAttempts = Array.from(attempts).sort((a, b) => {
             if (a === 'active') return -1;
             if (b === 'active') return 1;
-            return b.localeCompare(a); // Más recientes primero
+            return b.localeCompare(a);
           });
 
           if (id === datId || (baseTest.testname || '').toLowerCase().includes('dat')) {

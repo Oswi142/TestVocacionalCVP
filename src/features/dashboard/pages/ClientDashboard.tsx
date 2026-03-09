@@ -32,12 +32,10 @@ const ClientDashboard: React.FC = () => {
 
   useEffect(() => {
     const handlePopState = () => {
-      // Bloquear navegación y mostrar diálogo de cerrar sesión
       window.history.pushState(null, '', window.location.pathname);
       setShowLogoutDialog(true);
     };
 
-    // Añadir una entrada inicial al historial para que el "atrás" sea capturable en el dashboard
     window.history.pushState(null, '', window.location.pathname);
     window.addEventListener('popstate', handlePopState);
 
@@ -62,22 +60,19 @@ const ClientDashboard: React.FC = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    // Verificar si venimos de terminar un test y debemos mostrar confeti
     if (location.state?.showConfetti) {
       setShowConfetti(true);
-      // Limpiamos el estado para que si recarga no vuelva a salir
       navigate(location.pathname, { replace: true, state: {} });
 
       const timer = setTimeout(() => {
         setShowConfetti(false);
-      }, 5000); // 5 segundos de fiesta
+      }, 5000);
 
       return () => clearTimeout(timer);
     }
   }, [location.state, navigate, location.pathname]);
 
   useEffect(() => {
-    // Pre-descargar todos los tests para uso offline al entrar al dashboard
     if (navigator.onLine) {
       testService.prefetchAllTests();
     }
@@ -86,7 +81,6 @@ const ClientDashboard: React.FC = () => {
   const name = user?.name || '';
   const username = user?.username || '';
 
-  // Ajustes para que entre en 1 pantalla (sin scroll) y se vea como tu screenshot
   const sizes = useMemo(() => {
     if (isMobile) {
       return {
@@ -226,8 +220,7 @@ const ClientDashboard: React.FC = () => {
             flexDirection: 'column',
             justifyContent: 'center',
             minHeight: 400,
-            overflow: 'hidden', // evita scroll interno
-            // limita el alto del card para que SIEMPRE entre en pantalla
+            overflow: 'hidden',
             maxHeight: `calc(100dvh - ${sizes.logoH}px - ${sizes.tabsH}px - 64px)`,
           }}
         >
@@ -279,7 +272,6 @@ const ClientDashboard: React.FC = () => {
                         { id: 5, label: '🧩 DAT', path: '/dat', gradient: 'linear-gradient(90deg, #11998e, #38ef7d)', shadow: 'rgba(17, 153, 142, 0.3)' },
                       ];
 
-                      // Un test DAT se considera completado si tiene los 6 subtests
                       const isDatCompleted = progress.completedDatTypes.length >= 6;
                       const allFinished = progress.completedMainTestIds.length >= 4 && isDatCompleted;
 
@@ -344,7 +336,6 @@ const ClientDashboard: React.FC = () => {
                       return tests.map((t, idx) => {
                         const isCompleted = t.id === 5 ? isDatCompleted : progress.completedMainTestIds.includes(t.id);
 
-                        // Habilitado si es el primero o si el anterior está completado
                         let isEnabled = false;
                         if (idx === 0) {
                           isEnabled = !isCompleted;
@@ -354,7 +345,6 @@ const ClientDashboard: React.FC = () => {
                           isEnabled = prevCompleted && !isCompleted;
                         }
 
-                        // Caso especial: si ya está completado, no está "enabled" para entrar (se bloquea)
                         const status = isCompleted ? 'completed' : (isEnabled ? 'active' : 'locked');
 
                         return (

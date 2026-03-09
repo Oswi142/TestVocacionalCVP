@@ -57,10 +57,9 @@ export const testService = {
                 allOpts.push(...(data || []));
             }
 
-            // Guardar en un cache global de opciones para simplificar offline
             const existing = JSON.parse(localStorage.getItem('cache_all_options') || '[]');
             const updated = [...existing.filter((opt: any) => !questionIds.includes(opt.questionid)), ...allOpts];
-            localStorage.setItem('cache_all_options', JSON.stringify(updated.slice(-2000))); // Limitar tamaño
+            localStorage.setItem('cache_all_options', JSON.stringify(updated.slice(-2000)));
 
             return allOpts;
         } catch (error) {
@@ -89,7 +88,6 @@ export const testService = {
     },
 
     async getDetailedProgress(clientId: number) {
-        // 1. Obtener progreso de la base de datos (Supabase)
         const { data: dbRaw, error } = await supabase
             .from('testsanswers')
             .select('testid, questionid, details')
@@ -97,10 +95,8 @@ export const testService = {
 
         if (error) throw error;
 
-        // Filtrar localmente para incluir NULLs y excluir históricos
         const dbData = (dbRaw || []).filter(r => !r.details || !r.details.startsWith('[HIST_'));
 
-        // Verificar si completó la introducción (tiene registro en clientsinfo)
         const { data: clientInfo, error: infoError } = await supabase
             .from('clientsinfo')
             .select('userid')
@@ -120,7 +116,6 @@ export const testService = {
             });
         }
 
-        // 2. Obtener progreso de la cola offline (para que la interfaz avance sin señal)
         const pending = JSON.parse(localStorage.getItem('pending_submissions') || '[]');
         pending.forEach((item: any) => {
             const payload = item.payload || [];
@@ -130,10 +125,8 @@ export const testService = {
             }
         });
 
-        // Limpiar duplicados de IDs de test
         completedMainTestIds = [...new Set(completedMainTestIds)];
 
-        // 3. Resolver dat_types para el test 5 (DAT)
         const datQuestionIds = Array.from(answeredQuestionIds);
 
         if (datQuestionIds.length > 0) {
@@ -159,15 +152,13 @@ export const testService = {
         if (!navigator.onLine) return;
 
         try {
-            // Lista de tests principales
             const mainTests = [
-                { id: 1, type: null }, // Entrevista
-                { id: 2, type: null }, // IPPR
-                { id: 3, type: null }, // CHASIDE
-                { id: 4, type: null }, // MACI
+                { id: 1, type: null },
+                { id: 2, type: null },
+                { id: 3, type: null },
+                { id: 4, type: null },
             ];
 
-            // Subtests del DAT (5)
             const datSubtests = [
                 'razonamiento_verbal',
                 'razonamiento_numerico',
@@ -179,7 +170,6 @@ export const testService = {
 
             console.log('Iniciando pre-descarga de tests para uso offline...');
 
-            // 1. Descargar tests principales
             for (const test of mainTests) {
                 const qs = await this.getQuestions(test.id);
                 if (qs.length > 0) {
@@ -187,7 +177,6 @@ export const testService = {
                 }
             }
 
-            // 2. Descargar subtests del DAT
             for (const type of datSubtests) {
                 const qs = await this.getQuestions(5, { datType: type });
                 if (qs.length > 0) {

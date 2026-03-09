@@ -27,12 +27,10 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     const handlePopState = () => {
-      // Bloquear navegación y mostrar diálogo de cerrar sesión
       window.history.pushState(null, '', window.location.pathname);
       setShowLogoutDialog(true);
     };
 
-    // Añadir una entrada inicial al historial para que el "atrás" sea capturable
     window.history.pushState(null, '', window.location.pathname);
     window.addEventListener('popstate', handlePopState);
 
@@ -141,7 +139,7 @@ const AdminDashboard: React.FC = () => {
                 Este es el panel de administración. Aquí puedes gestionar usuarios y ver resultados.
               </Typography>
 
-              {/* Botones siempre en columna */}
+              {/* Botones en columna */}
               <Box
                 display="flex"
                 flexDirection="column"
@@ -210,7 +208,7 @@ const AdminDashboard: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Modular Logout Confirmation Dialog */}
+      {/* Dialogo Modular de Confirmación de Cierre de Sesión */}
       <LogoutDialog
         open={showLogoutDialog}
         onClose={() => setShowLogoutDialog(false)}

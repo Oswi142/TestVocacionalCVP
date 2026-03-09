@@ -11,7 +11,7 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredRole }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return null; // O un componente de carga
+    return null;
   }
 
   if (!user) {
@@ -19,7 +19,6 @@ const ProtectedRoute: React.FC<Props> = ({ children, requiredRole }) => {
   }
 
   if (requiredRole && user.role !== requiredRole) {
-    // Si el usuario no tiene el rol necesario, lo mandamos a su dashboard correspondiente
     const redirectPath = user.role === 'admin' ? '/admin' : '/client';
     return <Navigate to={redirectPath} replace />;
   }

@@ -55,7 +55,7 @@ function App() {
             <Route path="/dat/mecanico" element={<ProtectedRoute requiredRole="client"><DatMecanico /></ProtectedRoute>} />
             <Route path="/dat/espaciales" element={<ProtectedRoute requiredRole="client"><DatEspacial /></ProtectedRoute>} />
             <Route path="/dat/ortografia" element={<ProtectedRoute requiredRole="client"><DatOrtografia /></ProtectedRoute>} />
-            {/*Nueva ruta */}
+            {/*Nueva ruta acá*/}
 
           </Routes>
         </BrowserRouter>

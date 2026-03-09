@@ -36,7 +36,6 @@ export async function getDatTestId(): Promise<number> {
         .maybeSingle();
 
     if (error || !data) {
-        // Falback to 5 if search fails but let's be robust
         return 5;
     }
     return data.id;
@@ -45,7 +44,6 @@ export async function getDatTestId(): Promise<number> {
 export async function computeDatScore(clientId: number, attemptId: string = 'active'): Promise<DatResult> {
     const testId = await getDatTestId();
 
-    // 1. Get user name
     const { data: urows } = await supabase
         .from('users')
         .select('name')
@@ -59,7 +57,6 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
         .limit(1);
     const schoolName = (cirows && cirows[0]?.school) || null;
 
-    // 2. Get questions for this test to know the dat_type
     const { data: qrows, error: qErr } = await supabase
         .from('questions')
         .select('id, dat_type')
@@ -78,7 +75,6 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
         }
     });
 
-    // 3. Get client answers
     const { data: arows, error: aErr } = await supabase
         .from('testsanswers')
         .select('questionid, answerid, details')
@@ -93,7 +89,6 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
         return d.startsWith(attemptId);
     });
 
-    // 4. Get correct options info
     const answerIds = (filteredArows || []).map(r => r.answerid).filter(Boolean).filter(id => !isNaN(Number(id)));
     let correctSet = new Set<number>();
 
@@ -110,7 +105,6 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
         }
     }
 
-    // 5. Calculate scores
     const scores: Record<DatType, { correct: number; answered: number; total: number }> = {
         razonamiento_verbal: { correct: 0, answered: 0, total: typeTotalCount['razonamiento_verbal'] || 0 },
         razonamiento_numerico: { correct: 0, answered: 0, total: typeTotalCount['razonamiento_numerico'] || 0 },
@@ -148,7 +142,6 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
 export async function getCompletedDatCategories(clientId: number, attemptId: string = 'active'): Promise<DatType[]> {
     const testId = await getDatTestId();
 
-    // Get questions to map IDs to types
     const { data: qrows } = await supabase
         .from('questions')
         .select('id, dat_type')
@@ -160,7 +153,6 @@ export async function getCompletedDatCategories(clientId: number, attemptId: str
         if (q.dat_type) qToType.set(q.id, q.dat_type as DatType);
     });
 
-    // Get client answers
     const { data: arows } = await supabase
         .from('testsanswers')
         .select('questionid, details')
@@ -189,7 +181,6 @@ export async function downloadDatReportPDF(clientId: number, attemptId: string =
     const doc = new jsPDF();
     const now = new Date().toLocaleDateString('es-ES');
 
-    // Header
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
     doc.setTextColor(40, 40, 40);
@@ -209,7 +200,6 @@ export async function downloadDatReportPDF(clientId: number, attemptId: string =
         doc.line(14, 38, 196, 38);
     }
 
-    // Table
     const categories = Object.keys(DAT_LABELS) as DatType[];
 
     const tableData = categories.map(type => {
@@ -237,7 +227,6 @@ export async function downloadDatReportPDF(clientId: number, attemptId: string =
 
     const finalY = (doc as any).lastAutoTable.finalY + 15;
 
-    // Summary
     doc.setFont('helvetica', 'bold');
     doc.text('Progreso de Evaluación:', 14, finalY);
     doc.setFont('helvetica', 'normal');
@@ -246,7 +235,6 @@ export async function downloadDatReportPDF(clientId: number, attemptId: string =
     doc.text(`El cliente ha completado ${completedCount} de 6 sub-tests.`, 14, finalY + 7);
     doc.text(`Total de aciertos globales: ${res.overallCorrect} de ${res.totalAnswered} respondidas.`, 14, finalY + 14);
 
-    // Footer note
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
     const footerText = 'Este informe es evolutivo y se actualiza a medida que el cliente completa más categorías.';

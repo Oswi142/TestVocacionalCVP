@@ -21,7 +21,6 @@ const BackgroundContainer = styled(Box)({
     height: '100vh',
     zIndex: -1,
     overflow: 'hidden',
-    // Colores más intensos para que se note el gradiente moviéndose
     background: 'linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)',
     backgroundSize: '400% 400%',
     animation: `${moveGradient} 15s ease infinite`,

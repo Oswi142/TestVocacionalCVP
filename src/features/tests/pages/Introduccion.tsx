@@ -83,8 +83,7 @@ const Introduccion: React.FC = () => {
         onSnackbarClose,
         navigate,
         showSnackbar,
-    } = useTestLogic<Question>(0, 'introduccion', testLogicOptions); // Recuperando preguntas del testid 0
-
+    } = useTestLogic<Question>(0, 'introduccion', testLogicOptions);
     const handleAnswerChange = (id: number, value: string) => {
         setAnswers(prev => ({ ...prev, [id]: value }));
     };

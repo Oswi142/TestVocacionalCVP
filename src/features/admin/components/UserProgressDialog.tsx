@@ -88,7 +88,7 @@ const UserProgressDialog: React.FC<UserProgressDialogProps> = ({ open, onClose, 
                                     { id: 'razonamiento_numerico', name: 'R. Numérico' },
                                     { id: 'razonamiento_abstracto', name: 'R. Abstracto' },
                                     { id: 'razonamiento_mecanico', name: 'R. Mecánico' },
-                                    { id: 'razonamiento_espacial', name: 'R. Espacial' }, // CORREGIDO: relaciones_espaciales -> razonamiento_espacial
+                                    { id: 'razonamiento_espacial', name: 'R. Espacial' },
                                     { id: 'ortografia', name: 'Ortografía' }
                                 ]
                             }

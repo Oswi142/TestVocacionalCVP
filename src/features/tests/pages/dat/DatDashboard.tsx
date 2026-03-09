@@ -60,11 +60,11 @@ const DatDashboard: React.FC = () => {
       return {
         maxWidth: 420,
         logoH: 70,
-        outerPad: 12,    // px
-        cardPad: 18,     // px
-        btnPy: 1.55,     // 🔥 gorditos
+        outerPad: 12,
+        cardPad: 18,
+        btnPy: 1.55,
         btnFont: '0.95rem',
-        gap: 12,         // px
+        gap: 12,
         titleVariant: 'body1' as const,
         subtitleVariant: 'body2' as const,
         cardRadius: 18,
@@ -75,7 +75,7 @@ const DatDashboard: React.FC = () => {
       logoH: 90,
       outerPad: 16,
       cardPad: 26,
-      btnPy: 1.75,      // 🔥 gorditos
+      btnPy: 1.75,
       btnFont: '1rem',
       gap: 14,
       titleVariant: 'h6' as const,
@@ -113,8 +113,8 @@ const DatDashboard: React.FC = () => {
     <Box
       sx={{
         width: '100vw',
-        height: '100dvh',   // ✅ mejor para móvil
-        overflow: 'hidden', // ✅ sin scroll
+        height: '100dvh',
+        overflow: 'hidden',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -131,7 +131,7 @@ const DatDashboard: React.FC = () => {
           gap: isMobile ? 1.2 : 1.6,
         }}
       >
-        {/* LOGO */}
+        {/* Logo */}
         <Box
           component="img"
           src={logo}
@@ -157,15 +157,14 @@ const DatDashboard: React.FC = () => {
             WebkitBackdropFilter: 'blur(12px)',
             border: '1px solid rgba(255, 255, 255, 0.4)',
             boxShadow: '0px 12px 40px rgba(0, 0, 0, 0.08)',
-            position: 'relative', // Para el botón volver absoluto
+            position: 'relative',
             borderRadius: `${sizes.cardRadius}px`,
             p: `${sizes.cardPad}px`,
             textAlign: 'center',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            overflow: 'hidden', // ✅ evita scroll interno
-            // ✅ el card siempre entra en pantalla (no se pasa)
+            overflow: 'hidden',
             maxHeight: `calc(100dvh - ${sizes.logoH}px - 56px)`,
           }}
         >
@@ -174,7 +173,7 @@ const DatDashboard: React.FC = () => {
               onClick={() => navigate('/client', { replace: true })}
               sx={{
                 position: 'absolute',
-                left: -8, // ajustado para que no se pegue al borde pero no robe espacio al centro
+                left: -8,
                 color: '#64748b',
                 backgroundColor: 'rgba(255, 255, 255, 0.5)',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
@@ -193,7 +192,7 @@ const DatDashboard: React.FC = () => {
               variant={sizes.titleVariant}
               fontWeight={800}
               color="#1e293b"
-              sx={{ px: 5, textAlign: 'center' }} // px asegura que el texto no toque el botón
+              sx={{ px: 5, textAlign: 'center' }}
             >
               DAT — Selecciona un apartado
             </Typography>

@@ -103,13 +103,13 @@ const TestLayout: React.FC<TestLayoutProps> = ({
             <Box
                 sx={{
                     width: '100%',
-                    maxWidth: 700, // Slightly wider for better test reading
-                    height: '92vh', // Marginally taller
+                    maxWidth: 700,
+                    height: '92vh',
                     backgroundColor: 'rgba(255, 255, 255, 0.65)',
                     backdropFilter: 'blur(12px)',
                     WebkitBackdropFilter: 'blur(12px)',
                     border: '1px solid rgba(255, 255, 255, 0.4)',
-                    borderRadius: 6, // 24px
+                    borderRadius: 6,
                     boxShadow: '0px 12px 40px rgba(0, 0, 0, 0.08)',
                     display: 'flex',
                     flexDirection: 'column',
@@ -159,7 +159,7 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                     )}
                 </Box>
 
-                {/* Content */}
+                {/* Contenido */}
                 <Box
                     id="scroll-container"
                     sx={{ flex: 1, overflow: 'auto', padding: 3, paddingTop: 2 }}
@@ -191,7 +191,7 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                                     sx={{
                                         minWidth: 40,
                                         height: 40,
-                                        borderRadius: '50%', // Circle
+                                        borderRadius: '50%',
                                         fontWeight: 700,
                                         color: complete || isCurrent ? '#fff' : '#475569',
                                         backgroundColor: complete ? '#4caf50' : isCurrent ? '#3b82f6' : 'rgba(255,255,255,0.8)',
@@ -231,7 +231,7 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                     </Box>
                 </Box>
 
-                {/* Uploading Overlay */}
+                {/* Overlay de subida */}
                 <Dialog
                     open={saving}
                     PaperProps={{
@@ -283,14 +283,14 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                     </Box>
                 </Dialog>
 
-                {/* Dialogs */}
+                {/* Dialogos */}
                 <Dialog
                     open={dialogs.confirm}
                     onClose={() => setDialogs((prev) => ({ ...prev, confirm: false }))}
                     PaperProps={{
                         sx: {
                             borderRadius: 4,
-                            backgroundColor: 'rgba(255, 253, 231, 0.85)', // #fffde7 base
+                            backgroundColor: 'rgba(255, 253, 231, 0.85)',
                             backdropFilter: 'blur(16px)',
                             WebkitBackdropFilter: 'blur(16px)',
                             boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
@@ -359,7 +359,7 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                     PaperProps={{
                         sx: {
                             borderRadius: 4,
-                            backgroundColor: 'rgba(227, 242, 253, 0.85)', // #e3f2fd base
+                            backgroundColor: 'rgba(227, 242, 253, 0.85)',
                             backdropFilter: 'blur(16px)',
                             WebkitBackdropFilter: 'blur(16px)',
                             boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',

@@ -50,7 +50,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
 
     return (
         <Box mb={4}>
-            {/* Image if exists */}
+            {/* Imagen si existe */}
             {imgUrl && (
                 <Box
                     sx={{
@@ -107,14 +107,14 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 </Box>
             )}
 
-            {/* Question text */}
+            {/* Texto de la pregunta */}
             {question.question && (
                 <Typography variant="body1" fontWeight={700} color="#1e293b" gutterBottom>
                     {question.question}
                 </Typography>
             )}
 
-            {/* Options or Text Input */}
+            {/* Opciones o entrada de texto */}
             {options.length > 0 ? (
                 <RadioGroup
                     value={currentAnswer || ''}
@@ -178,7 +178,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 </>
             )}
 
-            {/* Preview Dialog */}
+            {/* Dialogo de Preview */}
             <Dialog
                 open={previewOpen}
                 onClose={() => setPreviewOpen(false)}
@@ -263,7 +263,6 @@ const propsAreEqual = (prevProps: QuestionRendererProps, nextProps: QuestionRend
     return (
         prevProps.currentAnswer === nextProps.currentAnswer &&
         prevProps.question.id === nextProps.question.id &&
-        // Options are assumed static by question length to avoid deep compare
         prevProps.options.length === nextProps.options.length
     );
 };

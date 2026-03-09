@@ -26,7 +26,7 @@ class ErrorBoundary extends Component<Props, State> {
     }
 
     private handleReset = () => {
-        localStorage.clear(); // Limpiar por si acaso es un dato corrupto
+        localStorage.clear();
         window.location.href = '/';
     };
 

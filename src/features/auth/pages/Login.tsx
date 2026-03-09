@@ -52,26 +52,26 @@ const Login: React.FC = () => {
   return (
     <PageBackground>
       <Paper
-        elevation={0} // Disable default material elevation to use custom shadow
+        elevation={0}
         sx={{
           p: 4,
-          borderRadius: 6, // More rounded (Efecto píldora/Soft UI)
+          borderRadius: 6,
           width: '100%',
           maxWidth: 420,
           textAlign: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.65)', // Semi-transparent white
-          backdropFilter: 'blur(12px)', // Glassmorphism blur
-          WebkitBackdropFilter: 'blur(12px)', // Safari support
-          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)', // Soft, large shadow
-          border: '1px solid rgba(255, 255, 255, 0.4)', // Subtle border highlight for glass effect
+          backgroundColor: 'rgba(255, 255, 255, 0.65)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
         }}
       >
         <Box sx={{ mb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <LogoHeader height={isMobile ? 120 : 180} />
           <Typography
             variant={isMobile ? 'h6' : 'h5'}
-            fontWeight={800} // Bolder typography
-            color="#1e293b" // Darker, sleeker slate-gray instead of pure green
+            fontWeight={800}
+            color="#1e293b"
             gutterBottom
             sx={{ mt: 1 }}
           >
@@ -96,8 +96,8 @@ const Login: React.FC = () => {
             inputProps={{ 'data-testid': 'username-input' }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                borderRadius: 3, // Rounded inputs
-                backgroundColor: 'rgba(255, 255, 255, 0.8)', // Slightly opaque backgrounds for inputs
+                borderRadius: 3,
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
                 transition: 'all 0.3s ease',
                 '&.Mui-focused': {
                   backgroundColor: '#ffffff',

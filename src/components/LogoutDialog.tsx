@@ -23,8 +23,8 @@ const LogoutDialog: React.FC<LogoutDialogProps> = ({ open, onClose, onConfirm })
             onClose={onClose}
             PaperProps={{
                 sx: {
-                    borderRadius: 4, // 16px
-                    backgroundColor: 'rgba(255, 235, 238, 0.85)', // #ffebee base
+                    borderRadius: 4,
+                    backgroundColor: 'rgba(255, 235, 238, 0.85)',
                     backdropFilter: 'blur(16px)',
                     WebkitBackdropFilter: 'blur(16px)',
                     boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',

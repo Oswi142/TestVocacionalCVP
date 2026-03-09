@@ -4,14 +4,13 @@ import App from './App';
 import './index.css';
 
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import theme from './theme'; // <- Importa el tema que creaste
+import theme from './theme';
 
 import { processPendingSubmissions } from './utils/offlineSync';
 
 const rootElement = document.getElementById('root')!;
 const root = ReactDOM.createRoot(rootElement);
 
-// Signal UI readiness to Rescue Shield
 if ((window as any).markAppAsReady) (window as any).markAppAsReady();
 
 root.render(
@@ -23,7 +22,6 @@ root.render(
   </React.StrictMode>
 );
 
-// Offline logic
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
