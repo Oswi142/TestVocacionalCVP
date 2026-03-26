@@ -24,7 +24,7 @@ const SECTION_LABELS: Record<SectionId, string> = {
   15: 'Turismo, hostelería y ocio',
 };
 
-function mapIpprAnswerTextToScore(txt: string | null | undefined): number {
+export function mapIpprAnswerTextToScore(txt: string | null | undefined): number {
   if (!txt) return 0;
   const t = txt.trim().toLowerCase();
   if (t === 'no conozco la actividad o profesión') return 0;
@@ -117,6 +117,29 @@ export async function computeIpprScore(clientId: number, attemptId: string = 'ac
     idToText = new Map((opts || []).map((o) => [o.id, String(o.answer || '')]));
   }
 
+  const { sectionScores, totalAnswered, totalScore, ranking } = calculateIpprResultSummary(
+    filteredArows,
+    qToSection,
+    idToText
+  );
+
+  return {
+    clientId,
+    testId,
+    userName,
+    schoolName,
+    sectionScores,
+    totalAnswered,
+    totalScore,
+    ranking,
+  };
+}
+
+export function calculateIpprResultSummary(
+  filteredArows: Array<{ questionid: number; answerid?: number | null; details?: string | null }>,
+  qToSection: Map<number, SectionId>,
+  idToText: Map<number, string>
+) {
   const sectionScores: SectionScore = {
     1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0, 13: 0, 14: 0, 15: 0,
   };
@@ -139,16 +162,7 @@ export async function computeIpprScore(clientId: number, attemptId: string = 'ac
     .map((s) => ({ section: s, label: SECTION_LABELS[s], value: sectionScores[s] }))
     .sort((a, b) => b.value - a.value);
 
-  return {
-    clientId,
-    testId,
-    userName,
-    schoolName,
-    sectionScores,
-    totalAnswered,
-    totalScore,
-    ranking,
-  };
+  return { sectionScores, totalAnswered, totalScore, ranking };
 }
 
 export async function downloadIpprReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {

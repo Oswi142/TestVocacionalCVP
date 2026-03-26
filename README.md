@@ -1,54 +1,63 @@
-# React + TypeScript + Vite
+# Test Vocacional CVP / Oswi142
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema de evaluación psicopedagógica y vocacional diseñado para administrar, calificar y generar reportes de tests estandarizados de manera automatizada.
 
-Currently, two official plugins are available:
+## 🚀 Módulos del Sistema
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Este proyecto incluye la implementación digital de los siguientes instrumentos:
 
-## Expanding the ESLint configuration
+1.  **CHASIDE**: Cuestionario de intereses y aptitudes vocacionales.
+2.  **IPP-R**: Inventario de Intereses y Preferencias Profesionales - Revisado.
+3.  **DAT**: Tests de Aptitudes Diferenciales (Razonamiento Verbal, Numérico, Abstracto, Mecánico, Espacial y Ortografía).
+4.  **MACI**: Inventario Clínico para Adolescentes de Millon (Evaluación de personalidad).
+5.  **Entrevista / Introducción**: Módulos de recolección de datos sociodemográficos y antecedentes.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🛠️ Tecnologías
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+- **Frontend**: React + TypeScript + Vite.
+- **Backend**: Supabase (PostgreSQL + Auth).
+- **Estilos**: Vanilla CSS (Premium Design).
+- **Reportes**: jsPDF + autoTable.
+- **Testing**: Vitest (Unitarios/DDT) y Playwright (E2E).
+
+## 💻 Comandos de Desarrollo
+
+Asegúrate de tener instaladas las dependencias antes de empezar:
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+### Ejecución Local
+Para iniciar el servidor de desarrollo:
+```bash
+npm run dev
 ```
+
+### Pruebas Unitarias (Vitest)
+Hemos implementado **Data Driven Testing (DDT)** para asegurar la precisión de los cálculos de calificación.
+
+- **Correr todos los tests unitarios**:
+  ```bash
+  npx vitest run tests/unit/
+  ```
+- **Ver el reporte de cobertura (Coverage)**:
+  ```bash
+  npx vitest run --coverage
+  ```
+
+### Pruebas End-to-End (Playwright)
+Para automatizar el llenado de formularios y flujo de navegación de forma secuencial y visual:
+```bash
+npm run test:secuencial
+```
+> [!NOTE]
+> Este comando ejecuta los tests uno por uno abriendo el navegador (`headed`) para que puedas observar el proceso de autocompletado.
+
+
+## 🏗️ Estructura de Calificación
+La lógica de negocio está desacoplada de la base de datos para facilitar el testing:
+- `src/utils/*.ts`: Contiene los algoritmos de suma de puntajes, mapeo de baremos y generación de rankings profesionales.
+- `tests/unit/*.test.ts`: Valida que cada respuesta simulada genere el perfil correcto del estudiante.
+
+---
+© 2026 - Oswi142 / CVP Test Vocacional

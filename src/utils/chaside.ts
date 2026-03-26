@@ -25,7 +25,7 @@ const BAND_LABELS: Record<Band, string> = {
   E: 'Emprendedor',
 };
 
-function isYes(text: string | null | undefined): boolean {
+export function isYes(text: string | null | undefined): boolean {
   if (!text) return false;
   const t = text.trim().toLowerCase();
   return t === 'sí' || t === 'si';
@@ -132,6 +132,32 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
     idToText = new Map((optrows || []).map((o) => [o.id, String(o.answer || '')]));
   }
 
+  const { counts, totals, ranking, answered, yesCount } = calculateChasideResultSummary(
+    filteredArows,
+    qToBand,
+    qToScale,
+    idToText
+  );
+
+  return {
+    clientId,
+    testId,
+    userName,
+    schoolName,
+    counts,
+    totals,
+    ranking,
+    answered,
+    yesCount,
+  };
+}
+
+export function calculateChasideResultSummary(
+  filteredArows: Array<{ questionid: number; answerid?: number | null; details?: string | null }>,
+  qToBand: Map<number, Band>,
+  qToScale: Map<number, Scale>,
+  idToText: Map<number, string>
+) {
   const initBandCounts = (): Record<Band, number> =>
     ({ C: 0, H: 0, A: 0, S: 0, I: 0, D: 0, E: 0 });
 
@@ -176,17 +202,7 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
     overall: sortBands(overall),
   };
 
-  return {
-    clientId,
-    testId,
-    userName,
-    schoolName,
-    counts,
-    totals: { interest: totalsInterest, aptitude: totalsAptitude, overall },
-    ranking,
-    answered,
-    yesCount,
-  };
+  return { counts, totals: { interest: totalsInterest, aptitude: totalsAptitude, overall }, ranking, answered, yesCount };
 }
 
 export async function downloadChasideReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {

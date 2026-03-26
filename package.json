@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:secuencial": "playwright test tests/e2e/fillIntroduccionTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillEntrevistaTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillIpprTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillChasideTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillMaciTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillDatTest.spec.ts --headed --reporter=list"
+    "test:secuencial": "playwright test tests/e2e/fillIntroduccionTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillEntrevistaTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillIpprTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillChasideTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillMaciTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillDatTest.spec.ts --headed --reporter=list",
+    "test": "vitest"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -32,21 +33,27 @@
   "devDependencies": {
     "@eslint/js": "^9.21.0",
     "@playwright/test": "^1.52.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^22.15.21",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^4.1.2",
+    "@vitest/ui": "^4.1.2",
     "autoprefixer": "^10.4.21",
     "dotenv": "^16.5.0",
     "eslint": "^9.21.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
+    "jsdom": "^29.0.1",
     "postcss": "^8.5.3",
     "supabase": "^2.72.6",
     "tailwindcss": "^4.1.4",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^4.1.2"
   }
 }

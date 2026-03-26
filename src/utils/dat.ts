@@ -105,6 +105,29 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
         }
     }
 
+    const { scores, overallCorrect, totalAnswered } = calculateDatResultSummary(
+        filteredArows,
+        qToType,
+        typeTotalCount,
+        correctSet
+    );
+
+    return {
+        clientId,
+        userName,
+        schoolName,
+        scores,
+        overallCorrect,
+        totalAnswered,
+    };
+}
+
+export function calculateDatResultSummary(
+  filteredArows: Array<{ questionid: number; answerid?: number | null; details?: string | null }>,
+  qToType: Map<number, DatType>,
+  typeTotalCount: Record<string, number>,
+  correctSet: Set<number>
+) {
     const scores: Record<DatType, { correct: number; answered: number; total: number }> = {
         razonamiento_verbal: { correct: 0, answered: 0, total: typeTotalCount['razonamiento_verbal'] || 0 },
         razonamiento_numerico: { correct: 0, answered: 0, total: typeTotalCount['razonamiento_numerico'] || 0 },
@@ -129,14 +152,7 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
         }
     });
 
-    return {
-        clientId,
-        userName,
-        schoolName,
-        scores,
-        overallCorrect,
-        totalAnswered,
-    };
+    return { scores, overallCorrect, totalAnswered };
 }
 
 export async function getCompletedDatCategories(clientId: number, attemptId: string = 'active'): Promise<DatType[]> {
