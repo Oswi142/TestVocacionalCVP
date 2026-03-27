@@ -39,8 +39,7 @@ type RawCounts = {
 export type ChasideScore = {
   clientId: number;
   testId: number;
-  userName: string | null;
-  schoolName: string | null;
+  client: import('./pdfUtils').ClientPdfData;
   counts: RawCounts;
   totals: { interest: number; aptitude: number; overall: Record<Band, number> };
   ranking: {
@@ -70,16 +69,26 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
 
   const { data: urows } = await supabase
     .from('users')
-    .select('id,name')
+    .select('id, name, firstlastname, secondlastname')
     .eq('id', clientId)
     .limit(1);
-  const userName = (urows && urows[0]?.name) || null;
+  const urow = urows?.[0];
   const { data: cirows } = await supabase
     .from('clientsinfo')
-    .select('school')
+    .select('school, grade, birthday, birthplace, gender')
     .eq('userid', clientId)
     .limit(1);
-  const schoolName = (cirows && cirows[0]?.school) || null;
+  const ci = cirows?.[0];
+  const clientData: import('./pdfUtils').ClientPdfData = {
+    name:           urow?.name           ?? null,
+    firstlastname:  urow?.firstlastname  ?? null,
+    secondlastname: urow?.secondlastname ?? null,
+    school:         ci?.school           ?? null,
+    grade:          ci?.grade            ?? null,
+    birthday:       ci?.birthday         ?? null,
+    birthplace:     ci?.birthplace       ?? null,
+    gender:         ci?.gender           ?? null,
+  };
 
   const { data: qrows, error: qErr } = await supabase
     .from('questions')
@@ -142,8 +151,7 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
   return {
     clientId,
     testId,
-    userName,
-    schoolName,
+    client: clientData,
     counts,
     totals,
     ranking,
@@ -194,7 +202,7 @@ export function calculateChasideResultSummary(
   const sortBands = (rec: Record<Band, number>) =>
     (Object.keys(rec) as Band[])
       .map((b) => ({ band: b, value: rec[b] }))
-      .sort((x, y) => y.value - x.value);
+      .sort((x, y) => y.value - x.value || BAND_LABELS[x.band].localeCompare(BAND_LABELS[y.band]));
 
   const ranking = {
     interest: sortBands(counts.interest),
@@ -207,77 +215,115 @@ export function calculateChasideResultSummary(
 
 export async function downloadChasideReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {
   const score = await computeChasideScore(clientId, attemptId);
+  const { drawPremiumHeader, drawClientCard, drawSectionHeading, drawFooter, PDF_COLORS, PDF_FONT_SIZE } = await import('./pdfUtils');
 
   const doc = new jsPDF();
   const now = new Date().toLocaleDateString('es-ES');
 
-  doc.setFont('helvetica');
-  doc.setFontSize(16);
-  doc.text('CHASIDE — Informe de Resultados', 14, 18);
+  // Header
+  let y = drawPremiumHeader(doc, 'CHASIDE — Informe de Resultados', 'Inventario de Intereses y Aptitudes Vocacionales', now);
 
-  doc.setFontSize(11);
-  doc.text(`Fecha: ${now}`, 14, 26);
-  if (score.schoolName) {
-    doc.text(`Nombre: ${score.userName ?? clientId.toString()}`, 14, 33);
-    doc.text(`Colegio: ${score.schoolName}`, 14, 40);
-  } else {
-    doc.text(`Nombre: ${score.userName ?? clientId.toString()}`, 14, 33);
-  }
+  // Client info card
+  const { buildClientCardFields } = await import('./pdfUtils');
+  y = drawClientCard(doc, y, buildClientCardFields(score.client));
 
-  doc.setFontSize(10);
-  const startYList = score.schoolName ? 50 : 43;
-  doc.text('C = Científico', 14, startYList);
-  doc.text('H = Humanístico', 14, startYList + 5);
-  doc.text('A = Artístico', 14, startYList + 10);
-  doc.text('S = Social', 14, startYList + 15);
-  doc.text('I = Investigativo', 14, startYList + 20);
-  doc.text('D = Directivo', 14, startYList + 25);
-  doc.text('E = Emprendedor', 14, startYList + 30);
+  // Legend
+  y = drawSectionHeading(doc, y, 'Referencia de Bandas');
 
   const bands: Band[] = ['C', 'H', 'A', 'S', 'I', 'D', 'E'];
+  const cols = 2;
+  const colW = (210 - 14 * 2) / cols;
+  bands.forEach((b, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const bx = 14 + col * colW;
+    const by = y + row * 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...PDF_COLORS.accentGreen as [number,number,number]);
+    doc.text(`${b}`, bx, by);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...PDF_COLORS.bodyText as [number,number,number]);
+    doc.text(`= ${BAND_LABELS[b]}`, bx + 5, by);
+  });
+  y += Math.ceil(bands.length / cols) * 6 + 4;
+
+  // Scores table
+  y = drawSectionHeading(doc, y, 'Resultados por Escala');
   const interestRow = ['Interés', ...bands.map((b) => String(score.counts.interest[b]))];
   const aptitudeRow = ['Aptitud', ...bands.map((b) => String(score.counts.aptitude[b]))];
-  const overallRow = ['Total (I+A)', ...bands.map((b) => String(score.totals.overall[b]))];
+  const overallRow  = ['Total (I+A)', ...bands.map((b) => String(score.totals.overall[b]))];
 
   autoTable(doc, {
-    startY: score.schoolName ? 88 : 84,
+    startY: y,
     head: [['Escala', ...bands]],
     body: [interestRow, aptitudeRow, overallRow],
-    styles: { fontSize: 10, cellPadding: 2, halign: 'center' as const },
-    headStyles: { fillColor: [30, 136, 229], textColor: 255 },
+    styles: { fontSize: PDF_FONT_SIZE, cellPadding: 3, halign: 'center' as const, font: 'helvetica' },
+    headStyles: { fillColor: PDF_COLORS.accentGreen, textColor: 255, fontStyle: 'bold' },
+    bodyStyles: { textColor: PDF_COLORS.bodyText },
+    alternateRowStyles: { fillColor: PDF_COLORS.lightBg },
     theme: 'grid',
-    margin: { left: 12, right: 12 },
+    margin: { left: 14, right: 14 },
   });
 
-  let y = (doc as any).lastAutoTable.finalY + 8;
+  y = (doc as any).lastAutoTable.finalY + 8;
 
-  doc.setFontSize(12);
-  doc.text('Ranking por escala', 14, y); y += 6;
+  // Bar chart — Total (I+A) per band
+  const { drawHorizontalBarChart, CHART_PALETTE } = await import('./pdfUtils');
+  y = drawSectionHeading(doc, y, 'Gráfico de Resultados — Total (Interés + Aptitud)');
+  const maxOverall = Math.max(...bands.map(b => score.totals.overall[b]), 1);
+  y = drawHorizontalBarChart(doc, y,
+    bands.map((b, i) => ({ label: `${b} — ${BAND_LABELS[b]}`, value: score.totals.overall[b], color: CHART_PALETTE[i % CHART_PALETTE.length], labelText: `${score.totals.overall[b]}/${maxOverall}` })),
+    maxOverall,
+    { labelWidth: 50, barMaxWidth: 110, barH: 5.5, rowGap: 2.5 }
+  );
+
+  // Ranking section (starts on page 2, no extra header)
+  doc.addPage();
+  y = 20;
+  y = drawSectionHeading(doc, y, 'Ranking por Escala');
 
   const top = (arr: Array<{ band: Band; value: number }>, k = 3) =>
-    arr
-      .slice(0, k)
-      .map((x) => `${BAND_LABELS[x.band]} (${x.value})`)
-      .join(', ');
+    arr.slice(0, k).map((x, i) => `${i + 1}. ${BAND_LABELS[x.band]} (${x.value})`).join('   ');
 
-  doc.setFontSize(10);
-  doc.text(`• Interés: ${top(score.ranking.interest)}`, 14, y); y += 5;
-  doc.text(`• Aptitud: ${top(score.ranking.aptitude)}`, 14, y); y += 5;
-  doc.text(`• General: ${top(score.ranking.overall)}`, 14, y); y += 8;
+  const rows = [
+    ['Interés', top(score.ranking.interest)],
+    ['Aptitud', top(score.ranking.aptitude)],
+    ['General', top(score.ranking.overall)],
+  ];
+  autoTable(doc, {
+    startY: y,
+    body: rows,
+    styles: { fontSize: PDF_FONT_SIZE, cellPadding: 3, font: 'helvetica' },
+    columnStyles: {
+      0: { fontStyle: 'bold', textColor: PDF_COLORS.accentGreen, cellWidth: 24 },
+      1: { textColor: PDF_COLORS.bodyText },
+    },
+    theme: 'plain',
+    margin: { left: 14, right: 14 },
+  });
 
+  y = (doc as any).lastAutoTable.finalY + 8;
+
+  // Quick note
   const firstI = score.ranking.interest[0];
   const firstA = score.ranking.aptitude[0];
+  const quickNote = firstI && firstA
+    ? `Mayor interés en ${BAND_LABELS[firstI.band]} y mayor aptitud en ${BAND_LABELS[firstA.band]}.`
+    : 'No hay suficientes datos para interpretar.';
 
-  const quickNote =
-    firstI && firstA
-      ? `Mayor interés en ${BAND_LABELS[firstI.band]} y mayor aptitud en ${BAND_LABELS[firstA.band]}.`
-      : 'No hay suficientes datos para interpretar.';
+  doc.setFillColor(...PDF_COLORS.lightBg as [number,number,number]);
+  doc.setDrawColor(...PDF_COLORS.accentAmber as [number,number,number]);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(14, y, 182, 12, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...PDF_COLORS.accentAmber as [number,number,number]);
+  doc.text('Nota: ', 18, y + 7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...PDF_COLORS.bodyText as [number,number,number]);
+  doc.text(quickNote, 30, y + 7.5);
 
-  doc.setFontSize(11);
-  doc.text('Nota rápida:', 14, y); y += 6;
-  doc.setFontSize(10);
-  doc.text(quickNote, 14, y);
-
-  const filename = `CHASIDE_${score.userName ?? clientId}.pdf`;
-  doc.save(filename);
+  drawFooter(doc);
+  doc.save(`CHASIDE_${score.client.name ?? clientId}.pdf`);
 }

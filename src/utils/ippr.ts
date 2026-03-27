@@ -37,8 +37,7 @@ export function mapIpprAnswerTextToScore(txt: string | null | undefined): number
 type IpprResult = {
   clientId: number;
   testId: number;
-  userName: string | null;
-  schoolName: string | null;
+  client: import('./pdfUtils').ClientPdfData;
   sectionScores: SectionScore;
   totalAnswered: number;
   totalScore: number;
@@ -63,16 +62,26 @@ export async function computeIpprScore(clientId: number, attemptId: string = 'ac
 
   const { data: urows } = await supabase
     .from('users')
-    .select('id,name')
+    .select('id, name, firstlastname, secondlastname')
     .eq('id', clientId)
     .limit(1);
-  const userName = (urows && urows[0]?.name) || null;
+  const urow = urows?.[0];
   const { data: cirows } = await supabase
     .from('clientsinfo')
-    .select('school')
+    .select('school, grade, birthday, birthplace, gender')
     .eq('userid', clientId)
     .limit(1);
-  const schoolName = (cirows && cirows[0]?.school) || null;
+  const ci = cirows?.[0];
+  const clientData: import('./pdfUtils').ClientPdfData = {
+    name:           urow?.name           ?? null,
+    firstlastname:  urow?.firstlastname  ?? null,
+    secondlastname: urow?.secondlastname ?? null,
+    school:         ci?.school           ?? null,
+    grade:          ci?.grade            ?? null,
+    birthday:       ci?.birthday         ?? null,
+    birthplace:     ci?.birthplace       ?? null,
+    gender:         ci?.gender           ?? null,
+  };
 
   const { data: qrows, error: qErr } = await supabase
     .from('questions')
@@ -126,8 +135,7 @@ export async function computeIpprScore(clientId: number, attemptId: string = 'ac
   return {
     clientId,
     testId,
-    userName,
-    schoolName,
+    client: clientData,
     sectionScores,
     totalAnswered,
     totalScore,
@@ -160,29 +168,27 @@ export function calculateIpprResultSummary(
 
   const ranking = (Object.keys(sectionScores) as unknown as SectionId[])
     .map((s) => ({ section: s, label: SECTION_LABELS[s], value: sectionScores[s] }))
-    .sort((a, b) => b.value - a.value);
+    .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
 
   return { sectionScores, totalAnswered, totalScore, ranking };
 }
 
 export async function downloadIpprReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {
   const res = await computeIpprScore(clientId, attemptId);
+  const { drawPremiumHeader, drawClientCard, drawSectionHeading, drawFooter, PDF_COLORS, PDF_FONT_SIZE } = await import('./pdfUtils');
 
   const doc = new jsPDF();
   const now = new Date().toLocaleDateString('es-ES');
 
-  doc.setFont('helvetica');
-  doc.setFontSize(16);
-  doc.text('IPP-R — Informe de Resultados', 14, 18);
+  // Header
+  let y = drawPremiumHeader(doc, 'IPP-R — Informe de Resultados', 'Inventario de Preferencias Profesionales', now);
 
-  doc.setFontSize(11);
-  doc.text(`Fecha: ${now}`, 14, 26);
-  if (res.schoolName) {
-    doc.text(`Nombre: ${res.userName || 'N/A'}`, 14, 33);
-    doc.text(`Colegio: ${res.schoolName}`, 14, 40);
-  } else {
-    doc.text(`Nombre: ${res.userName || 'N/A'}`, 14, 33);
-  }
+  // Client info card
+  const { buildClientCardFields } = await import('./pdfUtils');
+  y = drawClientCard(doc, y, buildClientCardFields(res.client));
+
+  // Scores table
+  y = drawSectionHeading(doc, y, 'Puntajes por Campo Profesional');
 
   const body = (Object.keys(SECTION_LABELS) as unknown as SectionId[]).map((s) => ([
     String(s),
@@ -191,28 +197,56 @@ export async function downloadIpprReportPDF(clientId: number, attemptId: string 
   ]));
 
   autoTable(doc, {
-    startY: res.schoolName ? 48 : 42,
-    head: [['#', 'Campo (sección)', 'Puntaje (0–36)']],
+    startY: y,
+    head: [['#', 'Campo (Sección)', 'Puntaje (0–36)']],
     body,
-    styles: { fontSize: 10, cellPadding: 2 },
-    headStyles: { fillColor: [30, 136, 229], textColor: 255 },
-    columnStyles: { 0: { halign: 'center' }, 2: { halign: 'center' } },
+    styles: { fontSize: PDF_FONT_SIZE, cellPadding: 3, font: 'helvetica' },
+    headStyles: { fillColor: PDF_COLORS.accentGreen, textColor: 255, fontStyle: 'bold' },
+    bodyStyles: { textColor: PDF_COLORS.bodyText },
+    alternateRowStyles: { fillColor: PDF_COLORS.lightBg },
+    columnStyles: { 0: { halign: 'center', cellWidth: 12 }, 2: { halign: 'center', cellWidth: 30 } },
     theme: 'grid',
-    margin: { left: 12, right: 12 },
+    margin: { left: 14, right: 14 },
   });
 
-  let y = (doc as any).lastAutoTable.finalY + 8;
+  y = (doc as any).lastAutoTable.finalY + 8;
 
-  doc.setFontSize(12);
-  doc.text('Ranking de afinidad (Top 5)', 14, y); y += 6;
-  doc.setFontSize(10);
+  // Top 5 ranking — always starts on a new page
+  doc.addPage();
+  y = drawSectionHeading(doc, y - y + 20, 'Ranking de Afinidad (Top 5)');
 
   const top5 = res.ranking.slice(0, 5);
-  top5.forEach((r, i) => {
-    doc.text(`${i + 1}) ${r.label} — ${r.value}/36`, 14, y);
-    y += 5;
+  const rankingRows = top5.map((r, i) => [
+    `${i + 1}°`,
+    r.label,
+    `${r.value} / 36`,
+  ]);
+
+  autoTable(doc, {
+    startY: y,
+    body: rankingRows,
+    styles: { fontSize: PDF_FONT_SIZE, cellPadding: 3, font: 'helvetica' },
+    columnStyles: {
+      0: { fontStyle: 'bold', textColor: PDF_COLORS.accentGreen, cellWidth: 14, halign: 'center' },
+      1: { textColor: PDF_COLORS.bodyText },
+      2: { textColor: PDF_COLORS.bodyText, halign: 'center', cellWidth: 28 },
+    },
+    theme: 'plain',
+    margin: { left: 14, right: 14 },
   });
 
-  const filename = `IPPR_${res.userName ?? clientId}.pdf`;
-  doc.save(filename);
+  y = (doc as any).lastAutoTable.finalY + 8;
+
+  // Bar chart — all 15 sections
+  const { drawHorizontalBarChart, CHART_PALETTE } = await import('./pdfUtils');
+  y = drawSectionHeading(doc, y, 'Gráfico de Afinidad — Todas las Áreas (0–36)');
+  const sortedForChart = [...res.ranking].sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+  y = drawHorizontalBarChart(doc, y,
+    sortedForChart.map((r, i) => ({ label: r.label, value: r.value, color: CHART_PALETTE[i % CHART_PALETTE.length], labelText: `${r.value}/36` })),
+    36,
+    { labelWidth: 68, barMaxWidth: 90, barH: 5, rowGap: 2 }
+  );
+
+  drawFooter(doc);
+  doc.save(`IPPR_${res.client.name ?? clientId}.pdf`);
 }

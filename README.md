@@ -47,9 +47,9 @@ Hemos implementado **Data Driven Testing (DDT)** para asegurar la precisión de 
 
 ### Pruebas End-to-End (Playwright)
 Para automatizar el llenado de formularios y flujo de navegación de forma secuencial y visual:
-```bash
-npm run test:secuencial
-```
+  ```bash
+  npm run test:secuencial
+  ```
 > [!NOTE]
 > Este comando ejecuta los tests uno por uno abriendo el navegador (`headed`) para que puedas observar el proceso de autocompletado.
 

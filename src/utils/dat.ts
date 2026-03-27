@@ -21,8 +21,7 @@ export const DAT_LABELS: Record<DatType, string> = {
 
 export type DatResult = {
     clientId: number;
-    userName: string | null;
-    schoolName: string | null;
+    client: import('./pdfUtils').ClientPdfData;
     scores: Record<DatType, { correct: number; answered: number; total: number }>;
     overallCorrect: number;
     totalAnswered: number;
@@ -46,16 +45,26 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
 
     const { data: urows } = await supabase
         .from('users')
-        .select('name')
+        .select('name, firstlastname, secondlastname')
         .eq('id', clientId)
         .limit(1);
-    const userName = (urows && urows[0]?.name) || null;
+    const urow = urows?.[0];
     const { data: cirows } = await supabase
         .from('clientsinfo')
-        .select('school')
+        .select('school, grade, birthday, birthplace, gender')
         .eq('userid', clientId)
         .limit(1);
-    const schoolName = (cirows && cirows[0]?.school) || null;
+    const ci = cirows?.[0];
+    const clientData: import('./pdfUtils').ClientPdfData = {
+        name:           urow?.name           ?? null,
+        firstlastname:  urow?.firstlastname  ?? null,
+        secondlastname: urow?.secondlastname ?? null,
+        school:         ci?.school           ?? null,
+        grade:          ci?.grade            ?? null,
+        birthday:       ci?.birthday         ?? null,
+        birthplace:     ci?.birthplace       ?? null,
+        gender:         ci?.gender           ?? null,
+    };
 
     const { data: qrows, error: qErr } = await supabase
         .from('questions')
@@ -114,8 +123,7 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
 
     return {
         clientId,
-        userName,
-        schoolName,
+        client: clientData,
         scores,
         overallCorrect,
         totalAnswered,
@@ -193,69 +201,102 @@ export async function getCompletedDatCategories(clientId: number, attemptId: str
 
 export async function downloadDatReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {
     const res = await computeDatScore(clientId, attemptId);
+    const { drawPremiumHeader, drawClientCard, drawSectionHeading, drawFooter, PDF_COLORS, PDF_FONT_SIZE } = await import('./pdfUtils');
 
     const doc = new jsPDF();
     const now = new Date().toLocaleDateString('es-ES');
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(40, 40, 40);
-    doc.text('DAT — Informe de Resultados', 14, 20);
+    // Header
+    let y = drawPremiumHeader(doc, 'DAT — Informe de Resultados', 'Differential Aptitude Tests (Puntajes por Categoría)', now);
 
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Fecha de generación: ${now}`, 14, 28);
-    if (res.schoolName) {
-        doc.text(`Nombre: ${res.userName ?? clientId}`, 14, 34);
-        doc.text(`Colegio: ${res.schoolName}`, 14, 40);
-        doc.setLineWidth(0.5);
-        doc.line(14, 44, 196, 44);
-    } else {
-        doc.text(`Nombre: ${res.userName ?? clientId}`, 14, 34);
-        doc.setLineWidth(0.5);
-        doc.line(14, 38, 196, 38);
-    }
+    // Client info card
+    const { buildClientCardFields } = await import('./pdfUtils');
+    y = drawClientCard(doc, y, buildClientCardFields(res.client));
+
+    // Scores table
+    y = drawSectionHeading(doc, y, 'Resultados por Aptitud');
 
     const categories = Object.keys(DAT_LABELS) as DatType[];
-
     const tableData = categories.map(type => {
         const isCompleted = res.scores[type].answered > 0;
         const label = DAT_LABELS[type];
-
-        return [
-            label,
-            isCompleted ? `${res.scores[type].correct} / ${res.scores[type].total}` : 'Pendiente',
-            isCompleted
-                ? `${Math.round((res.scores[type].correct / res.scores[type].total) * 100)}%`
-                : '0%'
-        ];
+        const result = isCompleted
+            ? `${res.scores[type].correct} / ${res.scores[type].total}`
+            : 'Pendiente';
+        const pct = isCompleted
+            ? `${Math.round((res.scores[type].correct / res.scores[type].total) * 100)}%`
+            : '—';
+        return [label, result, pct];
     });
 
     autoTable(doc, {
-        startY: res.schoolName ? 50 : 45,
+        startY: y,
         head: [['Aptitud / Categoría', 'Resultado (Aciertos)', 'Porcentaje']],
         body: tableData,
         theme: 'striped',
-        headStyles: { fillColor: [46, 125, 50], textColor: 255 },
-        styles: { fontSize: 11, cellPadding: 4 },
-        margin: { left: 14, right: 14 }
+        headStyles: { fillColor: PDF_COLORS.accentGreen, textColor: 255, fontStyle: 'bold' },
+        bodyStyles: { textColor: PDF_COLORS.bodyText, fontSize: PDF_FONT_SIZE },
+        alternateRowStyles: { fillColor: PDF_COLORS.lightBg },
+        styles: { cellPadding: 3.5, font: 'helvetica' },
+        columnStyles: {
+            1: { halign: 'center' as const, cellWidth: 48 },
+            2: { halign: 'center' as const, cellWidth: 30 },
+        },
+        margin: { left: 14, right: 14 },
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    y = (doc as any).lastAutoTable.finalY + 8;
 
-    doc.setFont('helvetica', 'bold');
-    doc.text('Progreso de Evaluación:', 14, finalY);
-    doc.setFont('helvetica', 'normal');
+    // Progress summary
+    y = drawSectionHeading(doc, y, 'Progreso de Evaluación');
 
     const completedCount = categories.filter(c => res.scores[c].answered > 0).length;
-    doc.text(`El cliente ha completado ${completedCount} de 6 sub-tests.`, 14, finalY + 7);
-    doc.text(`Total de aciertos globales: ${res.overallCorrect} de ${res.totalAnswered} respondidas.`, 14, finalY + 14);
+    const summaryRows = [
+        ['Sub-tests completados', `${completedCount} de 6`],
+        ['Total de aciertos',     `${res.overallCorrect} de ${res.totalAnswered} respondidas`],
+    ];
+    autoTable(doc, {
+        startY: y,
+        body: summaryRows,
+        styles: { fontSize: PDF_FONT_SIZE, cellPadding: 3, font: 'helvetica' },
+        columnStyles: {
+            0: { fontStyle: 'bold', textColor: PDF_COLORS.accentGreen, cellWidth: 60 },
+            1: { textColor: PDF_COLORS.bodyText },
+        },
+        theme: 'plain',
+        margin: { left: 14, right: 14 },
+    });
 
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    const footerText = 'Este informe es evolutivo y se actualiza a medida que el cliente completa más categorías.';
-    doc.text(footerText, 14, 280);
+    y = (doc as any).lastAutoTable.finalY + 8;
 
-    const filename = `DAT_Resultados_${res.userName?.replace(/\s+/g, '_') ?? clientId}.pdf`;
+    // Bar chart — page 2, no extra header, use labelText for correct/total
+    const { drawHorizontalBarChart, CHART_PALETTE } = await import('./pdfUtils');
+    doc.addPage();
+    y = 20;  // Start near top of page 2 without a branded header
+
+    y = drawSectionHeading(doc, y, 'Aciertos por Sub-test');
+
+    const maxTotal = Math.max(...categories.map(t => res.scores[t].total), 1);
+
+    const chartItems = categories.map((type, i) => {
+        const isCompleted = res.scores[type].answered > 0;
+        const correct = isCompleted ? res.scores[type].correct : 0;
+        const total   = res.scores[type].total;
+        return {
+            label:     DAT_LABELS[type],
+            value:     correct,
+            labelText: `${correct}/${total}`,
+            color:     CHART_PALETTE[i % CHART_PALETTE.length] as [number, number, number],
+        };
+    });
+
+    y = drawHorizontalBarChart(doc, y,
+        chartItems,
+        maxTotal,
+        { labelWidth: 58, barMaxWidth: 100, barH: 5.5, rowGap: 2.5 }
+    );
+
+    drawFooter(doc);
+    const filename = `DAT_Resultados_${res.client.name?.replace(/\s+/g, '_') ?? clientId}.pdf`;
     doc.save(filename);
 }

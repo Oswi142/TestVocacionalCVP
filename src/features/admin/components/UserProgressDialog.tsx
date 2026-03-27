@@ -96,7 +96,8 @@ const UserProgressDialog: React.FC<UserProgressDialogProps> = ({ open, onClose, 
                             <Box key={test.id} sx={{ p: 2, borderRadius: '16px', backgroundColor: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.04)' }}>
                                 <Box display="flex" alignItems="center" justifyContent="space-between">
                                     <Box display="flex" alignItems="center" gap={1.5}>
-                                        {progressData?.completedMainTestIds.includes(test.id) && test.id !== 5 ? (
+                                        {((test.id !== 5 && progressData?.completedMainTestIds.includes(test.id)) ||
+                                            (test.id === 5 && progressData?.completedDatTypes.length >= 6)) ? (
                                             <CheckCircleIcon sx={{ color: '#10b981', fontSize: 20 }} />
                                         ) : (
                                             <RadioButtonUncheckedIcon sx={{ color: '#94a3b8', fontSize: 20 }} />

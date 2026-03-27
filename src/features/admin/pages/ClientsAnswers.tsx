@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../../supabaseClient';
 import {
   Box, Typography, CircularProgress, IconButton,
   Collapse, Paper, TextField,
   Avatar, Divider, InputAdornment, Tooltip, useTheme, useMediaQuery,
-  Snackbar, Alert
+  Snackbar, Alert, TablePagination, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonIcon from '@mui/icons-material/Person';
@@ -49,6 +49,10 @@ const ClientsAnswers: React.FC = () => {
   const [clientTestsMap, setClientTestsMap] = useState<Record<number, Test[]>>({});
   const [loadingTestsForClient, setLoadingTestsForClient] = useState<Record<number, boolean>>({});
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 10;
   const [snackbar, setSnackbar] = useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
   const theme = useTheme();
@@ -58,7 +62,7 @@ const ClientsAnswers: React.FC = () => {
     const fetchAll = async () => {
       try {
         const [clientsData, testsData] = await Promise.all([
-          adminService.getClients(),
+          adminService.getUsers('client'),
           adminService.getTests(),
         ]);
         setClients(clientsData);
@@ -82,6 +86,7 @@ const ClientsAnswers: React.FC = () => {
 
   const downloadPDF = async (clientId: number, testId: number, category?: DatType, attemptId: string = 'active') => {
     try {
+      const { drawPremiumHeader, drawClientCard, drawFooter, PDF_COLORS, PDF_FONT_SIZE } = await import('../../../utils/pdfUtils');
       const client = clients.find(c => c.userid === clientId);
       const test = tests.find(t => t.id === testId);
       const datId = await getDatTestId();
@@ -110,71 +115,34 @@ const ClientsAnswers: React.FC = () => {
         const dates = clientAnswers
           .map(a => a.created_at ? new Date(a.created_at).getTime() : 0)
           .filter(t => t > 0);
-
         if (dates.length > 0) {
           const maxDate = new Date(Math.max(...dates));
           submitDateStr = maxDate.toLocaleDateString('es-ES');
         }
       }
 
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 28, 'F');
+      // ── Premium header ────────────────────────────────────────────────────
+      let y = drawPremiumHeader(
+        doc,
+        'REPORTE TÉCNICO DE RESPUESTAS',
+        `Test: ${test?.testname || '—'}   |   Enviado: ${submitDateStr}`,
+        now
+      );
 
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('REPORTE TÉCNICO DE RESPUESTAS', 14, 17);
+      // ── Client card ───────────────────────────────────────────────────────
+      const { buildClientCardFields: buildFields } = await import('../../../utils/pdfUtils');
+      y = drawClientCard(doc, y, buildFields({
+        name:           (client as any)?.name           ?? null,
+        firstlastname:  (client as any)?.firstlastname  ?? null,
+        secondlastname: (client as any)?.secondlastname ?? null,
+        school:         (client as any)?.school         ?? null,
+        grade:          (client as any)?.grade          ?? null,
+        birthday:       (client as any)?.birthday       ?? null,
+        birthplace:     (client as any)?.birthplace     ?? null,
+        gender:         (client as any)?.gender         ?? null,
+      }));
 
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(148, 163, 184);
-      doc.text(`Enviado: ${submitDateStr}`, 160, 17);
-
-      doc.setFillColor(248, 250, 252);
-      doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(14, 34, 182, 48, 4, 4, 'FD');
-
-      doc.setTextColor(15, 23, 42);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Datos del Cliente', 20, 44);
-
-      doc.setDrawColor(226, 232, 240);
-      doc.line(20, 47, 188, 47);
-
-      doc.setFontSize(9.5);
-
-      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Nombre:', 20, 54);
-      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.name || 'No registrado', 40, 54);
-
-      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Colegio:', 20, 61);
-      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.school || 'No registrado', 40, 61);
-
-      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Grado:', 20, 68);
-      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.grade || 'No registrado', 40, 68);
-
-      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Test:', 20, 75);
-      doc.setTextColor(16, 185, 129); doc.setFont('helvetica', 'bold'); doc.text(test?.testname || '', 40, 75);
-
-      let formattedBirthday = 'No registrado';
-      if (client?.birthday) {
-        const [year, month, day] = client.birthday.split('-');
-        if (year && month && day) {
-          formattedBirthday = `${day}/${month}/${year}`;
-        } else {
-          formattedBirthday = client.birthday;
-        }
-      }
-
-      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('F. Nac.:', 110, 54);
-      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(formattedBirthday, 134, 54);
-
-      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Lugar Nac.:', 110, 61);
-      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.birthplace || 'No registrado', 134, 61);
-
-      doc.setTextColor(100, 116, 139); doc.setFont('helvetica', 'normal'); doc.text('Género:', 110, 68);
-      doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.text(client?.gender || 'No registrado', 134, 68);
-
+      // ── Answers table ─────────────────────────────────────────────────────
       const tableData: any[] = [];
       let categoriesToProcess: (DatType | undefined)[] = [category];
 
@@ -187,7 +155,7 @@ const ClientsAnswers: React.FC = () => {
 
       categoriesToProcess.forEach(currentCat => {
         if (isDat && currentCat) {
-          tableData.push([{ content: `\nSECCIÓN: ${DAT_LABELS[currentCat]}\n`, styles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: 11, halign: 'center' } }]);
+          tableData.push([{ content: `\nSECCIÓN: ${DAT_LABELS[currentCat]}\n`, styles: { fillColor: PDF_COLORS.lightBg, textColor: PDF_COLORS.accentGreen, fontStyle: 'bold', fontSize: PDF_FONT_SIZE, halign: 'center' } }]);
         }
         const filteredAnswers = isDat && currentCat ? clientAnswers.filter(ans => qMap.get(ans.questionid)?.dat_type === currentCat) : clientAnswers;
 
@@ -201,12 +169,12 @@ const ClientsAnswers: React.FC = () => {
 
           tableData.push([{
             content: `${n}. ${qText}`,
-            styles: { fillColor: [255, 255, 255], textColor: [71, 85, 105], fontStyle: 'bold', fontSize: 9.5, cellPadding: { top: 6, bottom: 2, left: 4, right: 4 } }
+            styles: { fillColor: [255, 255, 255], textColor: PDF_COLORS.mutedText, fontStyle: 'bold', fontSize: PDF_FONT_SIZE, cellPadding: { top: 6, bottom: 2, left: 4, right: 4 } }
           }]);
 
           tableData.push([{
             content: `R:  ${aText}`,
-            styles: { fillColor: [255, 255, 255], textColor: [15, 23, 42], fontStyle: 'normal', fontSize: 10, cellPadding: { top: 2, bottom: 6, left: 4, right: 4 } }
+            styles: { fillColor: [255, 255, 255], textColor: PDF_COLORS.bodyText, fontStyle: 'normal', fontSize: PDF_FONT_SIZE, cellPadding: { top: 2, bottom: 6, left: 4, right: 4 } }
           }]);
 
           tableData.push([{ content: '', styles: { fillColor: [255, 255, 255], minCellHeight: 1, cellPadding: 0 } }]);
@@ -215,10 +183,10 @@ const ClientsAnswers: React.FC = () => {
       });
 
       autoTable(doc, {
-        startY: 88,
+        startY: y,
         body: tableData,
         theme: 'plain',
-        styles: { font: 'helvetica', fontSize: 10, overflow: 'linebreak', valign: 'middle' },
+        styles: { font: 'helvetica', fontSize: PDF_FONT_SIZE, overflow: 'linebreak', valign: 'middle' },
         columnStyles: { 0: { cellWidth: 'wrap' } },
         tableWidth: 'auto',
         margin: { left: 14, right: 14, bottom: 20 },
@@ -227,20 +195,49 @@ const ClientsAnswers: React.FC = () => {
         rowPageBreak: 'avoid',
         didDrawCell: (data) => {
           if (data.row.index % 3 === 1 && data.cell.raw !== '') {
-            doc.setDrawColor(241, 245, 249);
+            doc.setDrawColor(...PDF_COLORS.divider as [number,number,number]);
             doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
           }
         }
       });
+
+      drawFooter(doc);
       doc.save(`Resultados_${client?.name || 'Cliente'}_${test?.testname || 'Test'}.pdf`);
     } catch (e) { console.error(e); showToast('Ocurrió un error generando el PDF.', 'error'); }
   };
 
-  const filteredClients = clients.filter(client => {
+  const filteredClients = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return true;
-    return (client.name || '').toLowerCase().split(' ').some((w: string) => w.startsWith(q));
-  });
+    let result = [...clients];
+    
+    if (q) {
+        result = result.filter(c => (c.name || '').toLowerCase().includes(q));
+    }
+
+    // Ordenamiento
+    result.sort((a, b) => {
+        if (sortBy === 'date') {
+            const idA = a.userid;
+            const idB = b.userid;
+            return sortOrder === 'asc' ? idA - idB : idB - idA;
+        } else {
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+            if (sortOrder === 'asc') return nameA.localeCompare(nameB);
+            return nameB.localeCompare(nameA);
+        }
+    });
+
+    return result;
+  }, [clients, search, sortBy, sortOrder]);
+
+  const paginatedClients = useMemo(() => {
+    return filteredClients.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+  }, [filteredClients, page]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [search, sortBy, sortOrder]);
 
   const getClientInitials = (name: string) =>
     (name || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -309,91 +306,196 @@ const ClientsAnswers: React.FC = () => {
     <Box sx={{ width: '100%', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', p: isMobile ? 1 : 3, boxSizing: 'border-box', overflowX: 'hidden' }}>
       <Box sx={{ width: '100%', maxWidth: 1000, height: '90vh', backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', borderRadius: '32px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', border: '1px solid rgba(255,255,255,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxSizing: 'border-box' }}>
 
-        {/* Header */}
         <Box sx={{ p: isMobile ? 3 : 4, borderBottom: '1px solid rgba(0,0,0,0.05)', backgroundColor: 'rgba(255,255,255,0.3)' }}>
-          <Box display="flex" alignItems="center" mb={1} gap={2}>
-            <IconButton onClick={() => navigate(-1)} size="small" sx={{ color: '#64748b', backgroundColor: 'rgba(0,0,0,0.03)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.08)', transform: 'translateX(-3px)' }, transition: 'all 0.2s' }}>
-              <ArrowBackIcon />
-            </IconButton>
-            <AssignmentIcon sx={{ fontSize: 32, color: C.primary }} />
-            <Typography variant={isMobile ? 'h5' : 'h4'} fontWeight={800} color="#1e293b">Histórico de Respuestas</Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              justifyContent: 'space-between',
+              alignItems: isMobile ? 'flex-start' : 'center',
+              mb: 1,
+              gap: 2,
+            }}
+          >
+            <Box display="flex" alignItems="center" gap={2}>
+              <IconButton onClick={() => navigate(-1)} size="small" sx={{ color: '#64748b', backgroundColor: 'rgba(0,0,0,0.03)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.08)', transform: 'translateX(-3px)' }, transition: 'all 0.2s' }}>
+                <ArrowBackIcon />
+              </IconButton>
+              <AssignmentIcon sx={{ fontSize: 32, color: C.primary }} />
+              <Typography
+                variant={isMobile ? 'h5' : 'h4'}
+                fontWeight={800}
+                sx={{ color: '#1e293b' }}
+              >
+                Histórico de Respuestas
+              </Typography>
+            </Box>
           </Box>
-          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Respaldo íntegro y técnico de las respuestas enviadas por los usuarios.</Typography>
-          <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <TextField placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} variant="outlined" size="small"
-              InputProps={{ startAdornment: (<InputAdornment position="start"><SearchIcon sx={{ fontSize: 16, color: '#94a3b8' }} /></InputAdornment>), sx: { borderRadius: '20px', backgroundColor: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', '& fieldset': { borderColor: 'rgba(0,0,0,0.08)' }, '&:hover fieldset': { borderColor: `${C.searchHover} !important` }, '&.Mui-focused fieldset': { borderColor: `${C.searchFocus} !important` }, height: '34px' } }}
-              sx={{ width: 220 }} />
-            <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600 }}>{filteredClients.length} cliente{filteredClients.length !== 1 ? 's' : ''}</Typography>
+          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500, mb: 2 }}>Consulta y descarga las respuestas detalladas de cada proceso evaluativo.</Typography>
+
+          <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+              <FormControl variant="standard" sx={{ minWidth: 140 }}>
+                <InputLabel sx={{ fontSize: '0.75rem', fontWeight: 700, ml: 1 }}>Ordenar por</InputLabel>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  displayEmpty
+                  disableUnderline
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                    borderRadius: '12px',
+                    px: 1.5,
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    height: '36px',
+                    border: '1px solid rgba(0,0,0,0.05)',
+                    '& .MuiSelect-select': { py: 0, height: '36px', display: 'flex', alignItems: 'center' }
+                  }}
+                >
+                  <MenuItem value="date">Registro</MenuItem>
+                  <MenuItem value="name">Alfabético</MenuItem>
+                </Select>
+              </FormControl>
+
+              <FormControl variant="standard" sx={{ minWidth: 120 }}>
+                <InputLabel sx={{ fontSize: '0.75rem', fontWeight: 700, ml: 1 }}>Sentido</InputLabel>
+                <Select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as any)}
+                  displayEmpty
+                  disableUnderline
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                    borderRadius: '12px',
+                    px: 1.5,
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    height: '36px',
+                    border: '1px solid rgba(0,0,0,0.05)',
+                    '& .MuiSelect-select': { py: 0, height: '36px', display: 'flex', alignItems: 'center' }
+                  }}
+                >
+                  <MenuItem value="asc">Ascendente</MenuItem>
+                  <MenuItem value="desc">Descendente</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            <TextField
+              size="small"
+              placeholder="Buscar cliente..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              variant="outlined"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
+                  </InputAdornment>
+                ),
+                sx: {
+                  borderRadius: '50px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  fontSize: '0.85rem',
+                  height: '36px',
+                  '& fieldset': { borderColor: 'rgba(0,0,0,0.05)' }
+                }
+              }}
+              sx={{ width: isMobile ? '100%' : 220 }}
+            />
           </Box>
         </Box>
 
         {/* List */}
-        <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {loading ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
-              <CircularProgress size={40} thickness={5} sx={{ color: C.spinner }} />
-              <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>Cargando clientes...</Typography>
-            </Box>
-          ) : filteredClients.length === 0 ? (
-            <Box sx={{ textAlign: 'center', p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <PersonIcon sx={{ fontSize: 48, color: '#cbd5e1', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary">No se encontraron clientes</Typography>
-              <Typography variant="body2" color="text.secondary" mt={1}>Intenta con otro término de búsqueda</Typography>
-            </Box>
-          ) : (
-            filteredClients.map((client) => {
-              const isExpanded = expandedClientId === client.userid;
-              const testsForClient = clientTestsMap[client.userid] || [];
-              return (
-                <Paper key={client.userid} elevation={0} sx={{ borderRadius: '20px', backgroundColor: isExpanded ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)', transition: 'all 0.2s', '&:hover': { backgroundColor: 'rgba(255,255,255,0.85)', boxShadow: '0 4px 16px rgba(0,0,0,0.07)' } }}>
-                  <Box onClick={() => handleToggleClient(client)} sx={{ px: 3, py: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
-                    <Box display="flex" alignItems="center" gap={2}>
-                      <Avatar sx={{ background: avatarColor(client.userid), width: 44, height: 44, fontSize: '0.95rem', fontWeight: 800 }}>
-                        {getClientInitials(client.name || 'SC')}
-                      </Avatar>
-                      <Typography variant="subtitle1" fontWeight={700} color="#1e293b">{client.name || 'Sin nombre'}</Typography>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {loading ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
+                <CircularProgress size={40} thickness={5} sx={{ color: C.spinner }} />
+                <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>Cargando clientes...</Typography>
+              </Box>
+            ) : filteredClients.length === 0 ? (
+              <Box sx={{ textAlign: 'center', p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <PersonIcon sx={{ fontSize: 48, color: '#cbd5e1', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary">No se encontraron clientes</Typography>
+                <Typography variant="body2" color="text.secondary" mt={1}>Intenta con otro término de búsqueda</Typography>
+              </Box>
+            ) : (
+              paginatedClients.map((client) => {
+                const isExpanded = expandedClientId === client.userid;
+                const testsForClient = clientTestsMap[client.userid] || [];
+                return (
+                  <Paper key={client.userid} elevation={0} sx={{ borderRadius: '20px', backgroundColor: isExpanded ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)', transition: 'all 0.2s', '&:hover': { backgroundColor: 'rgba(255,255,255,0.85)', boxShadow: '0 4px 16px rgba(0,0,0,0.07)' } }}>
+                    <Box onClick={() => handleToggleClient(client)} sx={{ px: 3, py: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <Avatar sx={{ background: avatarColor(client.userid), width: 44, height: 44, fontSize: '0.95rem', fontWeight: 800 }}>
+                          {getClientInitials(client.name || 'SC')}
+                        </Avatar>
+                        <Typography variant="subtitle1" fontWeight={700} color="#1e293b">{client.name || 'Sin nombre'}</Typography>
+                      </Box>
+                      <IconButton size="small" sx={{ pointerEvents: 'none' }}>
+                        {isExpanded ? <ExpandLessIcon sx={{ color: C.primary }} /> : <ExpandMoreIcon sx={{ color: '#94a3b8' }} />}
+                      </IconButton>
                     </Box>
-                    <IconButton size="small" sx={{ pointerEvents: 'none' }}>
-                      {isExpanded ? <ExpandLessIcon sx={{ color: C.primary }} /> : <ExpandMoreIcon sx={{ color: '#94a3b8' }} />}
-                    </IconButton>
-                  </Box>
-                  <Collapse in={isExpanded} unmountOnExit>
-                    <Box sx={{ px: 3, pb: 3 }}>
-                      <Divider sx={{ mb: 2 }} />
-                      {loadingTestsForClient[client.userid] ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
-                          <CircularProgress size={20} thickness={5} sx={{ color: C.spinner }} />
-                          <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Cargando respuestas...</Typography>
-                        </Box>
-                      ) : testsForClient.length === 0 ? (
-                        <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic', py: 1 }}>Este usuario aún no ha enviado respuestas.</Typography>
-                      ) : (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                          {testsForClient.map((test: any) => (
-                            <Box key={test.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: '14px', backgroundColor: C.bg, border: `1px solid ${C.border}`, transition: 'all 0.2s', '&:hover': { backgroundColor: C.bgHover, borderColor: C.borderHover } }}>
-                              <Box display="flex" alignItems="center" gap={1.5}>
-                                <Box sx={{ p: 0.8, borderRadius: '10px', backgroundColor: 'rgba(16,185,129,0.12)', display: 'flex' }}>
-                                  <AssignmentIcon sx={{ fontSize: 18, color: C.dark }} />
+                    <Collapse in={isExpanded} unmountOnExit>
+                      <Box sx={{ px: 3, pb: 3 }}>
+                        <Divider sx={{ mb: 2 }} />
+                        {loadingTestsForClient[client.userid] ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
+                            <CircularProgress size={20} thickness={5} sx={{ color: C.spinner }} />
+                            <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Cargando respuestas...</Typography>
+                          </Box>
+                        ) : testsForClient.length === 0 ? (
+                          <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic', py: 1 }}>Este usuario aún no ha enviado respuestas.</Typography>
+                        ) : (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            {testsForClient.map((test: any) => (
+                              <Box key={test.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: '14px', backgroundColor: C.bg, border: `1px solid ${C.border}`, transition: 'all 0.2s', '&:hover': { backgroundColor: C.bgHover, borderColor: C.borderHover } }}>
+                                <Box display="flex" alignItems="center" gap={1.5}>
+                                  <Box sx={{ p: 0.8, borderRadius: '10px', backgroundColor: 'rgba(16,185,129,0.12)', display: 'flex' }}>
+                                    <AssignmentIcon sx={{ fontSize: 18, color: C.dark }} />
+                                  </Box>
+                                  <Box>
+                                    <Typography variant="body2" fontWeight={700} color="#334155">{test.testname}</Typography>
+                                  </Box>
                                 </Box>
-                                <Box>
-                                  <Typography variant="body2" fontWeight={700} color="#334155">{test.testname}</Typography>
-                                </Box>
+                                <Tooltip title="Descargar respaldo PDF" arrow placement="left">
+                                  <IconButton onClick={() => downloadPDF(client.userid, test.id, test.category, test.selectedAttempt)} size="small" sx={{ backgroundColor: '#1e293b', color: 'white', borderRadius: '10px', width: 34, height: 34, '&:hover': { backgroundColor: '#0f172a', transform: 'translateY(-2px)' }, transition: 'all 0.2s' }}>
+                                    <GetAppIcon sx={{ fontSize: 16 }} />
+                                  </IconButton>
+                                </Tooltip>
                               </Box>
-                              <Tooltip title="Descargar respaldo PDF" arrow placement="left">
-                                <IconButton onClick={() => downloadPDF(client.userid, test.id, test.category, test.selectedAttempt)} size="small" sx={{ backgroundColor: '#1e293b', color: 'white', borderRadius: '10px', width: 34, height: 34, '&:hover': { backgroundColor: '#0f172a', transform: 'translateY(-2px)' }, transition: 'all 0.2s' }}>
-                                  <GetAppIcon sx={{ fontSize: 16 }} />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          ))}
-                        </Box>
-                      )}
-                    </Box>
-                  </Collapse>
-                </Paper>
-              );
-            })
-          )}
+                            ))}
+                          </Box>
+                        )}
+                      </Box>
+                    </Collapse>
+                  </Paper>
+                );
+              })
+            )}
+          </Box>
+          <TablePagination
+            component="div"
+            count={filteredClients.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPageOptions={[]}
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+            sx={{
+              borderTop: '1px solid rgba(0,0,0,0.05)',
+              '& .MuiTablePagination-toolbar': {
+                minHeight: '48px',
+                px: 2
+              },
+              '& .MuiTablePagination-displayedRows': {
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: '#64748b'
+              }
+            }}
+          />
         </Box>
       </Box>
 
