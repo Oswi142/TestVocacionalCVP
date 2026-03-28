@@ -169,15 +169,14 @@ const ClientsAnswers: React.FC = () => {
 
           tableData.push([{
             content: `${n}. ${qText}`,
-            styles: { fillColor: [255, 255, 255], textColor: PDF_COLORS.mutedText, fontStyle: 'bold', fontSize: PDF_FONT_SIZE, cellPadding: { top: 6, bottom: 2, left: 4, right: 4 } }
+            styles: { fillColor: [255, 255, 255], textColor: PDF_COLORS.mutedText, fontStyle: 'bold', fontSize: PDF_FONT_SIZE, cellPadding: { top: 7, bottom: 1.5, left: 4, right: 4 } }
           }]);
 
           tableData.push([{
             content: `R:  ${aText}`,
-            styles: { fillColor: [255, 255, 255], textColor: PDF_COLORS.bodyText, fontStyle: 'normal', fontSize: PDF_FONT_SIZE, cellPadding: { top: 2, bottom: 6, left: 4, right: 4 } }
+            styles: { fillColor: [255, 255, 255], textColor: PDF_COLORS.bodyText, fontStyle: 'normal', fontSize: PDF_FONT_SIZE, cellPadding: { top: 1.5, bottom: 7, left: 4, right: 4 } }
           }]);
 
-          tableData.push([{ content: '', styles: { fillColor: [255, 255, 255], minCellHeight: 1, cellPadding: 0 } }]);
           n++;
         });
       });
@@ -186,17 +185,23 @@ const ClientsAnswers: React.FC = () => {
         startY: y,
         body: tableData,
         theme: 'plain',
-        styles: { font: 'helvetica', fontSize: PDF_FONT_SIZE, overflow: 'linebreak', valign: 'middle' },
-        columnStyles: { 0: { cellWidth: 'wrap' } },
-        tableWidth: 'auto',
+        styles: { font: 'helvetica', fontSize: PDF_FONT_SIZE, overflow: 'linebreak', valign: 'top' },
+        columnStyles: { 0: { cellWidth: 182 } },
+        tableWidth: 'wrap',
         margin: { left: 14, right: 14, bottom: 20 },
         showHead: false,
         pageBreak: 'auto',
         rowPageBreak: 'avoid',
         didDrawCell: (data) => {
-          if (data.row.index % 3 === 1 && data.cell.raw !== '') {
+          if (data.row.index % 2 === 1) {
             doc.setDrawColor(...PDF_COLORS.divider as [number,number,number]);
-            doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+            doc.setLineWidth(0.2);
+            doc.line(
+              data.cell.x + 4,
+              data.cell.y + data.cell.height,
+              data.cell.x + data.cell.width - 4,
+              data.cell.y + data.cell.height
+            );
           }
         }
       });
