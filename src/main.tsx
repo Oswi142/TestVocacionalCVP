@@ -4,9 +4,9 @@ import App from './App';
 import './index.css';
 
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import theme from './theme';
+import theme from '@/infrastructure/config/theme';
 
-import { processPendingSubmissions } from './utils/offlineSync';
+import { processPendingSubmissions } from '@/infrastructure/utils/offlineSync';
 
 const rootElement = document.getElementById('root')!;
 const root = ReactDOM.createRoot(rootElement);

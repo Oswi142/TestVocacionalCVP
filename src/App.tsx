@@ -1,32 +1,32 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Login from './features/auth/pages/Login';
-import ClientDashboard from './features/dashboard/pages/ClientDashboard';
-import AdminDashboard from './features/dashboard/pages/AdminDashboard';
-import Entrevista from './features/tests/pages/Entrevista';
-import ProtectedRoute from './features/auth/components/ProtectedRoute';
-import UserManagement from './features/admin/pages/UserManagement';
-import IPPR from './features/tests/pages/IPPR';
-import ClientsAnswers from './features/admin/pages/ClientsAnswers';
-import Chaside from './features/tests/pages/Chaside';
-import MACI from './features/tests/pages/MACI';
-import ClientsReports from './features/admin/pages/ClientsReports';
-import DatDashboard from './features/tests/pages/dat/DatDashboard';
-import DatVerbal from './features/tests/pages/dat/DatVerbal';
-import DatNumerico from './features/tests/pages/dat/DatNumerico';
-import DatAbstracto from './features/tests/pages/dat/DatAbstracto';
-import DatMecanico from './features/tests/pages/dat/DatMecanico';
-import DatEspacial from './features/tests/pages/dat/DatEspacial';
-import DatOrtografia from './features/tests/pages/dat/DatOrtografia';
+import Login from '@/presentation/features/auth/pages/Login';
+import ClientDashboard from '@/presentation/features/dashboard/pages/ClientDashboard';
+import AdminDashboard from '@/presentation/features/dashboard/pages/AdminDashboard';
+import Entrevista from '@/presentation/features/tests/pages/Entrevista';
+import ProtectedRoute from '@/presentation/features/auth/components/ProtectedRoute';
+import UserManagement from '@/presentation/features/admin/pages/UserManagement';
+import IPPR from '@/presentation/features/tests/pages/IPPR';
+import ClientsAnswers from '@/presentation/features/admin/pages/ClientsAnswers';
+import Chaside from '@/presentation/features/tests/pages/Chaside';
+import MACI from '@/presentation/features/tests/pages/MACI';
+import ClientsReports from '@/presentation/features/admin/pages/ClientsReports';
+import DatDashboard from '@/presentation/features/tests/pages/dat/DatDashboard';
+import DatVerbal from '@/presentation/features/tests/pages/dat/DatVerbal';
+import DatNumerico from '@/presentation/features/tests/pages/dat/DatNumerico';
+import DatAbstracto from '@/presentation/features/tests/pages/dat/DatAbstracto';
+import DatMecanico from '@/presentation/features/tests/pages/dat/DatMecanico';
+import DatEspacial from '@/presentation/features/tests/pages/dat/DatEspacial';
+import DatOrtografia from '@/presentation/features/tests/pages/dat/DatOrtografia';
 
-import Introduccion from './features/tests/pages/Introduccion';
+import Introduccion from '@/presentation/features/tests/pages/Introduccion';
 
-import { AuthProvider } from './components/AuthContext';
+import { AuthProvider } from '@/presentation/components/AuthContext';
 
-import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { useOnlineStatus } from '@/application/useCases/useOnlineStatus';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { Box, Tooltip, Zoom } from '@mui/material';
-import AnimatedBackground from './components/AnimatedBackground';
-import ErrorBoundary from './components/ErrorBoundary';
+import AnimatedBackground from '@/presentation/components/AnimatedBackground';
+import ErrorBoundary from '@/presentation/components/ErrorBoundary';
 
 function App() {
   const isOnline = useOnlineStatus();

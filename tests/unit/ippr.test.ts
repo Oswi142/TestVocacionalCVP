@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mapIpprAnswerTextToScore, calculateIpprResultSummary, computeIpprScore, downloadIpprReportPDF } from '../../src/utils/ippr';
 
-vi.mock('../../src/supabaseClient', () => {
+vi.mock('@/infrastructure/config/supabaseClient', () => {
     const chainable = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
