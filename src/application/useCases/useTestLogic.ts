@@ -57,7 +57,7 @@ export const useTestLogic = <T extends BaseQuestion>(
     message: '',
     severity: 'success' as 'success' | 'error' | 'warning' | 'info',
   });
-  const [dialogs, setDialogs] = useState({ confirm: false, exit: false });
+  const [dialogs, setDialogs] = useState({ confirm: false, exit: false, offlineBlock: false });
 
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'warning' | 'info' = 'success') => {
@@ -261,12 +261,9 @@ export const useTestLogic = <T extends BaseQuestion>(
     );
 
     setDialogs((prev) => ({ ...prev, confirm: false }));
+
     setSaving(true);
     try {
-      if (!navigator.onLine) {
-        throw new Error('Offline');
-      }
-
       await testService.submitAnswers(visiblePayload);
 
       localStorage.removeItem(STORAGE_KEY);
@@ -274,22 +271,7 @@ export const useTestLogic = <T extends BaseQuestion>(
       showSnackbar('Respuestas enviadas correctamente', 'success');
       setTimeout(() => navigate(navigateOnSubmit, { replace: true, state: { showConfetti: true } }), 500);
     } catch (err: any) {
-
-      if (!navigator.onLine || err.message === 'Offline' || err.message?.includes('fetch')) {
-        const pending = JSON.parse(localStorage.getItem('pending_submissions') || '[]');
-        pending.push({
-          id: Date.now(),
-          payload,
-          storageKey: STORAGE_KEY
-        });
-        localStorage.setItem('pending_submissions', JSON.stringify(pending));
-
-        showSnackbar('Sin conexión. Las respuestas se enviarán automáticamente cuando vuelvas a estar online.', 'warning');
-        localStorage.removeItem(STORAGE_KEY);
-        setTimeout(() => navigate(navigateOnSubmit, { replace: true }), 3000);
-      } else {
         showSnackbar('Hubo un problema al enviar tus respuestas. Por favor, intenta de nuevo o contacta con soporte.', 'error');
-      }
     } finally {
       setSaving(false);
     }
@@ -346,7 +328,14 @@ export const useTestLogic = <T extends BaseQuestion>(
       setDialogs((prev) => ({ ...prev, confirm: false }));
       submitTest();
     },
-    onSubmitClick: () => setDialogs((prev) => ({ ...prev, confirm: true })),
+    onSubmitClick: () => {
+      if (!navigator.onLine) {
+        saveToLocal();
+        setDialogs((prev) => ({ ...prev, offlineBlock: true }));
+      } else {
+        setDialogs((prev) => ({ ...prev, confirm: true }));
+      }
+    },
     onSnackbarClose: handleSnackbarClose,
     snackbar,
     dialogs,

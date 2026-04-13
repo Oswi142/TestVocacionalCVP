@@ -32,8 +32,8 @@ interface TestLayoutProps {
     onSubmitClick: () => void;
     onSnackbarClose: () => void;
     snackbar: { open: boolean; message: string; severity: 'success' | 'error' | 'warning' | 'info' };
-    dialogs: { confirm: boolean; exit: boolean };
-    setDialogs: React.Dispatch<React.SetStateAction<{ confirm: boolean; exit: boolean }>>;
+    dialogs: { confirm: boolean; exit: boolean; offlineBlock: boolean };
+    setDialogs: React.Dispatch<React.SetStateAction<{ confirm: boolean; exit: boolean; offlineBlock: boolean }>>;
     onConfirmExit: () => void;
     onConfirmSubmit: () => void;
     children: React.ReactNode;
@@ -416,6 +416,60 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                                 }}
                             >
                                 Salir
+                            </Button>
+                        </DialogActions>
+                    </Box>
+                </Dialog>
+
+                <Dialog
+                    open={!!dialogs.offlineBlock}
+                    onClose={() => setDialogs((prev) => ({ ...prev, offlineBlock: false }))}
+                    PaperProps={{
+                        sx: {
+                            borderRadius: 4,
+                            backgroundColor: 'rgba(253, 237, 237, 0.95)',
+                            backdropFilter: 'blur(16px)',
+                            WebkitBackdropFilter: 'blur(16px)',
+                            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
+                            border: '1px solid rgba(255, 255, 255, 0.5)',
+                            overflow: 'hidden'
+                        }
+                    }}
+                    sx={{
+                        '& .MuiBackdrop-root': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                            backdropFilter: 'blur(4px)',
+                        }
+                    }}
+                >
+                    <Box sx={{ textAlign: 'center', p: 4 }}>
+                        <WarningAmberIcon sx={{ fontSize: 48, color: '#d32f2f', mb: 1 }} />
+                        <DialogTitle sx={{ fontWeight: '800', color: '#c62828', p: 0, pb: 1, fontSize: '1.25rem' }}>
+                            Sin conexión
+                        </DialogTitle>
+                        <DialogContent sx={{ p: 0, pb: 3 }}>
+                            <DialogContentText sx={{ color: '#c62828', fontWeight: 500 }}>
+                                No tienes conexión a internet. Tus respuestas están guardadas temporalmente, inténtalo de nuevo cuando tengas conexión por favor.
+                            </DialogContentText>
+                        </DialogContent>
+                        <DialogActions sx={{ justifyContent: 'center', p: 0 }}>
+                            <Button
+                                onClick={() => setDialogs((prev) => ({ ...prev, offlineBlock: false }))}
+                                variant="contained"
+                                color="error"
+                                sx={{
+                                    borderRadius: 3,
+                                    textTransform: 'none',
+                                    fontWeight: 700,
+                                    boxShadow: '0 4px 12px rgba(211, 47, 47, 0.3)',
+                                    transition: 'all 0.2s',
+                                    '&:hover': {
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: '0 6px 16px rgba(211, 47, 47, 0.4)',
+                                    }
+                                }}
+                            >
+                                Aceptar
                             </Button>
                         </DialogActions>
                     </Box>

@@ -96,6 +96,11 @@ const Introduccion: React.FC = () => {
 
         if (!user || !user.id) return;
 
+        if (!navigator.onLine) {
+            showSnackbar('Necesitas conexión para enviar porfa.', 'warning');
+            return;
+        }
+
         try {
             setDialogs(prev => ({ ...prev, confirm: false }));
             setSaving(true);

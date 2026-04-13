@@ -27,6 +27,7 @@ import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { Box, Tooltip, Zoom } from '@mui/material';
 import AnimatedBackground from '@/presentation/components/AnimatedBackground';
 import ErrorBoundary from '@/presentation/components/ErrorBoundary';
+import SyncManager from '@/presentation/components/SyncManager';
 
 function App() {
   const isOnline = useOnlineStatus();
@@ -84,6 +85,7 @@ function App() {
             </Box>
           </Tooltip>
         </Zoom>
+        <SyncManager isOnline={isOnline} />
       </AuthProvider>
     </ErrorBoundary>
   );

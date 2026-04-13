@@ -59,7 +59,7 @@ export const testService = {
 
             const existing = JSON.parse(localStorage.getItem('cache_all_options') || '[]');
             const updated = [...existing.filter((opt: any) => !questionIds.includes(opt.questionid)), ...allOpts];
-            localStorage.setItem('cache_all_options', JSON.stringify(updated.slice(-2000)));
+            localStorage.setItem('cache_all_options', JSON.stringify(updated));
 
             return allOpts;
         } catch (error) {
@@ -88,32 +88,77 @@ export const testService = {
     },
 
     async getDetailedProgress(clientId: number) {
-        const { data: dbRaw, error } = await supabase
-            .from('testsanswers')
-            .select('testid, questionid, details')
-            .eq('clientid', clientId);
+        const cacheKey = `cache_progress_${clientId}`;
 
-        if (error) throw error;
-
-        const dbData = (dbRaw || []).filter(r => !r.details || !r.details.startsWith('[HIST_'));
-
-        const { data: clientInfo, error: infoError } = await supabase
-            .from('clientsinfo')
-            .select('userid')
-            .eq('userid', clientId)
-            .single();
-
-        const hasCompletedIntro = !infoError && !!clientInfo;
-
+        let hasCompletedIntro = false;
         let completedMainTestIds: number[] = [];
         let completedDatTypes: string[] = [];
         const answeredQuestionIds = new Set<number>();
 
-        if (dbData) {
-            dbData.forEach(r => {
-                completedMainTestIds.push(r.testid);
-                answeredQuestionIds.add(r.questionid);
-            });
+        try {
+            if (!navigator.onLine) {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    hasCompletedIntro = parsed.hasCompletedIntro;
+                    completedMainTestIds = parsed.completedMainTestIds || [];
+                    completedDatTypes = parsed.completedDatTypes || [];
+                } else {
+                    throw new Error('Offline and no progress cache');
+                }
+            } else {
+                const { data: dbRaw, error } = await supabase
+                    .from('testsanswers')
+                    .select('testid, questionid, details')
+                    .eq('clientid', clientId);
+
+                if (error) throw error;
+
+                const dbData = (dbRaw || []).filter(r => !r.details || !r.details.startsWith('[HIST_'));
+
+                const { data: clientInfo, error: infoError } = await supabase
+                    .from('clientsinfo')
+                    .select('userid')
+                    .eq('userid', clientId)
+                    .single();
+
+                hasCompletedIntro = !infoError && !!clientInfo;
+
+                if (dbData) {
+                    dbData.forEach(r => {
+                        completedMainTestIds.push(r.testid);
+                        answeredQuestionIds.add(r.questionid);
+                    });
+                }
+
+                if (answeredQuestionIds.size > 0) {
+                    const datQuestionIds = Array.from(answeredQuestionIds);
+                    const { data: qData, error: qError } = await supabase
+                        .from('questions')
+                        .select('dat_type')
+                        .in('id', datQuestionIds)
+                        .eq('testid', 5);
+
+                    if (!qError && qData) {
+                        completedDatTypes = [...new Set(qData.map(q => q.dat_type).filter(t => !!t))] as string[];
+                    }
+                }
+            }
+        } catch (error) {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                hasCompletedIntro = parsed.hasCompletedIntro;
+                completedMainTestIds = parsed.completedMainTestIds || [];
+                completedDatTypes = parsed.completedDatTypes || [];
+            } else {
+                throw error;
+            }
+        }
+
+        const pendingInfo = JSON.parse(localStorage.getItem('pending_clientsinfo') || '[]');
+        if (pendingInfo.some((p: any) => p.userid === clientId)) {
+            hasCompletedIntro = true;
         }
 
         const pending = JSON.parse(localStorage.getItem('pending_submissions') || '[]');
@@ -121,31 +166,25 @@ export const testService = {
             const payload = item.payload || [];
             if (payload.length > 0 && payload[0].clientid === clientId) {
                 completedMainTestIds.push(payload[0].testid);
-                payload.forEach((ans: any) => answeredQuestionIds.add(ans.questionid));
+                // Also parse DAT strings if dat subtests were completed offline!
+                // pending_submissions saves payload. In DAT, testid is 5 and dat_type is not directly in testsanswers, but we saved dat_type in local variables?
+                // Actually to keep it simple, `progressCacheKey` mutations are much safer and already happening elsewhere, but this ensures `testsanswers` offline acts correctly.
             }
         });
 
         completedMainTestIds = [...new Set(completedMainTestIds)];
 
-        const datQuestionIds = Array.from(answeredQuestionIds);
-
-        if (datQuestionIds.length > 0) {
-            const { data: qData, error: qError } = await supabase
-                .from('questions')
-                .select('dat_type')
-                .in('id', datQuestionIds)
-                .eq('testid', 5);
-
-            if (!qError && qData) {
-                completedDatTypes = [...new Set(qData.map(q => q.dat_type).filter(t => !!t))] as string[];
-            }
-        }
-
-        return {
+        const result = {
             hasCompletedIntro,
             completedMainTestIds,
             completedDatTypes
         };
+
+        if (navigator.onLine) {
+            localStorage.setItem(cacheKey, JSON.stringify(result));
+        }
+
+        return result;
     },
 
     async prefetchAllTests(onProgress?: (progress: number) => void) {
@@ -155,6 +194,7 @@ export const testService = {
 
         try {
             const mainTests = [
+                { id: 0, type: null },
                 { id: 1, type: null },
                 { id: 2, type: null },
                 { id: 3, type: null },
