@@ -67,9 +67,9 @@ describe('IPPR Utils', () => {
             {
                 name: 'Perfil Ciencias Naturales (S1 alto, resto bajo)',
                 answers: [
-                    { questionid: 101, answerid: 1 },
-                    { questionid: 102, answerid: 1 },
-                    { questionid: 201, answerid: 3 },
+                    { question_id: 101, answer_id: 1 },
+                    { question_id: 102, answer_id: 1 },
+                    { question_id: 201, answer_id: 3 },
                 ],
                 expectedAnswered: 3,
                 expectedTotalScore: 7,
@@ -78,8 +78,8 @@ describe('IPPR Utils', () => {
             {
                 name: 'Perfil Salud (S3 alto, S1 medio)',
                 answers: [
-                    { questionid: 301, answerid: 1 },
-                    { questionid: 101, answerid: 2 },
+                    { question_id: 301, answer_id: 1 },
+                    { question_id: 101, answer_id: 2 },
                 ],
                 expectedAnswered: 2,
                 expectedTotalScore: 5,
@@ -88,9 +88,9 @@ describe('IPPR Utils', () => {
             {
                 name: 'Perfil Equilibrado o Indeciso',
                 answers: [
-                    { questionid: 101, answerid: 2 },
-                    { questionid: 201, answerid: 2 },
-                    { questionid: 301, answerid: 2 },
+                    { question_id: 101, answer_id: 2 },
+                    { question_id: 201, answer_id: 2 },
+                    { question_id: 301, answer_id: 2 },
                 ],
                 expectedAnswered: 3,
                 expectedTotalScore: 6,
@@ -100,7 +100,7 @@ describe('IPPR Utils', () => {
 
         it.each(testProfiles)('Profile Name: $name', ({ answers, expectedAnswered, expectedTotalScore, expectedTopSection }) => {
             const result = calculateIpprResultSummary(answers, qToSection, idToText);
-            
+
             expect(result.totalAnswered).toBe(expectedAnswered);
             expect(result.totalScore).toBe(expectedTotalScore);
             expect(String(result.ranking[0].section)).toBe(expectedTopSection);
@@ -109,15 +109,15 @@ describe('IPPR Utils', () => {
 
     describe('Integration Wrappers (DB mocked)', () => {
         it('computeIpprScore should run without errors using mock DB', async () => {
-             const result = await computeIpprScore(1, 'active');
-             expect(result).toBeDefined();
-             expect(result.clientId).toBe(1);
-             expect(result.totalAnswered).toBe(0);
+            const result = await computeIpprScore(1, 'active');
+            expect(result).toBeDefined();
+            expect(result.client_id).toBe(1);
+            expect(result.totalAnswered).toBe(0);
         });
 
         it('downloadIpprReportPDF should generate and save PDF using mocks', async () => {
-             await downloadIpprReportPDF(1, 'active');
-             expect(true).toBe(true);
+            await downloadIpprReportPDF(1, 'active');
+            expect(true).toBe(true);
         });
     });
 });

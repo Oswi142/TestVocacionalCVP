@@ -66,10 +66,10 @@ describe('CHASIDE Utils', () => {
             {
                 name: 'El Ingeniero (Todo C positivo, resto negativo)',
                 answers: [
-                    { questionid: 1, answerid: 10 },
-                    { questionid: 4, answerid: 10 },
-                    { questionid: 2, answerid: 20 },
-                    { questionid: 3, answerid: 20 }
+                    { question_id: 1, answer_id: 10 },
+                    { question_id: 4, answer_id: 10 },
+                    { question_id: 2, answer_id: 20 },
+                    { question_id: 3, answer_id: 20 }
                 ],
                 expectedYesCount: 2,
                 expectedTopBand: 'C'
@@ -77,7 +77,7 @@ describe('CHASIDE Utils', () => {
             {
                 name: 'El Artista Indeciso (A positivo, deja el resto en blanco)',
                 answers: [
-                    { questionid: 3, answerid: 10 },
+                    { question_id: 3, answer_id: 10 },
                 ],
                 expectedYesCount: 1,
                 expectedTopBand: 'A'
@@ -85,19 +85,19 @@ describe('CHASIDE Utils', () => {
             {
                 name: 'El Rebelde (Todo negativo)',
                 answers: [
-                    { questionid: 1, answerid: 20 },
-                    { questionid: 2, answerid: 20 },
-                    { questionid: 3, answerid: 20 },
-                    { questionid: 4, answerid: 20 }
+                    { question_id: 1, answer_id: 20 },
+                    { question_id: 2, answer_id: 20 },
+                    { question_id: 3, answer_id: 20 },
+                    { question_id: 4, answer_id: 20 }
                 ],
                 expectedYesCount: 0,
-                expectedTopBand: 'C' 
+                expectedTopBand: 'C'
             }
         ];
 
         it.each(testProfiles)('Profile Name: $name', ({ answers, expectedYesCount, expectedTopBand }) => {
             const result = calculateChasideResultSummary(answers, qToBand, qToScale, idToText);
-            
+
             expect(result.yesCount).toBe(expectedYesCount);
             expect(result.ranking.overall[0].band).toBe(expectedTopBand);
         });
@@ -107,13 +107,13 @@ describe('CHASIDE Utils', () => {
         it('computeChasideScore should run without errors using mock DB', async () => {
             const result = await computeChasideScore(1, 'active');
             expect(result).toBeDefined();
-            expect(result.clientId).toBe(1);
+            expect(result.client_id).toBe(1);
             expect(result.yesCount).toBe(0);
         });
 
         it('downloadChasideReportPDF should generate and save PDF using mocks', async () => {
-             await downloadChasideReportPDF(1, 'active');
-             expect(true).toBe(true);
+            await downloadChasideReportPDF(1, 'active');
+            expect(true).toBe(true);
         });
     });
 });

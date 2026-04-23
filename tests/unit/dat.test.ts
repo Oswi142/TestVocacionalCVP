@@ -41,7 +41,7 @@ vi.mock('jspdf-autotable', () => ({
 describe('DAT Utils', () => {
     describe('DAT_LABELS (DDT)', () => {
         const datCategories = [
-            'razonamiento_verbal', 'razonamiento_numerico', 'razonamiento_abstracto', 
+            'razonamiento_verbal', 'razonamiento_numerico', 'razonamiento_abstracto',
             'razonamiento_mecanico', 'razonamiento_espacial', 'ortografia'
         ];
 
@@ -69,9 +69,9 @@ describe('DAT Utils', () => {
             {
                 name: 'Cliente Matemático (100% en Números, 0% en Verbal)',
                 answers: [
-                    { questionid: 4, answerid: 300 },
-                    { questionid: 1, answerid: 150 },
-                    { questionid: 2, answerid: 150 },
+                    { question_id: 4, answer_id: 300 },
+                    { question_id: 1, answer_id: 150 },
+                    { question_id: 2, answer_id: 150 },
                 ],
                 expectedAnswered: 3,
                 expectedCorrect: 1,
@@ -81,10 +81,10 @@ describe('DAT Utils', () => {
             {
                 name: 'Cliente Letrado (100% Verbal/Orto, 0% en Números)',
                 answers: [
-                    { questionid: 1, answerid: 100 },
-                    { questionid: 2, answerid: 200 },
-                    { questionid: 3, answerid: 300 },
-                    { questionid: 4, answerid: 150 },
+                    { question_id: 1, answer_id: 100 },
+                    { question_id: 2, answer_id: 200 },
+                    { question_id: 3, answer_id: 300 },
+                    { question_id: 4, answer_id: 150 },
                 ],
                 expectedAnswered: 4,
                 expectedCorrect: 3,
@@ -94,7 +94,7 @@ describe('DAT Utils', () => {
             {
                 name: 'Usuario Abandonador (solo rinde 1 y falla)',
                 answers: [
-                    { questionid: 1, answerid: 150 }
+                    { question_id: 1, answer_id: 150 }
                 ],
                 expectedAnswered: 1,
                 expectedCorrect: 0,
@@ -115,21 +115,21 @@ describe('DAT Utils', () => {
 
     describe('Integration Wrappers (DB mocked)', () => {
         it('computeDatScore should run without errors using mock DB', async () => {
-             const result = await computeDatScore(1, 'active');
-             expect(result).toBeDefined();
-             expect(result.clientId).toBe(1);
-             expect(result.totalAnswered).toBe(0);
+            const result = await computeDatScore(1, 'active');
+            expect(result).toBeDefined();
+            expect(result.client_id).toBe(1);
+            expect(result.totalAnswered).toBe(0);
         });
 
         it('getCompletedDatCategories should run without errors using mock DB', async () => {
-             const result = await getCompletedDatCategories(1, 'active');
-             expect(result).toBeDefined();
-             expect(Array.isArray(result)).toBe(true);
+            const result = await getCompletedDatCategories(1, 'active');
+            expect(result).toBeDefined();
+            expect(Array.isArray(result)).toBe(true);
         });
 
         it('downloadDatReportPDF should generate and save PDF using mocks', async () => {
-             await downloadDatReportPDF(1, 'active');
-             expect(true).toBe(true);
+            await downloadDatReportPDF(1, 'active');
+            expect(true).toBe(true);
         });
     });
 });

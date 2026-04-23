@@ -668,8 +668,8 @@ type RawCounts = {
 };
 &nbsp;
 export type ChasideScore = {
-  clientId: number;
-  testId: number;
+  client_id: number;
+  test_id: number;
   userName: string | null;
   schoolName: string | null;
   counts: RawCounts;
@@ -683,11 +683,11 @@ export type ChasideScore = {
   yesCount: number;
 };
 &nbsp;
-async function getChasideTestId(): Promise&lt;number&gt; {
+async function getChasidetest_id(): Promise&lt;number&gt; {
   const { data, error } = await supabase
     .from('tests')
-    .select('id, testname')
-    .ilike('testname', '%chaside%')
+    .select('id, test_name')
+    .ilike('test_name', '%chaside%')
     .maybeSingle();
 &nbsp;
   <span class="missing-if-branch" title="if path not taken" >I</span>if (error || !data) {
@@ -696,26 +696,26 @@ async function getChasideTestId(): Promise&lt;number&gt; {
   return data.id;
 }
 &nbsp;
-export async function computeChasideScore(clientId: number, attemptId: string = 'active'): Promise&lt;ChasideScore&gt; {
-  const testId = await getChasideTestId();
+export async function computeChasideScore(client_id: number, attemptId: string = 'active'): Promise&lt;ChasideScore&gt; {
+  const test_id = await getChasidetest_id();
 &nbsp;
   const { data: urows } = await supabase
     .from('users')
     .select('id,name')
-    .eq('id', clientId)
+    .eq('id', client_id)
     .limit(1);
   const userName = (urows &amp;&amp; urows[0]?.name) || null;
   const { data: cirows } = await supabase
-    .from('clientsinfo')
+    .from('clients_info')
     .select('school')
-    .eq('userid', clientId)
+    .eq('user_id', client_id)
     .limit(1);
   const schoolName = (cirows &amp;&amp; cirows[0]?.school) || null;
 &nbsp;
   const { data: qrows, error: qErr } = await supabase
     .from('questions')
-    .select('id, section, chatype')
-    .eq('testid', testId)
+    .select('id, section, cha_type')
+    .eq('test_id', test_id)
     .range(0, 99999);
 &nbsp;
   <span class="missing-if-branch" title="if path not taken" >I</span>if (qErr) <span class="cstat-no" title="statement not covered" >throw qErr;</span>
@@ -725,7 +725,7 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
 &nbsp;
   for (const q of qrows || <span class="branch-1 cbranch-no" title="branch not covered" >[]) {</span>
     const band = <span class="cstat-no" title="statement not covered" >SECTION_TO_BAND[q.section as number];</span>
-    const scale = (<span class="cstat-no" title="statement not covered" >q.chatype as string)?.toLowerCase() as Scale;</span>
+    const scale = (<span class="cstat-no" title="statement not covered" >q.cha_type as string)?.toLowerCase() as Scale;</span>
 <span class="cstat-no" title="statement not covered" >    if (!band) <span class="cstat-no" title="statement not covered" >continue;</span></span>
 <span class="cstat-no" title="statement not covered" >    if (scale !== 'interest' &amp;&amp; scale !== 'aptitude') <span class="cstat-no" title="statement not covered" >continue;</span></span>
 <span class="cstat-no" title="statement not covered" >    qToBand.set(q.id, band);</span>
@@ -733,11 +733,11 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
   }
 &nbsp;
   const { data: arows, error: aErr } = await supabase
-    .from('testsanswers')
-    .select('questionid, answerid, details')
-    .eq('clientid', clientId)
-    .eq('testid', testId)
-    .order('questionid', { ascending: true })
+    .from('test_answers')
+    .select('question_id, answer_id, details')
+    .eq('client_id', client_id)
+    .eq('test_id', test_id)
+    .order('question_id', { ascending: true })
     .range(0, 999999);
 &nbsp;
   <span class="missing-if-branch" title="if path not taken" >I</span>if (aErr) <span class="cstat-no" title="statement not covered" >throw aErr;</span>
@@ -748,16 +748,16 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
 <span class="cstat-no" title="statement not covered" >    return d.startsWith(attemptId);</span>
   });
 &nbsp;
-  const answerIds = Array.from(
-    new Set((arows || <span class="branch-1 cbranch-no" title="branch not covered" >[]).m</span>ap(<span class="fstat-no" title="function not covered" >(r</span>) =&gt; <span class="cstat-no" title="statement not covered" >r.answerid)</span>.filter(<span class="fstat-no" title="function not covered" >(x</span>): x is number =&gt; <span class="cstat-no" title="statement not covered" >x != null)</span>)
+  const answer_ids = Array.from(
+    new Set((arows || <span class="branch-1 cbranch-no" title="branch not covered" >[]).m</span>ap(<span class="fstat-no" title="function not covered" >(r</span>) =&gt; <span class="cstat-no" title="statement not covered" >r.answer_id)</span>.filter(<span class="fstat-no" title="function not covered" >(x</span>): x is number =&gt; <span class="cstat-no" title="statement not covered" >x != null)</span>)
   );
 &nbsp;
   let idToText = new Map&lt;number, string&gt;();
-  <span class="missing-if-branch" title="if path not taken" >I</span>if (answerIds.length) {
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (answer_ids.length) {
     const { data: optrows, error: oErr } = <span class="cstat-no" title="statement not covered" >await supabase</span>
-      .from('answeroptions')
+      .from('answer_options')
       .select('id, answer')
-      .in('id', answerIds)
+      .in('id', answer_ids)
       .range(0, 999999);
 <span class="cstat-no" title="statement not covered" >    if (oErr) <span class="cstat-no" title="statement not covered" >throw oErr;</span></span>
 <span class="cstat-no" title="statement not covered" >    idToText = new Map((optrows || []).map(<span class="fstat-no" title="function not covered" >(o</span>) =&gt; <span class="cstat-no" title="statement not covered" >[o.id, String(o.answer || '')])</span>);</span>
@@ -771,8 +771,8 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
   );
 &nbsp;
   return {
-    clientId,
-    testId,
+    client_id,
+    test_id,
     userName,
     schoolName,
     counts,
@@ -784,7 +784,7 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
 }
 &nbsp;
 export function calculateChasideResultSummary(
-  filteredArows: Array&lt;{ questionid: number; answerid?: number | null; details?: string | null }&gt;,
+  filteredArows: Array&lt;{ question_id: number; answer_id?: number | null; details?: string | null }&gt;,
   qToBand: Map&lt;number, Band&gt;,
   qToScale: Map&lt;number, Scale&gt;,
   idToText: Map&lt;number, string&gt;
@@ -801,13 +801,13 @@ export function calculateChasideResultSummary(
   let yesCount = 0;
 &nbsp;
   for (const r of filteredArows) {
-    const band = qToBand.get(r.questionid);
-    const scale = qToScale.get(r.questionid);
+    const band = qToBand.get(r.question_id);
+    const scale = qToScale.get(r.question_id);
     <span class="missing-if-branch" title="if path not taken" >I</span>if (!band || !scale) <span class="cstat-no" title="statement not covered" >continue;</span>
 &nbsp;
     answered++;
 &nbsp;
-    const txt = r.answerid ? idToText.get(r.answerid) : <span class="branch-1 cbranch-no" title="branch not covered" >r.details;</span>
+    const txt = r.answer_id ? idToText.get(r.answer_id) : <span class="branch-1 cbranch-no" title="branch not covered" >r.details;</span>
     if (isYes(txt)) {
       counts[scale][band] += 1;
       yesCount++;
@@ -836,8 +836,8 @@ export function calculateChasideResultSummary(
   return { counts, totals: { interest: totalsInterest, aptitude: totalsAptitude, overall }, ranking, answered, yesCount };
 }
 &nbsp;
-export async function downloadChasideReportPDF(clientId: number, attemptId: string = 'active'): Promise&lt;void&gt; {
-  const score = await computeChasideScore(clientId, attemptId);
+export async function downloadChasideReportPDF(client_id: number, attemptId: string = 'active'): Promise&lt;void&gt; {
+  const score = await computeChasideScore(client_id, attemptId);
 &nbsp;
   const doc = new jsPDF();
   const now = new Date().toLocaleDateString('es-ES');
@@ -849,10 +849,10 @@ export async function downloadChasideReportPDF(clientId: number, attemptId: stri
   doc.setFontSize(11);
   doc.text(`Fecha: ${now}`, 14, 26);
   <span class="missing-if-branch" title="if path not taken" >I</span>if (score.schoolName) {
-<span class="cstat-no" title="statement not covered" >    doc.text(`Nombre: ${score.userName ?? clientId.toString()}`, 14, 33);</span>
+<span class="cstat-no" title="statement not covered" >    doc.text(`Nombre: ${score.userName ?? client_id.toString()}`, 14, 33);</span>
 <span class="cstat-no" title="statement not covered" >    doc.text(`Colegio: ${score.schoolName}`, 14, 40);</span>
   } else {
-    doc.text(`Nombre: ${score.userName ?? clientId.toString()}`, 14, 33);
+    doc.text(`Nombre: ${score.userName ?? client_id.toString()}`, 14, 33);
   }
 &nbsp;
   doc.setFontSize(10);
@@ -909,7 +909,7 @@ export async function downloadChasideReportPDF(clientId: number, attemptId: stri
   doc.setFontSize(10);
   doc.text(quickNote, 14, y);
 &nbsp;
-  const filename = `CHASIDE_${score.userName ?? clientId}.pdf`;
+  const filename = `CHASIDE_${score.userName ?? client_id}.pdf`;
   doc.save(filename);
 }
 &nbsp;</pre></td></tr></table></pre>

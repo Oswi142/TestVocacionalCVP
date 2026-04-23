@@ -12,7 +12,7 @@ const Entrevista: React.FC = () => {
 
   const {
     allQuestions,
-    answerOptions,
+    answer_options,
     currentSection,
     setCurrentSection,
     answers,
@@ -64,12 +64,12 @@ const Entrevista: React.FC = () => {
       const entries = allQuestions.map((q: Question) => {
         const isVisible = shouldDisplayQuestion(q.id);
         const value = answers[q.id];
-        const options = answerOptions.filter(opt => opt.questionid === q.id);
+        const options = answer_options.filter(opt => opt.question_id === q.id);
 
         const data: any = {
-          clientid: user.id,
-          testid: 1,
-          questionid: q.id
+          client_id: user.id,
+          test_id: 1,
+          question_id: q.id
         };
 
         if (!isVisible) {
@@ -79,12 +79,12 @@ const Entrevista: React.FC = () => {
 
         if (options.length > 0) {
           const parsed = parseInt(value);
-          data.answerid = Number.isInteger(parsed) ? parsed : null;
+          data.answer_id = Number.isInteger(parsed) ? parsed : null;
         } else {
           data.details = value || '';
         }
         return data;
-      }).filter(e => (e.answerid !== null && !isNaN(e.answerid)) || (e.details !== undefined && e.details !== ''));
+      }).filter(e => (e.answer_id !== null && !isNaN(e.answer_id)) || (e.details !== undefined && e.details !== ''));
 
       if (entries.length > 0) {
         await testService.submitAnswers(entries);
@@ -145,7 +145,7 @@ const Entrevista: React.FC = () => {
             <QuestionRenderer
               key={q.id}
               question={q}
-              options={answerOptions.filter(opt => opt.questionid === q.id)}
+              options={answer_options.filter(opt => opt.question_id === q.id)}
               currentAnswer={answers[q.id]}
               onAnswerChange={(qid, val) => handleAnswerChange(qid, val)}
             />

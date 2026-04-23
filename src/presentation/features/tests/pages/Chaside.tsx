@@ -7,12 +7,12 @@ import QuestionRenderer from '@/presentation/features/tests/components/QuestionR
 import { Question as BaseQuestion } from '@/domain/entities/test';
 
 interface Question extends BaseQuestion {
-  chatype: string;
+  cha_type: string;
 }
 
 const Chaside: React.FC = () => {
   const {
-    answerOptions,
+    answer_options,
     currentSection,
     setCurrentSection,
     answers,
@@ -34,8 +34,8 @@ const Chaside: React.FC = () => {
   } = useTestLogic<Question>(3, 'chaside');
 
   const questions = groupedQuestions[currentSection] || [];
-  const getOptionsForQuestion = (questionId: number) =>
-    answerOptions.filter((opt) => opt.questionid === questionId);
+  const getOptionsForQuestion = (question_id: number) =>
+    answer_options.filter((opt) => opt.question_id === question_id);
 
   return (
     <TestLayout
@@ -58,7 +58,7 @@ const Chaside: React.FC = () => {
       onConfirmSubmit={onConfirmSubmit}
     >
       {['interest', 'aptitude'].map((type) => {
-        const questionsOfType = questions.filter((q) => q.chatype === type);
+        const questionsOfType = questions.filter((q) => q.cha_type === type);
         if (questionsOfType.length === 0) return null;
         return (
           <Box key={type} sx={{ mb: 3 }}>

@@ -9,7 +9,7 @@ interface Question extends BaseQuestion { }
 
 const MACI: React.FC = () => {
   const {
-    answerOptions,
+    answer_options,
     currentSection,
     setCurrentSection,
     answers,
@@ -31,8 +31,8 @@ const MACI: React.FC = () => {
   } = useTestLogic<Question>(4, 'maci');
 
   const questions = groupedQuestions[currentSection] || [];
-  const getOptionsForQuestion = (questionId: number) =>
-    answerOptions.filter((opt) => opt.questionid === questionId);
+  const getOptionsForQuestion = (question_id: number) =>
+    answer_options.filter((opt) => opt.question_id === question_id);
 
   return (
     <TestLayout

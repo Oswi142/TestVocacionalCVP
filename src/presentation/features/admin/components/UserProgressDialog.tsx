@@ -28,7 +28,7 @@ const UserProgressDialog: React.FC<UserProgressDialogProps> = ({ open, onClose, 
         if (!user) return;
         setLoading(true);
         try {
-            const data = await testService.getDetailedProgress(user.userid);
+            const data = await testService.getDetailedProgress(user.user_id);
             setProgressData(data);
         } catch (e) {
             console.error(e);
@@ -96,7 +96,7 @@ const UserProgressDialog: React.FC<UserProgressDialogProps> = ({ open, onClose, 
                             <Box key={test.id} sx={{ p: 2, borderRadius: '16px', backgroundColor: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.04)' }}>
                                 <Box display="flex" alignItems="center" justifyContent="space-between">
                                     <Box display="flex" alignItems="center" gap={1.5}>
-                                        {((test.id !== 5 && progressData?.completedMainTestIds.includes(test.id)) ||
+                                        {((test.id !== 5 && progressData?.completedMaintest_ids.includes(test.id)) ||
                                             (test.id === 5 && progressData?.completedDatTypes.length >= 6)) ? (
                                             <CheckCircleIcon sx={{ color: '#10b981', fontSize: 20 }} />
                                         ) : (

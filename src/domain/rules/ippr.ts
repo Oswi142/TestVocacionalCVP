@@ -35,8 +35,8 @@ export function mapIpprAnswerTextToScore(txt: string | null | undefined): number
 }
 
 type IpprResult = {
-  clientId: number;
-  testId: number;
+  client_id: number;
+  test_id: number;
   client: import('@/infrastructure/utils/pdfUtils').ClientPdfData;
   sectionScores: SectionScore;
   totalAnswered: number;
@@ -44,11 +44,11 @@ type IpprResult = {
   ranking: Array<{ section: SectionId; label: string; value: number }>;
 };
 
-async function getIpprTestId(): Promise<number> {
+async function getIpprtest_id(): Promise<number> {
   const { data, error } = await supabase
     .from('tests')
-    .select('id, testname')
-    .ilike('testname', '%ipp%')
+    .select('id, test_name')
+    .ilike('test_name', '%ipp%')
     .maybeSingle();
 
   if (error || !data) {
@@ -57,36 +57,36 @@ async function getIpprTestId(): Promise<number> {
   return data.id;
 }
 
-export async function computeIpprScore(clientId: number, attemptId: string = 'active'): Promise<IpprResult> {
-  const testId = await getIpprTestId();
+export async function computeIpprScore(client_id: number, attemptId: string = 'active'): Promise<IpprResult> {
+  const test_id = await getIpprtest_id();
 
   const { data: urows } = await supabase
     .from('users')
-    .select('id, name, firstlastname, secondlastname')
-    .eq('id', clientId)
+    .select('id, name, first_last_name, second_last_name')
+    .eq('id', client_id)
     .limit(1);
   const urow = urows?.[0];
   const { data: cirows } = await supabase
-    .from('clientsinfo')
+    .from('clients_info')
     .select('school, grade, birthday, birthplace, gender')
-    .eq('userid', clientId)
+    .eq('user_id', client_id)
     .limit(1);
   const ci = cirows?.[0];
   const clientData: import('@/infrastructure/utils/pdfUtils').ClientPdfData = {
-    name:           urow?.name           ?? null,
-    firstlastname:  urow?.firstlastname  ?? null,
-    secondlastname: urow?.secondlastname ?? null,
-    school:         ci?.school           ?? null,
-    grade:          ci?.grade            ?? null,
-    birthday:       ci?.birthday         ?? null,
-    birthplace:     ci?.birthplace       ?? null,
-    gender:         ci?.gender           ?? null,
+    name: urow?.name ?? null,
+    first_last_name: urow?.first_last_name ?? null,
+    second_last_name: urow?.second_last_name ?? null,
+    school: ci?.school ?? null,
+    grade: ci?.grade ?? null,
+    birthday: ci?.birthday ?? null,
+    birthplace: ci?.birthplace ?? null,
+    gender: ci?.gender ?? null,
   };
 
   const { data: qrows, error: qErr } = await supabase
     .from('questions')
     .select('id, section')
-    .eq('testid', testId)
+    .eq('test_id', test_id)
     .range(0, 999999);
   if (qErr) throw qErr;
 
@@ -97,11 +97,11 @@ export async function computeIpprScore(clientId: number, attemptId: string = 'ac
   });
 
   const { data: arows, error: aErr } = await supabase
-    .from('testsanswers')
-    .select('questionid, answerid, details')
-    .eq('clientid', clientId)
-    .eq('testid', testId)
-    .order('questionid', { ascending: true })
+    .from('test_answers')
+    .select('question_id, answer_id, details')
+    .eq('client_id', client_id)
+    .eq('test_id', test_id)
+    .order('question_id', { ascending: true })
     .range(0, 999999);
   if (aErr) throw aErr;
 
@@ -111,16 +111,16 @@ export async function computeIpprScore(clientId: number, attemptId: string = 'ac
     return d.startsWith(attemptId);
   });
 
-  const answerIds = Array.from(
-    new Set((arows || []).map((r) => r.answerid).filter((x): x is number => x != null))
+  const answer_ids = Array.from(
+    new Set((arows || []).map((r) => r.answer_id).filter((x): x is number => x != null))
   );
 
   let idToText = new Map<number, string>();
-  if (answerIds.length) {
+  if (answer_ids.length) {
     const { data: opts, error: oErr } = await supabase
-      .from('answeroptions')
+      .from('answer_options')
       .select('id, answer')
-      .in('id', answerIds)
+      .in('id', answer_ids)
       .range(0, 999999);
     if (oErr) throw oErr;
     idToText = new Map((opts || []).map((o) => [o.id, String(o.answer || '')]));
@@ -133,8 +133,8 @@ export async function computeIpprScore(clientId: number, attemptId: string = 'ac
   );
 
   return {
-    clientId,
-    testId,
+    client_id,
+    test_id,
     client: clientData,
     sectionScores,
     totalAnswered,
@@ -144,7 +144,7 @@ export async function computeIpprScore(clientId: number, attemptId: string = 'ac
 }
 
 export function calculateIpprResultSummary(
-  filteredArows: Array<{ questionid: number; answerid?: number | null; details?: string | null }>,
+  filteredArows: Array<{ question_id: number; answer_id?: number | null; details?: string | null }>,
   qToSection: Map<number, SectionId>,
   idToText: Map<number, string>
 ) {
@@ -155,10 +155,10 @@ export function calculateIpprResultSummary(
   let totalAnswered = 0;
 
   for (const r of filteredArows) {
-    const sec = qToSection.get(r.questionid);
+    const sec = qToSection.get(r.question_id);
     if (!sec) continue;
 
-    const txt = r.answerid ? idToText.get(r.answerid) : r.details;
+    const txt = r.answer_id ? idToText.get(r.answer_id) : r.details;
     const score = mapIpprAnswerTextToScore(txt);
     sectionScores[sec] += score;
     totalAnswered++;
@@ -173,8 +173,8 @@ export function calculateIpprResultSummary(
   return { sectionScores, totalAnswered, totalScore, ranking };
 }
 
-export async function downloadIpprReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {
-  const res = await computeIpprScore(clientId, attemptId);
+export async function downloadIpprReportPDF(client_id: number, attemptId: string = 'active'): Promise<void> {
+  const res = await computeIpprScore(client_id, attemptId);
   const { drawPremiumHeader, drawClientCard, drawSectionHeading, drawFooter, PDF_COLORS, PDF_FONT_SIZE } = await import('@/infrastructure/utils/pdfUtils');
 
   const doc = new jsPDF();
@@ -248,5 +248,5 @@ export async function downloadIpprReportPDF(clientId: number, attemptId: string 
   );
 
   drawFooter(doc);
-  doc.save(`IPPR_${res.client.name ?? clientId}.pdf`);
+  doc.save(`IPPR_${res.client.name ?? client_id}.pdf`);
 }

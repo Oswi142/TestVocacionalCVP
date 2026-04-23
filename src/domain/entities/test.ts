@@ -2,28 +2,28 @@ export interface Question {
     id: number;
     question: string | null;
     section: number;
-    testid: number;
+    test_id: number;
     dat_type?: string | null;
     image_path?: string | null;
 }
 
 export interface AnswerOption {
     id: number;
-    questionid: number;
+    question_id: number;
     answer: string;
 }
 
 export interface Test {
     id: number;
-    testname: string;
+    test_name: string;
 }
 
 export interface TestAnswer {
     id?: number;
-    clientid: number;
-    testid: number;
-    questionid: number;
-    answerid: number | null;
+    client_id: number;
+    test_id: number;
+    question_id: number;
+    answer_id: number | null;
     details?: string | null;
     created_at?: string;
 }

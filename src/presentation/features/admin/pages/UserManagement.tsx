@@ -50,8 +50,8 @@ import ActionOverlay from '@/presentation/components/ActionOverlay';
 
 const UserManagement: React.FC = () => {
   const [name, setName] = useState('');
-  const [firstLastName, setFirstLastName] = useState('');
-  const [secondLastName, setSecondLastName] = useState('');
+  const [first_last_name, setfirst_last_name] = useState('');
+  const [second_last_name, setsecond_last_name] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('client');
@@ -79,7 +79,7 @@ const UserManagement: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   const getLoggedUser = () => {
     try {
       return JSON.parse(localStorage.getItem('user') || '{}');
@@ -95,9 +95,9 @@ const UserManagement: React.FC = () => {
 
   useEffect(() => {
     if (!editingUser) {
-        setUsername(generateUsername(name, firstLastName, secondLastName));
+      setUsername(generateUsername(name, first_last_name, second_last_name));
     }
-  }, [name, firstLastName, secondLastName, editingUser]);
+  }, [name, first_last_name, second_last_name, editingUser]);
 
   const isValidName = (value: string) => {
     const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
@@ -140,7 +140,7 @@ const UserManagement: React.FC = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
     let result = '';
     for (let i = 0; i < 8; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
   };
@@ -154,14 +154,14 @@ const UserManagement: React.FC = () => {
 
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
-    
+
     doc.setFillColor(30, 41, 59);
     doc.rect(0, 0, pw, 35, 'F');
 
     try {
-        doc.addImage(logoCvp, 'PNG', (pw / 2) - 15, 3, 30, 30);
+      doc.addImage(logoCvp, 'PNG', (pw / 2) - 15, 3, 30, 30);
     } catch (e) {
-        console.warn("Logo load error", e);
+      console.warn("Logo load error", e);
     }
 
     const contentYStart = 45;
@@ -178,9 +178,9 @@ const UserManagement: React.FC = () => {
     const cardX = 12;
     const cardY = contentYStart + 12;
     const cardW = pw - 24;
-    const cardH = 50; 
+    const cardH = 50;
 
-    doc.setDrawColor(241, 245, 249); 
+    doc.setDrawColor(241, 245, 249);
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(cardX, cardY, cardW, cardH, 4, 4, 'FD');
 
@@ -218,7 +218,7 @@ const UserManagement: React.FC = () => {
     doc.setFontSize(9);
     doc.setTextColor(146, 64, 14);
     doc.text('¡SEGURIDAD!', pw / 2, infoY + 6, { align: 'center' });
-    
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.text('Guarde estos datos en un lugar seguro y no los comparta.', pw / 2, infoY + 12, { align: 'center' });
@@ -250,15 +250,17 @@ const UserManagement: React.FC = () => {
       const hashedPassword = await bcrypt.hash(password, 10);
       const { error } = await supabase.from('users').insert({
         name,
-        firstlastname: firstLastName,
-        secondlastname: secondLastName,
+        first_last_name: first_last_name,
+        second_last_name: second_last_name,
         username: username.trim(),
         password: hashedPassword,
-        role
+        role,
+        created_by: loggedUser.id,
+        created_at: new Date().toISOString()
       });
       if (error) throw error;
 
-      await generateCredentialsPDF(name, firstLastName, secondLastName, username, password);
+      await generateCredentialsPDF(name, first_last_name, second_last_name, username, password);
 
       handleCloseCreateDialog();
       fetchUsers();
@@ -293,8 +295,8 @@ const UserManagement: React.FC = () => {
         .from('users')
         .update({
           name,
-          firstlastname: firstLastName,
-          secondlastname: secondLastName,
+          first_last_name: first_last_name,
+          second_last_name: second_last_name,
           username: username.trim(),
           ...(hashedPassword ? { password: hashedPassword } : {}),
           role
@@ -345,16 +347,16 @@ const UserManagement: React.FC = () => {
     );
 
     result.sort((a, b) => {
-        if (sortBy === 'date') {
-            const idA = a.id || a.userid;
-            const idB = b.id || b.userid;
-            return sortOrder === 'asc' ? idA - idB : idB - idA;
-        } else {
-            const nameA = (a.name || '').toLowerCase();
-            const nameB = (b.name || '').toLowerCase();
-            if (sortOrder === 'asc') return nameA.localeCompare(nameB);
-            return nameB.localeCompare(nameA);
-        }
+      if (sortBy === 'date') {
+        const idA = a.id || a.user_id;
+        const idB = b.id || b.user_id;
+        return sortOrder === 'asc' ? idA - idB : idB - idA;
+      } else {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        if (sortOrder === 'asc') return nameA.localeCompare(nameB);
+        return nameB.localeCompare(nameA);
+      }
     });
 
     return result;
@@ -377,8 +379,8 @@ const UserManagement: React.FC = () => {
   const handleEdit = useCallback((user: any) => {
     setEditingUser(user);
     setName(user.name);
-    setFirstLastName(user.firstlastname || '');
-    setSecondLastName(user.secondlastname || '');
+    setfirst_last_name(user.first_last_name || '');
+    setsecond_last_name(user.second_last_name || '');
     setUsername(user.username);
     setRole(user.role);
     setPassword('');
@@ -388,20 +390,20 @@ const UserManagement: React.FC = () => {
   const confirmDelete = useCallback(async (user: any) => {
     setUserToDelete(user);
     try {
-        const hasData = await adminService.checkUserDependencies(user.id);
-        setHasRelatedData(hasData);
+      const hasData = await adminService.checkUserDependencies(user.id);
+      setHasRelatedData(hasData);
     } catch (e) {
-        console.error("Error checking deps", e);
-        setHasRelatedData(false);
+      console.error("Error checking deps", e);
+      setHasRelatedData(false);
     } finally {
-        setOpenConfirmDialog(true);
+      setOpenConfirmDialog(true);
     }
   }, []);
 
   const resetForm = () => {
     setName('');
-    setFirstLastName('');
-    setSecondLastName('');
+    setfirst_last_name('');
+    setsecond_last_name('');
     setUsername('');
     setPassword('');
     setRole('client');
@@ -419,15 +421,15 @@ const UserManagement: React.FC = () => {
     resetForm();
   };
 
-  const isCreateDisabled = !isValidName(name) || !firstLastName || !username || !password || !role;
+  const isCreateDisabled = !isValidName(name) || !first_last_name || !username || !password || !role;
 
   const isEditDisabled =
     !editingUser ||
     !isValidName(name) ||
-    !firstLastName ||
+    !first_last_name ||
     (name === editingUser.name &&
-      firstLastName === (editingUser.firstlastname || '') &&
-      secondLastName === (editingUser.secondlastname || '') &&
+      first_last_name === (editingUser.first_last_name || '') &&
+      second_last_name === (editingUser.second_last_name || '') &&
       username === editingUser.username &&
       role === editingUser.role);
 
@@ -591,11 +593,11 @@ const UserManagement: React.FC = () => {
           backgroundColor: 'rgba(255,255,255,0.4)',
           position: 'relative'
         }}>
-          <UserTable 
-            users={paginatedUsers} 
-            loading={loading} 
-            isMobile={isMobile} 
-            loggedUserId={loggedUser.id}
+          <UserTable
+            users={paginatedUsers}
+            loading={loading}
+            isMobile={isMobile}
+            loggeduser_id={loggedUser.id}
             onProgress={handleOpenProgress}
             onEdit={handleEdit}
             onDelete={confirmDelete}
@@ -662,8 +664,8 @@ const UserManagement: React.FC = () => {
             <TextField
               label="Primer Apellido"
               fullWidth
-              value={firstLastName}
-              onChange={(e) => setFirstLastName(e.target.value)}
+              value={first_last_name}
+              onChange={(e) => setfirst_last_name(e.target.value)}
               margin="dense"
               variant="filled"
               sx={{ '& .MuiFilledInput-root': { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: '12px' } }}
@@ -671,8 +673,8 @@ const UserManagement: React.FC = () => {
             <TextField
               label="Segundo Apellido"
               fullWidth
-              value={secondLastName}
-              onChange={(e) => setSecondLastName(e.target.value)}
+              value={second_last_name}
+              onChange={(e) => setsecond_last_name(e.target.value)}
               margin="dense"
               variant="filled"
               sx={{ '& .MuiFilledInput-root': { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: '12px' } }}
@@ -768,8 +770,8 @@ const UserManagement: React.FC = () => {
             <TextField
               label="Primer Apellido"
               fullWidth
-              value={firstLastName}
-              onChange={(e) => setFirstLastName(e.target.value)}
+              value={first_last_name}
+              onChange={(e) => setfirst_last_name(e.target.value)}
               margin="dense"
               variant="filled"
               sx={{ '& .MuiFilledInput-root': { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: '12px' } }}
@@ -777,8 +779,8 @@ const UserManagement: React.FC = () => {
             <TextField
               label="Segundo Apellido"
               fullWidth
-              value={secondLastName}
-              onChange={(e) => setSecondLastName(e.target.value)}
+              value={second_last_name}
+              onChange={(e) => setsecond_last_name(e.target.value)}
               margin="dense"
               variant="filled"
               sx={{ '& .MuiFilledInput-root': { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: '12px' } }}
@@ -848,7 +850,7 @@ const UserManagement: React.FC = () => {
             {hasRelatedData && (
               <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(211, 47, 47, 0.1)', borderRadius: 2, border: '1px solid rgba(211, 47, 47, 0.2)', mx: 2 }}>
                 <Typography variant="body2" sx={{ color: '#d32f2f', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                   <WarningAmberIcon fontSize="small" /> ¡ATENCIÓN!
+                  <WarningAmberIcon fontSize="small" /> ¡ATENCIÓN!
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#c62828', fontWeight: 600, display: 'block', mt: 0.5 }}>
                   Este usuario tiene respuestas de tests y datos de perfil guardados. Al eliminarlo, se borrará TODA su información de forma permanente.
@@ -929,13 +931,13 @@ interface UserTableProps {
   users: any[];
   loading: boolean;
   isMobile: boolean;
-  loggedUserId: number;
+  loggeduser_id: number;
   onProgress: (user: any) => void;
   onEdit: (user: any) => void;
   onDelete: (user: any) => void;
 }
 
-const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobile, loggedUserId, onProgress, onEdit, onDelete }) => {
+const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobile, loggeduser_id, onProgress, onEdit, onDelete }) => {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, py: 4 }}>
@@ -973,7 +975,12 @@ const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobi
                 sx={{ '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.04)' }, transition: 'background-color 0.2s' }}
               >
                 <TableCell sx={{ color: '#334155', fontWeight: 500, wordBreak: 'break-word' }}>
-                  {user.name} {user.firstlastname} {user.secondlastname}
+                  <Box sx={{ fontWeight: 700 }}>
+                    {user.name} {user.first_last_name} {user.second_last_name}
+                  </Box>
+                  <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5, fontStyle: user.created_by_name ? 'italic' : 'normal' }}>
+                    {user.created_by_name ? `Creado por: ${user.created_by_name}` : '-'}
+                  </Typography>
                 </TableCell>
                 <TableCell sx={{ color: '#334155', wordBreak: 'break-word' }}>{user.username}</TableCell>
                 <TableCell>
@@ -1009,8 +1016,8 @@ const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobi
                       transition: 'all 0.2s'
                     }}
                     onClick={() => onDelete(user)}
-                    disabled={user.id === loggedUserId}
-                    title={user.id === loggedUserId ? "No puedes eliminar tu propio usuario" : "Eliminar"}>
+                    disabled={user.id === loggeduser_id}
+                    title={user.id === loggeduser_id ? "No puedes eliminar tu propio usuario" : "Eliminar"}>
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </TableCell>

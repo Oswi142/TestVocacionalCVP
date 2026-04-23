@@ -16,7 +16,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { getCompletedDatCategories, DAT_LABELS, DatType, getDatTestId } from '@/domain/rules/dat';
+import { getCompletedDatCategories, DAT_LABELS, DatType, getDattest_id } from '@/domain/rules/dat';
 import { adminService } from '@/infrastructure/services/adminService';
 import { UnifiedClient } from '@/domain/entities/user';
 import { Question as QuestionRow, AnswerOption as AnswerOptionRow, Test, TestAnswer as TestsAnswerRow } from '@/domain/entities/test';
@@ -45,7 +45,7 @@ const ClientsAnswers: React.FC = () => {
   const [clients, setClients] = useState<UnifiedClient[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedClientId, setExpandedClientId] = useState<number | null>(null);
+  const [expandedclient_id, setExpandedclient_id] = useState<number | null>(null);
   const [clientTestsMap, setClientTestsMap] = useState<Record<number, Test[]>>({});
   const [loadingTestsForClient, setLoadingTestsForClient] = useState<Record<number, boolean>>({});
   const [search, setSearch] = useState('');
@@ -84,23 +84,23 @@ const ClientsAnswers: React.FC = () => {
 
 
 
-  const downloadPDF = async (clientId: number, testId: number, category?: DatType, attemptId: string = 'active') => {
+  const downloadPDF = async (client_id: number, test_id: number, category?: DatType, attemptId: string = 'active') => {
     try {
       const { drawPremiumHeader, drawClientCard, drawFooter, PDF_COLORS, PDF_FONT_SIZE } = await import('@/infrastructure/utils/pdfUtils');
-      const client = clients.find(c => c.userid === clientId);
-      const test = tests.find(t => t.id === testId);
-      const datId = await getDatTestId();
-      const isDat = testId === datId || (test?.testname || '').toLowerCase().includes('dat');
+      const client = clients.find(c => c.user_id === client_id);
+      const test = tests.find(t => t.id === test_id);
+      const datId = await getDattest_id();
+      const isDat = test_id === datId || (test?.test_name || '').toLowerCase().includes('dat');
 
-      const allAnswers = (await adminService.getClientAnswers(clientId, testId)) as TestsAnswerRow[];
+      const allAnswers = (await adminService.getClientAnswers(client_id, test_id)) as TestsAnswerRow[];
       const clientAnswers = allAnswers.filter(ans => {
         const details = ans.details || '';
         if (attemptId === 'active') return !details.startsWith('[HIST_');
         return details.startsWith(attemptId);
       });
 
-      const qIds = [...new Set(clientAnswers.map(a => a.questionid))];
-      const aIds = [...new Set(clientAnswers.map(a => a.answerid).filter((x): x is number => x != null))];
+      const qIds = [...new Set(clientAnswers.map(a => a.question_id))];
+      const aIds = [...new Set(clientAnswers.map(a => a.answer_id).filter((x): x is number => x != null))];
       const [qsRaw, optsRaw] = await Promise.all([
         qIds.length ? adminService.getQuestionsByIds(qIds) : Promise.resolve([]),
         aIds.length ? adminService.getOptionsByIds(aIds) : Promise.resolve([]),
@@ -125,21 +125,21 @@ const ClientsAnswers: React.FC = () => {
       let y = drawPremiumHeader(
         doc,
         'REPORTE TÉCNICO DE RESPUESTAS',
-        `Test: ${test?.testname || '—'}   |   Enviado: ${submitDateStr}`,
+        `Test: ${test?.test_name || '—'}   |   Enviado: ${submitDateStr}`,
         now
       );
 
       // ── Client card ───────────────────────────────────────────────────────
       const { buildClientCardFields: buildFields } = await import('@/infrastructure/utils/pdfUtils');
       y = drawClientCard(doc, y, buildFields({
-        name:           (client as any)?.name           ?? null,
-        firstlastname:  (client as any)?.firstlastname  ?? null,
-        secondlastname: (client as any)?.secondlastname ?? null,
-        school:         (client as any)?.school         ?? null,
-        grade:          (client as any)?.grade          ?? null,
-        birthday:       (client as any)?.birthday       ?? null,
-        birthplace:     (client as any)?.birthplace     ?? null,
-        gender:         (client as any)?.gender         ?? null,
+        name: (client as any)?.name ?? null,
+        first_last_name: (client as any)?.first_last_name ?? null,
+        second_last_name: (client as any)?.second_last_name ?? null,
+        school: (client as any)?.school ?? null,
+        grade: (client as any)?.grade ?? null,
+        birthday: (client as any)?.birthday ?? null,
+        birthplace: (client as any)?.birthplace ?? null,
+        gender: (client as any)?.gender ?? null,
       }));
 
       // ── Answers table ─────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ const ClientsAnswers: React.FC = () => {
 
       if (isDat && !category) {
         const foundCats = new Set<DatType>();
-        clientAnswers.forEach(ans => { const q = qMap.get(ans.questionid); if (q?.dat_type) foundCats.add(q.dat_type as DatType); });
+        clientAnswers.forEach(ans => { const q = qMap.get(ans.question_id); if (q?.dat_type) foundCats.add(q.dat_type as DatType); });
         const order: DatType[] = ['razonamiento_verbal', 'razonamiento_numerico', 'razonamiento_abstracto', 'razonamiento_mecanico', 'razonamiento_espacial', 'ortografia'];
         categoriesToProcess = order.filter(c => foundCats.has(c));
       }
@@ -157,12 +157,12 @@ const ClientsAnswers: React.FC = () => {
         if (isDat && currentCat) {
           tableData.push([{ content: `\nSECCIÓN: ${DAT_LABELS[currentCat]}\n`, styles: { fillColor: PDF_COLORS.lightBg, textColor: PDF_COLORS.accentGreen, fontStyle: 'bold', fontSize: PDF_FONT_SIZE, halign: 'center' } }]);
         }
-        const filteredAnswers = isDat && currentCat ? clientAnswers.filter(ans => qMap.get(ans.questionid)?.dat_type === currentCat) : clientAnswers;
+        const filteredAnswers = isDat && currentCat ? clientAnswers.filter(ans => qMap.get(ans.question_id)?.dat_type === currentCat) : clientAnswers;
 
         let n = 1;
         filteredAnswers.forEach(ans => {
-          const qRow = qMap.get(ans.questionid);
-          const oRow = ans.answerid != null ? oMap.get(ans.answerid) : undefined;
+          const qRow = qMap.get(ans.question_id);
+          const oRow = ans.answer_id != null ? oMap.get(ans.answer_id) : undefined;
           let qText = qRow?.question || '';
           if (!qText.trim()) qText = 'Pregunta Visual (Referente a la imagen del documento)';
           const aText = oRow?.answer ?? ans.details ?? 'Sin respuesta';
@@ -194,7 +194,7 @@ const ClientsAnswers: React.FC = () => {
         rowPageBreak: 'avoid',
         didDrawCell: (data) => {
           if (data.row.index % 2 === 1) {
-            doc.setDrawColor(...PDF_COLORS.divider as [number,number,number]);
+            doc.setDrawColor(...PDF_COLORS.divider as [number, number, number]);
             doc.setLineWidth(0.2);
             doc.line(
               data.cell.x + 4,
@@ -207,30 +207,30 @@ const ClientsAnswers: React.FC = () => {
       });
 
       drawFooter(doc);
-      doc.save(`Resultados_${client?.name || 'Cliente'}_${test?.testname || 'Test'}.pdf`);
+      doc.save(`Resultados_${client?.name || 'Cliente'}_${test?.test_name || 'Test'}.pdf`);
     } catch (e) { console.error(e); showToast('Ocurrió un error generando el PDF.', 'error'); }
   };
 
   const filteredClients = useMemo(() => {
     const q = search.toLowerCase().trim();
     let result = [...clients];
-    
+
     if (q) {
-        result = result.filter(c => (c.name || '').toLowerCase().includes(q));
+      result = result.filter(c => (c.name || '').toLowerCase().includes(q));
     }
 
     // Ordenamiento
     result.sort((a, b) => {
-        if (sortBy === 'date') {
-            const idA = a.userid;
-            const idB = b.userid;
-            return sortOrder === 'asc' ? idA - idB : idB - idA;
-        } else {
-            const nameA = (a.name || '').toLowerCase();
-            const nameB = (b.name || '').toLowerCase();
-            if (sortOrder === 'asc') return nameA.localeCompare(nameB);
-            return nameB.localeCompare(nameA);
-        }
+      if (sortBy === 'date') {
+        const idA = a.user_id;
+        const idB = b.user_id;
+        return sortOrder === 'asc' ? idA - idB : idB - idA;
+      } else {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        if (sortOrder === 'asc') return nameA.localeCompare(nameB);
+        return nameB.localeCompare(nameA);
+      }
     });
 
     return result;
@@ -248,27 +248,27 @@ const ClientsAnswers: React.FC = () => {
     (name || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
   const handleToggleClient = async (client: UnifiedClient) => {
-    setExpandedClientId(prev => (prev === client.userid ? null : client.userid));
-    if (!clientTestsMap[client.userid]) {
+    setExpandedclient_id(prev => (prev === client.user_id ? null : client.user_id));
+    if (!clientTestsMap[client.user_id]) {
       try {
-        setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: true }));
+        setLoadingTestsForClient(prev => ({ ...prev, [client.user_id]: true }));
 
         const { data: allAnswersRaw } = await supabase
-          .from('testsanswers')
-          .select('testid, details')
-          .eq('clientid', client.userid);
+          .from('test_answers')
+          .select('test_id, details')
+          .eq('client_id', client.user_id);
 
         const answers = (allAnswersRaw || []) as any[];
-        const uniqTestIds = [...new Set(answers.map(a => a.testid))];
+        const uniqtest_ids = [...new Set(answers.map(a => a.test_id))];
 
-        const datId = await getDatTestId();
+        const datId = await getDattest_id();
         const testsForClient: any[] = [];
 
-        for (const id of uniqTestIds) {
+        for (const id of uniqtest_ids) {
           const baseTest = tests.find(t => t.id === id);
           if (!baseTest) continue;
 
-          const testAnswers = answers.filter(a => a.testid === id);
+          const testAnswers = answers.filter(a => a.test_id === id);
           const attempts = new Set<string>();
           testAnswers.forEach(a => {
             const d = a.details || '';
@@ -283,11 +283,11 @@ const ClientsAnswers: React.FC = () => {
             return b.localeCompare(a);
           });
 
-          if (id === datId || (baseTest.testname || '').toLowerCase().includes('dat')) {
-            const completedCats = await getCompletedDatCategories(client.userid);
+          if (id === datId || (baseTest.test_name || '').toLowerCase().includes('dat')) {
+            const completedCats = await getCompletedDatCategories(client.user_id);
             testsForClient.push({
               ...baseTest,
-              testname: `DAT (${completedCats.length} de 6 completados)`,
+              test_name: `DAT (${completedCats.length} de 6 completados)`,
               attempts: sortedAttempts,
               selectedAttempt: sortedAttempts[0]
             });
@@ -299,9 +299,9 @@ const ClientsAnswers: React.FC = () => {
             });
           }
         }
-        setClientTestsMap(prev => ({ ...prev, [client.userid]: testsForClient }));
+        setClientTestsMap(prev => ({ ...prev, [client.user_id]: testsForClient }));
       } catch (e) { console.error('Error fetching tests for client:', e); }
-      finally { setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: false })); }
+      finally { setLoadingTestsForClient(prev => ({ ...prev, [client.user_id]: false })); }
     }
   };
 
@@ -427,13 +427,13 @@ const ClientsAnswers: React.FC = () => {
               </Box>
             ) : (
               paginatedClients.map((client) => {
-                const isExpanded = expandedClientId === client.userid;
-                const testsForClient = clientTestsMap[client.userid] || [];
+                const isExpanded = expandedclient_id === client.user_id;
+                const testsForClient = clientTestsMap[client.user_id] || [];
                 return (
-                  <Paper key={client.userid} elevation={0} sx={{ borderRadius: '20px', backgroundColor: isExpanded ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)', transition: 'all 0.2s', '&:hover': { backgroundColor: 'rgba(255,255,255,0.85)', boxShadow: '0 4px 16px rgba(0,0,0,0.07)' } }}>
+                  <Paper key={client.user_id} elevation={0} sx={{ borderRadius: '20px', backgroundColor: isExpanded ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)', transition: 'all 0.2s', '&:hover': { backgroundColor: 'rgba(255,255,255,0.85)', boxShadow: '0 4px 16px rgba(0,0,0,0.07)' } }}>
                     <Box onClick={() => handleToggleClient(client)} sx={{ px: 3, py: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
                       <Box display="flex" alignItems="center" gap={2}>
-                        <Avatar sx={{ background: avatarColor(client.userid), width: 44, height: 44, fontSize: '0.95rem', fontWeight: 800 }}>
+                        <Avatar sx={{ background: avatarColor(client.user_id), width: 44, height: 44, fontSize: '0.95rem', fontWeight: 800 }}>
                           {getClientInitials(client.name || 'SC')}
                         </Avatar>
                         <Typography variant="subtitle1" fontWeight={700} color="#1e293b">{client.name || 'Sin nombre'}</Typography>
@@ -445,7 +445,7 @@ const ClientsAnswers: React.FC = () => {
                     <Collapse in={isExpanded} unmountOnExit>
                       <Box sx={{ px: 3, pb: 3 }}>
                         <Divider sx={{ mb: 2 }} />
-                        {loadingTestsForClient[client.userid] ? (
+                        {loadingTestsForClient[client.user_id] ? (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
                             <CircularProgress size={20} thickness={5} sx={{ color: C.spinner }} />
                             <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Cargando respuestas...</Typography>
@@ -461,11 +461,11 @@ const ClientsAnswers: React.FC = () => {
                                     <AssignmentIcon sx={{ fontSize: 18, color: C.dark }} />
                                   </Box>
                                   <Box>
-                                    <Typography variant="body2" fontWeight={700} color="#334155">{test.testname}</Typography>
+                                    <Typography variant="body2" fontWeight={700} color="#334155">{test.test_name}</Typography>
                                   </Box>
                                 </Box>
                                 <Tooltip title="Descargar respaldo PDF" arrow placement="left">
-                                  <IconButton onClick={() => downloadPDF(client.userid, test.id, test.category, test.selectedAttempt)} size="small" sx={{ backgroundColor: '#1e293b', color: 'white', borderRadius: '10px', width: 34, height: 34, '&:hover': { backgroundColor: '#0f172a', transform: 'translateY(-2px)' }, transition: 'all 0.2s' }}>
+                                  <IconButton onClick={() => downloadPDF(client.user_id, test.id, test.category, test.selectedAttempt)} size="small" sx={{ backgroundColor: '#1e293b', color: 'white', borderRadius: '10px', width: 34, height: 34, '&:hover': { backgroundColor: '#0f172a', transform: 'translateY(-2px)' }, transition: 'all 0.2s' }}>
                                     <GetAppIcon sx={{ fontSize: 16 }} />
                                   </IconButton>
                                 </Tooltip>

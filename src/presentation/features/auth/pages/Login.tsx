@@ -69,122 +69,122 @@ const Login: React.FC = () => {
     <PageBackground>
       <Fade in timeout={800} appear={true}>
         <Paper
-        elevation={0}
-        sx={{
-          p: 4,
-          borderRadius: 6,
-          width: '100%',
-          maxWidth: 420,
-          textAlign: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.65)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.4)',
-        }}
-      >
-        <Box sx={{ mb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <LogoHeader height={isMobile ? 120 : 180} />
-          <Typography
-            variant={isMobile ? 'h6' : 'h5'}
-            fontWeight={800}
-            color="#1e293b"
-            gutterBottom
-            sx={{ mt: 1 }}
-          >
-            Bienvenido!
-          </Typography>
-        </Box>
+          elevation={0}
+          sx={{
+            p: 4,
+            borderRadius: 6,
+            width: '100%',
+            maxWidth: 420,
+            textAlign: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.65)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.4)',
+          }}
+        >
+          <Box sx={{ mb: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <LogoHeader height={isMobile ? 120 : 180} />
+            <Typography
+              variant={isMobile ? 'h6' : 'h5'}
+              fontWeight={800}
+              color="#1e293b"
+              gutterBottom
+              sx={{ mt: 1 }}
+            >
+              Bienvenido!
+            </Typography>
+          </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: 3 }}>
-            {error}
-          </Alert>
-        )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 3 }}>
+              {error}
+            </Alert>
+          )}
 
-        <form onSubmit={handleSubmit}>
-          <TextField
-            label="Usuario"
-            fullWidth
-            margin="normal"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            inputProps={{ 'data-testid': 'username-input' }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 3,
-                backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                transition: 'all 0.3s ease',
-                '&.Mui-focused': {
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+          <form onSubmit={handleSubmit}>
+            <TextField
+              label="Usuario"
+              fullWidth
+              margin="normal"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              inputProps={{ 'data-testid': 'username-input' }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  transition: 'all 0.3s ease',
+                  '&.Mui-focused': {
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                  }
                 }
-              }
-            }}
-          />
+              }}
+            />
 
-          <TextField
-            label="Contraseña"
-            type={showPassword ? 'text' : 'password'}
-            fullWidth
-            margin="normal"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            inputProps={{ 'data-testid': 'password-input' }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 3,
-                backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                transition: 'all 0.3s ease',
-                '&.Mui-focused': {
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+            <TextField
+              label="Contraseña"
+              type={showPassword ? 'text' : 'password'}
+              fullWidth
+              margin="normal"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              inputProps={{ 'data-testid': 'password-input' }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  transition: 'all 0.3s ease',
+                  '&.Mui-focused': {
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                  }
                 }
-              }
-            }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={() => setShowPassword((prev) => !prev)} edge="end">
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
+              }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPassword((prev) => !prev)} edge="end">
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-          <Button
-            data-testid="login-button"
-            type="submit"
-            variant="contained"
-            fullWidth
-            disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : undefined}
-            sx={{
-              mt: 3,
-              py: 1.5,
-              borderRadius: 3,
-              fontWeight: 800,
-              fontSize: '1.1rem',
-              backgroundColor: '#FF6F00',
-              transition: 'all 0.3s ease-in-out',
-              boxShadow: '0 6px 15px rgba(255, 111, 0, 0.3)',
-              '&:hover': {
-                backgroundColor: '#E65100',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 20px rgba(255, 111, 0, 0.4)'
-              },
-              '&:active': {
-                transform: 'translateY(1px)',
-              }
-            }}
-          >
-            {isLoading ? 'Entrando...' : 'Entrar'}
-          </Button>
-        </form>
-      </Paper>
+            <Button
+              data-testid="login-button"
+              type="submit"
+              variant="contained"
+              fullWidth
+              disabled={isLoading}
+              startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : undefined}
+              sx={{
+                mt: 3,
+                py: 1.5,
+                borderRadius: 3,
+                fontWeight: 800,
+                fontSize: '1.1rem',
+                backgroundColor: '#FF6F00',
+                transition: 'all 0.3s ease-in-out',
+                boxShadow: '0 6px 15px rgba(255, 111, 0, 0.3)',
+                '&:hover': {
+                  backgroundColor: '#E65100',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 20px rgba(255, 111, 0, 0.4)'
+                },
+                '&:active': {
+                  transform: 'translateY(1px)',
+                }
+              }}
+            >
+              {isLoading ? 'Entrando...' : 'Entrar'}
+            </Button>
+          </form>
+        </Paper>
       </Fade>
     </PageBackground>
   );

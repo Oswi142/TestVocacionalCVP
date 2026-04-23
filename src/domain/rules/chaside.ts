@@ -37,8 +37,8 @@ type RawCounts = {
 };
 
 export type ChasideScore = {
-  clientId: number;
-  testId: number;
+  client_id: number;
+  test_id: number;
   client: import('@/infrastructure/utils/pdfUtils').ClientPdfData;
   counts: RawCounts;
   totals: { interest: number; aptitude: number; overall: Record<Band, number> };
@@ -51,11 +51,11 @@ export type ChasideScore = {
   yesCount: number;
 };
 
-async function getChasideTestId(): Promise<number> {
+async function getChasidetest_id(): Promise<number> {
   const { data, error } = await supabase
     .from('tests')
-    .select('id, testname')
-    .ilike('testname', '%chaside%')
+    .select('id, test_name')
+    .ilike('test_name', '%chaside%')
     .maybeSingle();
 
   if (error || !data) {
@@ -64,36 +64,36 @@ async function getChasideTestId(): Promise<number> {
   return data.id;
 }
 
-export async function computeChasideScore(clientId: number, attemptId: string = 'active'): Promise<ChasideScore> {
-  const testId = await getChasideTestId();
+export async function computeChasideScore(client_id: number, attemptId: string = 'active'): Promise<ChasideScore> {
+  const test_id = await getChasidetest_id();
 
   const { data: urows } = await supabase
     .from('users')
-    .select('id, name, firstlastname, secondlastname')
-    .eq('id', clientId)
+    .select('id, name, first_last_name, second_last_name')
+    .eq('id', client_id)
     .limit(1);
   const urow = urows?.[0];
   const { data: cirows } = await supabase
-    .from('clientsinfo')
+    .from('clients_info')
     .select('school, grade, birthday, birthplace, gender')
-    .eq('userid', clientId)
+    .eq('user_id', client_id)
     .limit(1);
   const ci = cirows?.[0];
   const clientData: import('@/infrastructure/utils/pdfUtils').ClientPdfData = {
-    name:           urow?.name           ?? null,
-    firstlastname:  urow?.firstlastname  ?? null,
-    secondlastname: urow?.secondlastname ?? null,
-    school:         ci?.school           ?? null,
-    grade:          ci?.grade            ?? null,
-    birthday:       ci?.birthday         ?? null,
-    birthplace:     ci?.birthplace       ?? null,
-    gender:         ci?.gender           ?? null,
+    name: urow?.name ?? null,
+    first_last_name: urow?.first_last_name ?? null,
+    second_last_name: urow?.second_last_name ?? null,
+    school: ci?.school ?? null,
+    grade: ci?.grade ?? null,
+    birthday: ci?.birthday ?? null,
+    birthplace: ci?.birthplace ?? null,
+    gender: ci?.gender ?? null,
   };
 
   const { data: qrows, error: qErr } = await supabase
     .from('questions')
-    .select('id, section, chatype')
-    .eq('testid', testId)
+    .select('id, section, cha_type')
+    .eq('test_id', test_id)
     .range(0, 99999);
 
   if (qErr) throw qErr;
@@ -103,7 +103,7 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
 
   for (const q of qrows || []) {
     const band = SECTION_TO_BAND[q.section as number];
-    const scale = (q.chatype as string)?.toLowerCase() as Scale;
+    const scale = (q.cha_type as string)?.toLowerCase() as Scale;
     if (!band) continue;
     if (scale !== 'interest' && scale !== 'aptitude') continue;
     qToBand.set(q.id, band);
@@ -111,11 +111,11 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
   }
 
   const { data: arows, error: aErr } = await supabase
-    .from('testsanswers')
-    .select('questionid, answerid, details')
-    .eq('clientid', clientId)
-    .eq('testid', testId)
-    .order('questionid', { ascending: true })
+    .from('test_answers')
+    .select('question_id, answer_id, details')
+    .eq('client_id', client_id)
+    .eq('test_id', test_id)
+    .order('question_id', { ascending: true })
     .range(0, 999999);
 
   if (aErr) throw aErr;
@@ -126,16 +126,16 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
     return d.startsWith(attemptId);
   });
 
-  const answerIds = Array.from(
-    new Set((arows || []).map((r) => r.answerid).filter((x): x is number => x != null))
+  const answer_ids = Array.from(
+    new Set((arows || []).map((r) => r.answer_id).filter((x): x is number => x != null))
   );
 
   let idToText = new Map<number, string>();
-  if (answerIds.length) {
+  if (answer_ids.length) {
     const { data: optrows, error: oErr } = await supabase
-      .from('answeroptions')
+      .from('answer_options')
       .select('id, answer')
-      .in('id', answerIds)
+      .in('id', answer_ids)
       .range(0, 999999);
     if (oErr) throw oErr;
     idToText = new Map((optrows || []).map((o) => [o.id, String(o.answer || '')]));
@@ -149,8 +149,8 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
   );
 
   return {
-    clientId,
-    testId,
+    client_id,
+    test_id,
     client: clientData,
     counts,
     totals,
@@ -161,7 +161,7 @@ export async function computeChasideScore(clientId: number, attemptId: string = 
 }
 
 export function calculateChasideResultSummary(
-  filteredArows: Array<{ questionid: number; answerid?: number | null; details?: string | null }>,
+  filteredArows: Array<{ question_id: number; answer_id?: number | null; details?: string | null }>,
   qToBand: Map<number, Band>,
   qToScale: Map<number, Scale>,
   idToText: Map<number, string>
@@ -178,13 +178,13 @@ export function calculateChasideResultSummary(
   let yesCount = 0;
 
   for (const r of filteredArows) {
-    const band = qToBand.get(r.questionid);
-    const scale = qToScale.get(r.questionid);
+    const band = qToBand.get(r.question_id);
+    const scale = qToScale.get(r.question_id);
     if (!band || !scale) continue;
 
     answered++;
 
-    const txt = r.answerid ? idToText.get(r.answerid) : r.details;
+    const txt = r.answer_id ? idToText.get(r.answer_id) : r.details;
     if (isYes(txt)) {
       counts[scale][band] += 1;
       yesCount++;
@@ -213,8 +213,8 @@ export function calculateChasideResultSummary(
   return { counts, totals: { interest: totalsInterest, aptitude: totalsAptitude, overall }, ranking, answered, yesCount };
 }
 
-export async function downloadChasideReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {
-  const score = await computeChasideScore(clientId, attemptId);
+export async function downloadChasideReportPDF(client_id: number, attemptId: string = 'active'): Promise<void> {
+  const score = await computeChasideScore(client_id, attemptId);
   const { drawPremiumHeader, drawClientCard, drawSectionHeading, drawFooter, PDF_COLORS, PDF_FONT_SIZE } = await import('@/infrastructure/utils/pdfUtils');
 
   const doc = new jsPDF();
@@ -240,10 +240,10 @@ export async function downloadChasideReportPDF(clientId: number, attemptId: stri
     const by = y + row * 6;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.setTextColor(...PDF_COLORS.accentGreen as [number,number,number]);
+    doc.setTextColor(...PDF_COLORS.accentGreen as [number, number, number]);
     doc.text(`${b}`, bx, by);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...PDF_COLORS.bodyText as [number,number,number]);
+    doc.setTextColor(...PDF_COLORS.bodyText as [number, number, number]);
     doc.text(`= ${BAND_LABELS[b]}`, bx + 5, by);
   });
   y += Math.ceil(bands.length / cols) * 6 + 4;
@@ -252,7 +252,7 @@ export async function downloadChasideReportPDF(clientId: number, attemptId: stri
   y = drawSectionHeading(doc, y, 'Resultados por Escala');
   const interestRow = ['Interés', ...bands.map((b) => String(score.counts.interest[b]))];
   const aptitudeRow = ['Aptitud', ...bands.map((b) => String(score.counts.aptitude[b]))];
-  const overallRow  = ['Total (I+A)', ...bands.map((b) => String(score.totals.overall[b]))];
+  const overallRow = ['Total (I+A)', ...bands.map((b) => String(score.totals.overall[b]))];
 
   autoTable(doc, {
     startY: y,
@@ -312,18 +312,18 @@ export async function downloadChasideReportPDF(clientId: number, attemptId: stri
     ? `Mayor interés en ${BAND_LABELS[firstI.band]} y mayor aptitud en ${BAND_LABELS[firstA.band]}.`
     : 'No hay suficientes datos para interpretar.';
 
-  doc.setFillColor(...PDF_COLORS.lightBg as [number,number,number]);
-  doc.setDrawColor(...PDF_COLORS.accentAmber as [number,number,number]);
+  doc.setFillColor(...PDF_COLORS.lightBg as [number, number, number]);
+  doc.setDrawColor(...PDF_COLORS.accentAmber as [number, number, number]);
   doc.setLineWidth(0.4);
   doc.roundedRect(14, y, 182, 12, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  doc.setTextColor(...PDF_COLORS.accentAmber as [number,number,number]);
+  doc.setTextColor(...PDF_COLORS.accentAmber as [number, number, number]);
   doc.text('Nota: ', 18, y + 7.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF_COLORS.bodyText as [number,number,number]);
+  doc.setTextColor(...PDF_COLORS.bodyText as [number, number, number]);
   doc.text(quickNote, 30, y + 7.5);
 
   drawFooter(doc);
-  doc.save(`CHASIDE_${score.client.name ?? clientId}.pdf`);
+  doc.save(`CHASIDE_${score.client.name ?? client_id}.pdf`);
 }

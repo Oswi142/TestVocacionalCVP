@@ -115,8 +115,8 @@ const Introduccion: React.FC = () => {
                 hobbies: section1[6] ? answers[section1[6].id] || '' : '',
             };
 
-            const { error: infoError } = await supabase.from('clientsinfo').upsert({
-                userid: user.id,
+            const { error: infoError } = await supabase.from('clients_info').upsert({
+                user_id: user.id,
                 gender: mapped.gender,
                 birthday: mapped.birthday,
                 birthplace: mapped.birthplace,

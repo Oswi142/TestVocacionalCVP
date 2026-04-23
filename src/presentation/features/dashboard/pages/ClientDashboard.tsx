@@ -17,9 +17,9 @@ const ClientDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'tests' | 'account'>('tests');
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(true);
-  const [progress, setProgress] = useState<{ hasCompletedIntro: boolean, completedMainTestIds: number[], completedDatTypes: string[] }>({
+  const [progress, setProgress] = useState<{ hasCompletedIntro: boolean, completedMaintest_ids: number[], completedDatTypes: string[] }>({
     hasCompletedIntro: false,
-    completedMainTestIds: [],
+    completedMaintest_ids: [],
     completedDatTypes: []
   });
   const [isDownloading, setIsDownloading] = useState(false);
@@ -162,7 +162,7 @@ const ClientDashboard: React.FC = () => {
   };
 
   const isDatCompleted = progress.completedDatTypes.length >= 6;
-  const allFinished = progress.completedMainTestIds.length >= 4 && isDatCompleted;
+  const allFinished = progress.completedMaintest_ids.length >= 4 && isDatCompleted;
 
   const handleDownloadTests = async () => {
     if (!navigator.onLine) {
@@ -172,7 +172,7 @@ const ClientDashboard: React.FC = () => {
     setIsDownloading(true);
     setDownloadProgress(0);
     setDownloadSuccess(false);
-    
+
     try {
       await testService.prefetchAllTests((prog) => {
         setDownloadProgress(prog);
@@ -181,9 +181,9 @@ const ClientDashboard: React.FC = () => {
       setHasDownloaded(true);
       localStorage.setItem('tests_downloaded', 'true');
     } catch (e: any) {
-        alert(e.message || 'Error al descargar las pruebas.');
+      alert(e.message || 'Error al descargar las pruebas.');
     } finally {
-        setIsDownloading(false);
+      setIsDownloading(false);
     }
   };
 
@@ -256,242 +256,242 @@ const ClientDashboard: React.FC = () => {
             <Fade in timeout={600} key="tests-tab">
               <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Typography variant={sizes.titleVariant} fontWeight={800} color="#1e293b" gutterBottom>
-                Bienvenido, {name} 👋
-              </Typography>
-
-              {!allFinished && (
-                <Typography variant={sizes.subtitleVariant} gutterBottom sx={{ mb: isMobile ? 1.2 : 2 }}>
-                  Es hora de iniciar a realizar los tests! 😄
+                  Bienvenido, {name} 👋
                 </Typography>
-              )}
 
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: `${sizes.btnGap}px`,
-                  width: '100%',
-                  mt: isMobile ? 1 : 2,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: loadingProgress ? 200 : 'auto',
-                }}
-              >
-                {loadingProgress ? (
-                  <CircularProgress color="primary" />
-                ) : !progress.hasCompletedIntro ? (
-                  <>
-                    <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', mb: 1 }}>
-                      Pero antes de comenzar, necesitamos conocerte mejor
-                    </Typography>
-                    <Button
-                      fullWidth
-                      onClick={() => navigate('/introduccion')}
-                      sx={buttonStyle('linear-gradient(90deg, #91e257ff, #ff823aff)', 'rgba(144, 142, 75, 0.79)', 'active')}
-                    >
-                      👋 INTRODUCCIÓN
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    {(() => {
-                      const tests = [
-                        { id: 1, label: '📄 ENTREVISTA', path: '/entrevista', gradient: 'linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)', shadow: 'rgba(127, 127, 213, 0.3)' },
-                        { id: 2, label: '🧠 IPPR', path: '/ippr', gradient: 'linear-gradient(90deg, #ff758c, #ff7eb3)', shadow: 'rgba(255, 117, 140, 0.3)' },
-                        { id: 3, label: '🍥 CHASIDE', path: '/chaside', gradient: 'linear-gradient(90deg, #ff6a00, #ee0979)', shadow: 'rgba(255, 106, 0, 0.3)' },
-                        { id: 4, label: '🛠️ MACI', path: '/maci', gradient: 'linear-gradient(90deg, #43cea2, #185a9d)', shadow: 'rgba(67, 206, 162, 0.3)' },
-                        { id: 5, label: '🧩 DAT', path: '/dat', gradient: 'linear-gradient(90deg, #11998e, #38ef7d)', shadow: 'rgba(17, 153, 142, 0.3)' },
-                      ];
+                {!allFinished && (
+                  <Typography variant={sizes.subtitleVariant} gutterBottom sx={{ mb: isMobile ? 1.2 : 2 }}>
+                    Es hora de iniciar a realizar los tests! 😄
+                  </Typography>
+                )}
 
-                      if (allFinished) {
-                        const whatsappMsg = `¡Hola! Soy ${name}. He completado satisfactoriamente todos los tests vocacionales.`;
-                        const whatsappUrl = `https://wa.me/59162733929?text=${encodeURIComponent(whatsappMsg)}`;
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: `${sizes.btnGap}px`,
+                    width: '100%',
+                    mt: isMobile ? 1 : 2,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: loadingProgress ? 200 : 'auto',
+                  }}
+                >
+                  {loadingProgress ? (
+                    <CircularProgress color="primary" />
+                  ) : !progress.hasCompletedIntro ? (
+                    <>
+                      <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', mb: 1 }}>
+                        Pero antes de comenzar, necesitamos conocerte mejor
+                      </Typography>
+                      <Button
+                        fullWidth
+                        onClick={() => navigate('/introduccion')}
+                        sx={buttonStyle('linear-gradient(90deg, #91e257ff, #ff823aff)', 'rgba(144, 142, 75, 0.79)', 'active')}
+                      >
+                        👋 INTRODUCCIÓN
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {(() => {
+                        const tests = [
+                          { id: 1, label: '📄 ENTREVISTA', path: '/entrevista', gradient: 'linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)', shadow: 'rgba(127, 127, 213, 0.3)' },
+                          { id: 2, label: '🧠 IPPR', path: '/ippr', gradient: 'linear-gradient(90deg, #ff758c, #ff7eb3)', shadow: 'rgba(255, 117, 140, 0.3)' },
+                          { id: 3, label: '🍥 CHASIDE', path: '/chaside', gradient: 'linear-gradient(90deg, #ff6a00, #ee0979)', shadow: 'rgba(255, 106, 0, 0.3)' },
+                          { id: 4, label: '🛠️ MACI', path: '/maci', gradient: 'linear-gradient(90deg, #43cea2, #185a9d)', shadow: 'rgba(67, 206, 162, 0.3)' },
+                          { id: 5, label: '🧩 DAT', path: '/dat', gradient: 'linear-gradient(90deg, #11998e, #38ef7d)', shadow: 'rgba(17, 153, 142, 0.3)' },
+                        ];
 
-                        return (
-                          <Fade in timeout={800}>
-                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                              <Box sx={{
-                                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                                p: 3,
-                                borderRadius: 6,
-                                border: '2px dashed #4caf50',
-                                position: 'relative',
-                                width: '100%'
-                              }}>
-                                <Typography variant="h5" fontWeight={900} color="#2e7d32" gutterBottom>
-                                  ¡Muchas Felicidades! 🎉
-                                </Typography>
-                                <Typography variant="body1" color="#1b5e20" sx={{ mb: 1, fontWeight: 500 }}>
-                                  Has completado todos los tests de manera exitosa.
-                                </Typography>
-                                <Typography variant="body2" color="#388e3c">
-                                  Ahora el siguiente paso es comunicarte con la clínica para que podamos procesar tus resultados.
-                                </Typography>
-                              </Box>
+                        if (allFinished) {
+                          const whatsappMsg = `¡Hola! Soy ${name}. He completado satisfactoriamente todos los tests vocacionales.`;
+                          const whatsappUrl = `https://wa.me/59162733929?text=${encodeURIComponent(whatsappMsg)}`;
 
-                              <Button
-                                fullWidth
-                                variant="contained"
-                                startIcon={<WhatsAppIcon />}
-                                href={whatsappUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                sx={{
-                                  background: 'linear-gradient(90deg, #25D366, #128C7E)',
-                                  color: '#fff',
-                                  fontWeight: 800,
-                                  py: 2.2,
-                                  borderRadius: 4,
-                                  fontSize: '1.05rem',
-                                  textTransform: 'none',
-                                  boxShadow: '0 8px 25px rgba(37, 211, 102, 0.3)',
-                                  transition: 'all 0.3s ease',
-                                  '&:hover': {
-                                    transform: 'translateY(-3px)',
-                                    boxShadow: '0 12px 30px rgba(37, 211, 102, 0.4)',
+                          return (
+                            <Fade in timeout={800}>
+                              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                                <Box sx={{
+                                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                  p: 3,
+                                  borderRadius: 6,
+                                  border: '2px dashed #4caf50',
+                                  position: 'relative',
+                                  width: '100%'
+                                }}>
+                                  <Typography variant="h5" fontWeight={900} color="#2e7d32" gutterBottom>
+                                    ¡Muchas Felicidades! 🎉
+                                  </Typography>
+                                  <Typography variant="body1" color="#1b5e20" sx={{ mb: 1, fontWeight: 500 }}>
+                                    Has completado todos los tests de manera exitosa.
+                                  </Typography>
+                                  <Typography variant="body2" color="#388e3c">
+                                    Ahora el siguiente paso es comunicarte con la clínica para que podamos procesar tus resultados.
+                                  </Typography>
+                                </Box>
+
+                                <Button
+                                  fullWidth
+                                  variant="contained"
+                                  startIcon={<WhatsAppIcon />}
+                                  href={whatsappUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  sx={{
+                                    background: 'linear-gradient(90deg, #25D366, #128C7E)',
                                     color: '#fff',
-                                  }
-                                }}
-                              >
-                                Notificar a la Clínica
-                              </Button>
-                            </Box>
-                          </Fade>
-                        );
-                      }
-
-                      return tests.map((t, idx) => {
-                        const isCompleted = t.id === 5 ? isDatCompleted : progress.completedMainTestIds.includes(t.id);
-
-                        let isEnabled = false;
-                        if (idx === 0) {
-                          isEnabled = !isCompleted;
-                        } else {
-                          const prevTest = tests[idx - 1];
-                          const prevCompleted = prevTest.id === 5 ? isDatCompleted : progress.completedMainTestIds.includes(prevTest.id);
-                          isEnabled = prevCompleted && !isCompleted;
+                                    fontWeight: 800,
+                                    py: 2.2,
+                                    borderRadius: 4,
+                                    fontSize: '1.05rem',
+                                    textTransform: 'none',
+                                    boxShadow: '0 8px 25px rgba(37, 211, 102, 0.3)',
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                      transform: 'translateY(-3px)',
+                                      boxShadow: '0 12px 30px rgba(37, 211, 102, 0.4)',
+                                      color: '#fff',
+                                    }
+                                  }}
+                                >
+                                  Notificar a la Clínica
+                                </Button>
+                              </Box>
+                            </Fade>
+                          );
                         }
 
-                        const status = isCompleted ? 'completed' : (isEnabled ? 'active' : 'locked');
+                        return tests.map((t, idx) => {
+                          const isCompleted = t.id === 5 ? isDatCompleted : progress.completedMaintest_ids.includes(t.id);
 
-                        return (
-                          <Button
-                            key={t.id}
-                            fullWidth
-                            onClick={() => navigate(t.path)}
-                            sx={buttonStyle(t.gradient, t.shadow, status)}
-                          >
-                            {status === 'locked' && <LockIcon sx={{ fontSize: '1.1rem' }} />}
-                            {t.id === 5 && isDatCompleted ? '🧩 DAT (CONTINUAR)' : t.label}
-                            {status === 'completed' && <CheckCircleIcon sx={{ fontSize: '1.1rem' }} />}
-                          </Button>
-                        );
-                      });
-                    })()}
-                  </>
-                )}
-              </Box>
+                          let isEnabled = false;
+                          if (idx === 0) {
+                            isEnabled = !isCompleted;
+                          } else {
+                            const prevTest = tests[idx - 1];
+                            const prevCompleted = prevTest.id === 5 ? isDatCompleted : progress.completedMaintest_ids.includes(prevTest.id);
+                            isEnabled = prevCompleted && !isCompleted;
+                          }
+
+                          const status = isCompleted ? 'completed' : (isEnabled ? 'active' : 'locked');
+
+                          return (
+                            <Button
+                              key={t.id}
+                              fullWidth
+                              onClick={() => navigate(t.path)}
+                              sx={buttonStyle(t.gradient, t.shadow, status)}
+                            >
+                              {status === 'locked' && <LockIcon sx={{ fontSize: '1.1rem' }} />}
+                              {t.id === 5 && isDatCompleted ? '🧩 DAT (CONTINUAR)' : t.label}
+                              {status === 'completed' && <CheckCircleIcon sx={{ fontSize: '1.1rem' }} />}
+                            </Button>
+                          );
+                        });
+                      })()}
+                    </>
+                  )}
+                </Box>
               </Box>
             </Fade>
           ) : (
             <Fade in timeout={600} key="account-tab">
               <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Typography variant="h6" fontWeight={600} color="text.primary" gutterBottom>
-                Cuenta
-              </Typography>
-              <Typography variant="body1" color="text.secondary" mb={1}>
-                <strong>Nombre:</strong> {name}
-              </Typography>
-              <Typography variant="body1" color="text.secondary" mb={3}>
-                <strong>Usuario:</strong> {username}
-              </Typography>
-              
-              <Box sx={{ width: '100%', mb: 3 }}>
+                  Cuenta
+                </Typography>
+                <Typography variant="body1" color="text.secondary" mb={1}>
+                  <strong>Nombre:</strong> {name}
+                </Typography>
+                <Typography variant="body1" color="text.secondary" mb={3}>
+                  <strong>Usuario:</strong> {username}
+                </Typography>
+
+                <Box sx={{ width: '100%', mb: 3 }}>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    disabled={isDownloading || hasDownloaded}
+                    onClick={handleDownloadTests}
+                    startIcon={hasDownloaded ? <CheckCircleIcon /> : <CloudDownloadIcon />}
+                    sx={{
+                      fontWeight: 800,
+                      textTransform: 'none',
+                      borderRadius: 3,
+                      py: sizes.btnPy,
+                      backgroundColor: hasDownloaded ? '#4caf50' : '#1976d2',
+                      color: '#ffffff',
+                      boxShadow: hasDownloaded ? 'none' : '0 4px 15px rgba(25, 118, 210, 0.3)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        backgroundColor: hasDownloaded ? '#4caf50' : '#1565c0',
+                        transform: hasDownloaded ? 'none' : 'translateY(-2px)',
+                        boxShadow: hasDownloaded ? 'none' : '0 6px 20px rgba(25, 118, 210, 0.4)'
+                      },
+                      '&.Mui-disabled': {
+                        background: hasDownloaded ? '#e8f5e9' : '#cfd8dc',
+                        color: hasDownloaded ? '#2e7d32' : '#78909c'
+                      }
+                    }}
+                  >
+                    {isDownloading ? 'Descargando...' : (hasDownloaded ? 'Descargado' : 'Descargar tests para responder offline')}
+                  </Button>
+                  {isDownloading && (
+                    <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <LinearProgress variant="determinate" value={downloadProgress} sx={{ flex: 1, height: 8, borderRadius: 4 }} />
+                      <Typography variant="body2" color="text.secondary" fontWeight={700}>
+                        {downloadProgress}%
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+
                 <Button
                   variant="contained"
+                  color="error"
                   fullWidth
-                  disabled={isDownloading || hasDownloaded}
-                  onClick={handleDownloadTests}
-                  startIcon={hasDownloaded ? <CheckCircleIcon /> : <CloudDownloadIcon />}
+                  onClick={handleLogout}
                   sx={{
                     fontWeight: 800,
                     textTransform: 'none',
                     borderRadius: 3,
                     py: sizes.btnPy,
-                    backgroundColor: hasDownloaded ? '#4caf50' : '#1976d2',
-                    color: '#ffffff',
-                    boxShadow: hasDownloaded ? 'none' : '0 4px 15px rgba(25, 118, 210, 0.3)',
+                    boxShadow: '0 4px 15px rgba(211, 47, 47, 0.3)',
                     transition: 'all 0.3s ease',
                     '&:hover': {
-                      backgroundColor: hasDownloaded ? '#4caf50' : '#1565c0',
-                      transform: hasDownloaded ? 'none' : 'translateY(-2px)',
-                      boxShadow: hasDownloaded ? 'none' : '0 6px 20px rgba(25, 118, 210, 0.4)'
-                    },
-                    '&.Mui-disabled': {
-                      background: hasDownloaded ? '#e8f5e9' : '#cfd8dc',
-                      color: hasDownloaded ? '#2e7d32' : '#78909c'
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 20px rgba(211, 47, 47, 0.4)'
                     }
                   }}
                 >
-                  {isDownloading ? 'Descargando...' : (hasDownloaded ? 'Descargado' : 'Descargar tests para responder offline')}
+                  Cerrar sesión
                 </Button>
-                {isDownloading && (
-                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <LinearProgress variant="determinate" value={downloadProgress} sx={{ flex: 1, height: 8, borderRadius: 4 }} />
-                    <Typography variant="body2" color="text.secondary" fontWeight={700}>
-                      {downloadProgress}%
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
 
-              <Button
-                variant="contained"
-                color="error"
-                fullWidth
-                onClick={handleLogout}
-                sx={{
-                  fontWeight: 800,
-                  textTransform: 'none',
-                  borderRadius: 3,
-                  py: sizes.btnPy,
-                  boxShadow: '0 4px 15px rgba(211, 47, 47, 0.3)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 6px 20px rgba(211, 47, 47, 0.4)'
-                  }
-                }}
-              >
-                Cerrar sesión
-              </Button>
-
-              <Button
-                variant="contained"
-                fullWidth
-                href="https://wa.me/59162733929?text=Hola%2C%20quisiera%20hacer%20una%20consulta%20sobre%20el%20test%20vocacional"
-                target="_blank"
-                rel="noopener noreferrer"
-                sx={{
-                  mt: 1.5,
-                  fontWeight: 800,
-                  textTransform: 'none',
-                  borderRadius: 3,
-                  py: sizes.btnPy,
-                  backgroundColor: '#2e7d32',
-                  color: '#ffffff',
-                  boxShadow: '0 4px 15px rgba(46, 125, 50, 0.3)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    backgroundColor: '#1b5e20',
+                <Button
+                  variant="contained"
+                  fullWidth
+                  href="https://wa.me/59162733929?text=Hola%2C%20quisiera%20hacer%20una%20consulta%20sobre%20el%20test%20vocacional"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{
+                    mt: 1.5,
+                    fontWeight: 800,
+                    textTransform: 'none',
+                    borderRadius: 3,
+                    py: sizes.btnPy,
+                    backgroundColor: '#2e7d32',
                     color: '#ffffff',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 6px 20px rgba(46, 125, 50, 0.4)'
-                  },
-                }}
-              >
-                Contáctanos por WhatsApp
-              </Button>
+                    boxShadow: '0 4px 15px rgba(46, 125, 50, 0.3)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      backgroundColor: '#1b5e20',
+                      color: '#ffffff',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 20px rgba(46, 125, 50, 0.4)'
+                    },
+                  }}
+                >
+                  Contáctanos por WhatsApp
+                </Button>
               </Box>
             </Fade>
           )}

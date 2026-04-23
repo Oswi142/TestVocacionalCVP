@@ -6,10 +6,13 @@ export interface User {
     name: string;
     role: UserRole;
     password?: string;
+    created_by?: number;
+    created_by_name?: string | null;
+    created_at?: string;
 }
 
 export interface ClientInfo {
-    userid: number;
+    user_id: number;
     birthday: string | null;
     address: string | null;
     birthplace: string | null;

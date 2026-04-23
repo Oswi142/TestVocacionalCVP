@@ -3,45 +3,45 @@ import logoUrl from '@/assets/logo-cvp.png';
 
 // ─── Brand colors ──────────────────────────────────────────────────────────
 export const PDF_COLORS = {
-  headerBg:   [15, 23, 42]   as [number, number, number],  // slate-900
-  accentGreen:[32, 130, 80]  as [number, number, number],  // CVP green
-  accentAmber:[200, 130, 30] as [number, number, number],  // CVP amber
-  bodyText:   [30, 41, 59]   as [number, number, number],  // slate-800
-  mutedText:  [100, 116, 139]as [number, number, number],  // slate-500
-  lightBg:    [248, 250, 252]as [number, number, number],  // slate-50
-  divider:    [226, 232, 240]as [number, number, number],  // slate-200
-  white:      [255, 255, 255]as [number, number, number],
+  headerBg: [15, 23, 42] as [number, number, number],  // slate-900
+  accentGreen: [32, 130, 80] as [number, number, number],  // CVP green
+  accentAmber: [200, 130, 30] as [number, number, number],  // CVP amber
+  bodyText: [30, 41, 59] as [number, number, number],  // slate-800
+  mutedText: [100, 116, 139] as [number, number, number],  // slate-500
+  lightBg: [248, 250, 252] as [number, number, number],  // slate-50
+  divider: [226, 232, 240] as [number, number, number],  // slate-200
+  white: [255, 255, 255] as [number, number, number],
 };
 
 /** Distinct palette used for bar charts — one color per bar */
 export const CHART_PALETTE: [number, number, number][] = [
-  [32,  130,  80],  // CVP green
-  [245, 158,  11],  // amber
-  [99,  102, 241],  // indigo
-  [239,  68,  68],  // red
-  [20,  184, 166],  // teal
-  [168,  85, 247],  // violet
-  [59,  130, 246],  // blue
-  [249, 115,  22],  // orange
-  [16,  185, 129],  // emerald
-  [236,  72, 153],  // pink
-  [234, 179,   8],  // yellow
-  [6,   182, 212],  // cyan
-  [139,  92,  46],  // brown
+  [32, 130, 80],  // CVP green
+  [245, 158, 11],  // amber
+  [99, 102, 241],  // indigo
+  [239, 68, 68],  // red
+  [20, 184, 166],  // teal
+  [168, 85, 247],  // violet
+  [59, 130, 246],  // blue
+  [249, 115, 22],  // orange
+  [16, 185, 129],  // emerald
+  [236, 72, 153],  // pink
+  [234, 179, 8],  // yellow
+  [6, 182, 212],  // cyan
+  [139, 92, 46],  // brown
   [107, 114, 128],  // slate
-  [52,  211, 153],  // mint
+  [52, 211, 153],  // mint
 ];
 
 /** Shared client data bag used by all PDF generators */
 export interface ClientPdfData {
-  name:            string | null;
-  firstlastname:   string | null;
-  secondlastname:  string | null;
-  school:          string | null;
-  grade:           string | null;
-  birthday:        string | null;
-  birthplace:      string | null;
-  gender:          string | null;
+  name: string | null;
+  first_last_name: string | null;
+  second_last_name: string | null;
+  school: string | null;
+  grade: string | null;
+  birthday: string | null;
+  birthplace: string | null;
+  gender: string | null;
 }
 
 /** Format a raw ISO/YYYY-MM-DD birthday to DD/MM/YYYY */
@@ -55,14 +55,14 @@ export function formatBirthday(raw: string | null | undefined): string {
 /** Build the standard field list for drawClientCard */
 export function buildClientCardFields(c: ClientPdfData): { label: string; value: string }[] {
   return [
-    { label: 'Nombre(s)',       value: c.name           || 'No registrado' },
-    { label: 'Primer apellido', value: c.firstlastname  || 'No registrado' },
-    { label: 'Segundo apellido',value: c.secondlastname || 'No registrado' },
-    { label: 'Colegio',        value: c.school          || 'No registrado' },
-    { label: 'Grado',          value: c.grade           || 'No registrado' },
-    { label: 'F. Nacimiento',  value: formatBirthday(c.birthday) },
-    { label: 'Lugar Nac.',     value: c.birthplace      || 'No registrado' },
-    { label: 'Género',         value: c.gender          || 'No registrado' },
+    { label: 'Nombre(s)', value: c.name || 'No registrado' },
+    { label: 'Primer apellido', value: c.first_last_name || 'No registrado' },
+    { label: 'Segundo apellido', value: c.second_last_name || 'No registrado' },
+    { label: 'Colegio', value: c.school || 'No registrado' },
+    { label: 'Grado', value: c.grade || 'No registrado' },
+    { label: 'F. Nacimiento', value: formatBirthday(c.birthday) },
+    { label: 'Lugar Nac.', value: c.birthplace || 'No registrado' },
+    { label: 'Género', value: c.gender || 'No registrado' },
   ];
 }
 
@@ -237,10 +237,10 @@ export function drawHorizontalBarChart(
   } = {}
 ): number {
   const {
-    labelWidth  = 52,
+    labelWidth = 52,
     barMaxWidth = 108,
-    barH        = 5,
-    rowGap      = 3,
+    barH = 5,
+    rowGap = 3,
     defaultColor = PDF_COLORS.accentGreen,
   } = opts;
 

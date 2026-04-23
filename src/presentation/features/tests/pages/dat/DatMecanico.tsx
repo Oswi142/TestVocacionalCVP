@@ -11,7 +11,7 @@ interface Question extends BaseQuestion {
 
 const DatMecanico: React.FC = () => {
   const {
-    answerOptions,
+    answer_options,
     currentSection,
     setCurrentSection,
     answers,
@@ -37,8 +37,8 @@ const DatMecanico: React.FC = () => {
   });
 
   const questions = groupedQuestions[currentSection] || [];
-  const getOptionsForQuestion = (questionId: number) =>
-    answerOptions.filter((opt) => opt.questionid === questionId);
+  const getOptionsForQuestion = (question_id: number) =>
+    answer_options.filter((opt) => opt.question_id === question_id);
 
   return (
     <TestLayout

@@ -1,28 +1,38 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, useMediaQuery, useTheme, IconButton, CircularProgress } from '@mui/material';
+import { Box, Button, Typography, useMediaQuery, useTheme, IconButton, CircularProgress, Dialog, DialogContent, DialogActions, Chip } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LockIcon from '@mui/icons-material/Lock';
+import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { testService } from '@/infrastructure/services/testService';
 import logo from '@/assets/logo-cvp.png';
 
 const DatDashboard: React.FC = () => {
   const [name, setName] = useState('');
-  const [userId, setUserId] = useState<number | null>(null);
+  const [user_id, setuser_id] = useState<number | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(true);
   const [completedDatTypes, setCompletedDatTypes] = useState<string[]>([]);
+  const [showOfflineAlert, setShowOfflineAlert] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
+    // Listen to connection changes
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       const user = JSON.parse(storedUser);
       setName(user.name);
-      setUserId(user.id);
+      setuser_id(user.id);
     } else {
       navigate('/');
     }
@@ -35,15 +45,17 @@ const DatDashboard: React.FC = () => {
     window.addEventListener('popstate', handlePopState);
 
     return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
       window.removeEventListener('popstate', handlePopState);
     };
   }, [navigate]);
 
   useEffect(() => {
     const fetchProgress = async () => {
-      if (userId) {
+      if (user_id) {
         try {
-          const data = await testService.getDetailedProgress(userId);
+          const data = await testService.getDetailedProgress(user_id);
           setCompletedDatTypes(data.completedDatTypes);
         } catch (error) {
           console.error('Error fetching DAT progress:', error);
@@ -53,7 +65,7 @@ const DatDashboard: React.FC = () => {
       }
     };
     fetchProgress();
-  }, [userId]);
+  }, [user_id]);
 
   const sizes = useMemo(() => {
     if (isMobile) {
@@ -108,6 +120,36 @@ const DatDashboard: React.FC = () => {
     } : {},
     '&:active': status === 'active' ? { transform: 'translateY(1px)' } : {}
   });
+
+  const handleTestClick = async (path: string) => {
+    setLoadingProgress(true); // Reutilizamos el spinner para dar feedback
+    
+    // Verificación de "Fuego": Intento de fetch ultra rápido
+    let realOnline = navigator.onLine;
+    if (realOnline) {
+      try {
+        // Hacemos un fetch a un recurso muy pequeño (o simplemente un ping)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 segundos máximo
+        await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', signal: controller.signal });
+        clearTimeout(timeoutId);
+        realOnline = true;
+      } catch (e) {
+        realOnline = false;
+      }
+    }
+
+    setLoadingProgress(false);
+
+    if (!realOnline) {
+      setIsOnline(false);
+      setShowOfflineAlert(true);
+      return;
+    }
+
+    setIsOnline(true);
+    navigate(path);
+  };
 
   return (
     <Box
@@ -251,7 +293,7 @@ const DatDashboard: React.FC = () => {
                       <Button
                         key={s.type}
                         fullWidth
-                        onClick={() => navigate(s.path)}
+                        onClick={() => handleTestClick(s.path)}
                         sx={buttonStyle(s.gradient, s.shadow, status)}
                       >
                         {status === 'locked' && <LockIcon sx={{ fontSize: '1.1rem' }} />}
@@ -266,6 +308,68 @@ const DatDashboard: React.FC = () => {
           </Box>
         </Box>
       </Box>
+
+      {/* Alerta de Conexión Estilo Card Premium (Reducido) */}
+      <Dialog
+        open={showOfflineAlert}
+        onClose={() => setShowOfflineAlert(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 6,
+            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.5)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+            maxWidth: 320,
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogContent sx={{ textAlign: 'center', pt: 4, pb: 1 }}>
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto',
+              mb: 2,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+            }}
+          >
+            <WifiOffIcon sx={{ fontSize: 32, color: '#FF6F00' }} />
+          </Box>
+          <Typography variant="h6" fontWeight={900} color="#1e293b" gutterBottom>
+            Conexión necesaria
+          </Typography>
+          <Typography variant="body2" color="#475569" fontWeight={500} sx={{ px: 1 }}>
+            Se necesita internet para continuar con este test.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 4, px: 4 }}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => setShowOfflineAlert(false)}
+            sx={{
+              borderRadius: 3,
+              py: 1.5,
+              fontWeight: 800,
+              backgroundColor: '#FF6F00',
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: '#E65100',
+              }
+            }}
+          >
+            Aceptar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

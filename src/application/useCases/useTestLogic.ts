@@ -5,11 +5,11 @@ import { testService } from '@/infrastructure/services/testService';
 import { Question as BaseQuestion, AnswerOption as BaseAnswerOption, TestAnswer } from '@/domain/entities/test';
 
 export const useTestLogic = <T extends BaseQuestion>(
-  testId: number,
+  test_id: number,
   storageKeyPrefix: string,
   options: {
     datType?: string | null;
-    minQuestionId?: number;
+    minquestion_id?: number;
     questionsPerSection?: number;
     navigateOnSubmit?: string;
     onSaveExtra?: (answers: { [key: number]: string }) => any;
@@ -20,7 +20,7 @@ export const useTestLogic = <T extends BaseQuestion>(
 ) => {
   const {
     datType = null,
-    minQuestionId = null,
+    minquestion_id = null,
     questionsPerSection = null,
     navigateOnSubmit = '/client',
     conditionalVisibility,
@@ -45,7 +45,7 @@ export const useTestLogic = <T extends BaseQuestion>(
   const STORAGE_KEY = `${storageKeyPrefix}_${user?.id || 'anonymous'}`;
 
   const [allQuestions, setAllQuestions] = useState<T[]>([]);
-  const [answerOptions, setAnswerOptions] = useState<BaseAnswerOption[]>([]);
+  const [answer_options, setanswer_options] = useState<BaseAnswerOption[]>([]);
   const [currentSection, setCurrentSection] = useState(1);
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
   const [loading, setLoading] = useState(true);
@@ -121,7 +121,7 @@ export const useTestLogic = <T extends BaseQuestion>(
       const userObj = JSON.parse(storedUser);
       const progress = await testService.getDetailedProgress(userObj.id);
 
-      if (testId !== 0 && !progress.hasCompletedIntro) {
+      if (test_id !== 0 && !progress.hasCompletedIntro) {
         navigate('/introduccion', { replace: true });
         return;
       }
@@ -136,10 +136,10 @@ export const useTestLogic = <T extends BaseQuestion>(
         'ortografia'
       ];
 
-      const isMainCompleted = progress.completedMainTestIds.includes(testId);
+      const isMainCompleted = progress.completedMaintest_ids.includes(test_id);
       const isDatCompleted = datType ? progress.completedDatTypes.includes(datType) : false;
 
-      if (isMainCompleted && testId !== 5) {
+      if (isMainCompleted && test_id !== 5) {
         navigate('/client', { replace: true });
         return;
       }
@@ -148,13 +148,13 @@ export const useTestLogic = <T extends BaseQuestion>(
         return;
       }
 
-      if (testId !== 0) {
-        const currentIdx = mainOrder.indexOf(testId);
-        if (currentIdx >= 0 && testId !== 1) {
-          const prevTestId = mainOrder[currentIdx - 1];
-          let prevCompleted = progress.completedMainTestIds.includes(prevTestId);
+      if (test_id !== 0) {
+        const currentIdx = mainOrder.indexOf(test_id);
+        if (currentIdx >= 0 && test_id !== 1) {
+          const prevtest_id = mainOrder[currentIdx - 1];
+          let prevCompleted = progress.completedMaintest_ids.includes(prevtest_id);
 
-          if (testId === 5 && datType) {
+          if (test_id === 5 && datType) {
             if (!prevCompleted) {
               navigate('/client', { replace: true });
               return;
@@ -174,7 +174,7 @@ export const useTestLogic = <T extends BaseQuestion>(
         }
       }
 
-      const qs = (await testService.getQuestions(testId, { datType, minQuestionId })) as T[];
+      const qs = (await testService.getQuestions(test_id, { datType, minquestion_id })) as T[];
 
       let finalQuestions = qs;
       if (questionsPerSection) {
@@ -192,10 +192,16 @@ export const useTestLogic = <T extends BaseQuestion>(
 
       setAllQuestions(finalQuestions);
 
-      const questionIds = finalQuestions.map((q) => q.id);
-      if (questionIds.length > 0) {
-        const allOpts = await testService.getAnswerOptions(questionIds);
-        setAnswerOptions(allOpts);
+      const question_ids = finalQuestions.map((q) => q.id);
+      if (question_ids.length > 0) {
+        const allOpts = await testService.getanswer_options(question_ids);
+        // Ensure all numeric IDs are actually numbers to avoid comparison issues
+        const normalizedOpts = allOpts.map(opt => ({
+          ...opt,
+          id: Number(opt.id),
+          question_id: Number(opt.question_id)
+        }));
+        setanswer_options(normalizedOpts);
       }
 
       const sectionsSorted = Array.from(new Set(finalQuestions.map((q) => q.section))).sort(
@@ -209,7 +215,7 @@ export const useTestLogic = <T extends BaseQuestion>(
       showSnackbar('Error al cargar los datos', 'error');
       setLoading(false);
     }
-  }, [testId, datType, questionsPerSection, minQuestionId, loadFromLocal, showSnackbar, navigate]);
+  }, [test_id, datType, questionsPerSection, minquestion_id, loadFromLocal, showSnackbar, navigate]);
 
   useEffect(() => {
     if (user) fetchData();
@@ -248,16 +254,16 @@ export const useTestLogic = <T extends BaseQuestion>(
       const val = answers[q.id];
       const parsed = parseInt(val);
       return {
-        clientid: user?.id as number,
-        testid: testId,
-        questionid: q.id,
-        answerid: Number.isInteger(parsed) ? parsed : null,
+        client_id: user?.id as number,
+        test_id: test_id,
+        question_id: q.id,
+        answer_id: Number.isInteger(parsed) ? parsed : null,
       };
     });
 
     const visiblePayload = payload.filter(p =>
-      (!conditionalVisibility || shouldDisplayQuestion(p.questionid)) &&
-      p.answerid !== null
+      (!conditionalVisibility || shouldDisplayQuestion(p.question_id)) &&
+      p.answer_id !== null
     );
 
     setDialogs((prev) => ({ ...prev, confirm: false }));
@@ -271,7 +277,7 @@ export const useTestLogic = <T extends BaseQuestion>(
       showSnackbar('Respuestas enviadas correctamente', 'success');
       setTimeout(() => navigate(navigateOnSubmit, { replace: true, state: { showConfetti: true } }), 500);
     } catch (err: any) {
-        showSnackbar('Hubo un problema al enviar tus respuestas. Por favor, intenta de nuevo o contacta con soporte.', 'error');
+      showSnackbar('Hubo un problema al enviar tus respuestas. Por favor, intenta de nuevo o contacta con soporte.', 'error');
     } finally {
       setSaving(false);
     }
@@ -285,16 +291,16 @@ export const useTestLogic = <T extends BaseQuestion>(
     }, {});
   }, [allQuestions]);
 
-  const shouldDisplayQuestion = (questionId: number): boolean => {
+  const shouldDisplayQuestion = (question_id: number): boolean => {
     if (!conditionalVisibility) return true;
-    const condition = conditionalVisibility[questionId];
+    const condition = conditionalVisibility[question_id];
     if (!condition) return true;
 
-    const selectedAnswerId = answers[condition.parentId];
-    if (!selectedAnswerId) return false;
+    const selectedanswer_id = answers[condition.parentId];
+    if (!selectedanswer_id) return false;
 
-    const parentOptions = answerOptions.filter((opt) => opt.questionid === condition.parentId);
-    const selectedAnswer = parentOptions.find((opt) => String(opt.id) === String(selectedAnswerId));
+    const parentOptions = answer_options.filter((opt) => opt.question_id === condition.parentId);
+    const selectedAnswer = parentOptions.find((opt) => String(opt.id) === String(selectedanswer_id));
     return selectedAnswer?.answer?.toLowerCase() === condition.expectedAnswer.toLowerCase();
   };
 
@@ -309,7 +315,7 @@ export const useTestLogic = <T extends BaseQuestion>(
 
   return {
     allQuestions,
-    answerOptions,
+    answer_options,
     currentSection,
     setCurrentSection,
     answers,
@@ -322,7 +328,7 @@ export const useTestLogic = <T extends BaseQuestion>(
     onConfirmExit: () => {
       saveToLocal();
       setDialogs((prev) => ({ ...prev, exit: false }));
-      navigate(testId === 5 ? '/dat' : '/client', { replace: true });
+      navigate(test_id === 5 ? '/dat' : '/client', { replace: true });
     },
     onConfirmSubmit: () => {
       setDialogs((prev) => ({ ...prev, confirm: false }));

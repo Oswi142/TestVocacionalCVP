@@ -20,18 +20,18 @@ export const DAT_LABELS: Record<DatType, string> = {
 };
 
 export type DatResult = {
-    clientId: number;
+    client_id: number;
     client: import('@/infrastructure/utils/pdfUtils').ClientPdfData;
     scores: Record<DatType, { correct: number; answered: number; total: number }>;
     overallCorrect: number;
     totalAnswered: number;
 };
 
-export async function getDatTestId(): Promise<number> {
+export async function getDattest_id(): Promise<number> {
     const { data, error } = await supabase
         .from('tests')
         .select('id')
-        .ilike('testname', '%dat%')
+        .ilike('test_name', '%dat%')
         .maybeSingle();
 
     if (error || !data) {
@@ -40,36 +40,36 @@ export async function getDatTestId(): Promise<number> {
     return data.id;
 }
 
-export async function computeDatScore(clientId: number, attemptId: string = 'active'): Promise<DatResult> {
-    const testId = await getDatTestId();
+export async function computeDatScore(client_id: number, attemptId: string = 'active'): Promise<DatResult> {
+    const test_id = await getDattest_id();
 
     const { data: urows } = await supabase
         .from('users')
-        .select('name, firstlastname, secondlastname')
-        .eq('id', clientId)
+        .select('name, first_last_name, second_last_name')
+        .eq('id', client_id)
         .limit(1);
     const urow = urows?.[0];
     const { data: cirows } = await supabase
-        .from('clientsinfo')
+        .from('clients_info')
         .select('school, grade, birthday, birthplace, gender')
-        .eq('userid', clientId)
+        .eq('user_id', client_id)
         .limit(1);
     const ci = cirows?.[0];
     const clientData: import('@/infrastructure/utils/pdfUtils').ClientPdfData = {
-        name:           urow?.name           ?? null,
-        firstlastname:  urow?.firstlastname  ?? null,
-        secondlastname: urow?.secondlastname ?? null,
-        school:         ci?.school           ?? null,
-        grade:          ci?.grade            ?? null,
-        birthday:       ci?.birthday         ?? null,
-        birthplace:     ci?.birthplace       ?? null,
-        gender:         ci?.gender           ?? null,
+        name: urow?.name ?? null,
+        first_last_name: urow?.first_last_name ?? null,
+        second_last_name: urow?.second_last_name ?? null,
+        school: ci?.school ?? null,
+        grade: ci?.grade ?? null,
+        birthday: ci?.birthday ?? null,
+        birthplace: ci?.birthplace ?? null,
+        gender: ci?.gender ?? null,
     };
 
     const { data: qrows, error: qErr } = await supabase
         .from('questions')
         .select('id, dat_type')
-        .eq('testid', testId)
+        .eq('test_id', test_id)
         .range(0, 9999);
     if (qErr) throw qErr;
 
@@ -85,10 +85,10 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
     });
 
     const { data: arows, error: aErr } = await supabase
-        .from('testsanswers')
-        .select('questionid, answerid, details')
-        .eq('clientid', clientId)
-        .eq('testid', testId)
+        .from('test_answers')
+        .select('question_id, answer_id, details')
+        .eq('client_id', client_id)
+        .eq('test_id', test_id)
         .range(0, 9999);
     if (aErr) throw aErr;
 
@@ -98,14 +98,14 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
         return d.startsWith(attemptId);
     });
 
-    const answerIds = (filteredArows || []).map(r => r.answerid).filter(Boolean).filter(id => !isNaN(Number(id)));
+    const answer_ids = (filteredArows || []).map(r => r.answer_id).filter(Boolean).filter(id => !isNaN(Number(id)));
     let correctSet = new Set<number>();
 
-    if (answerIds.length > 0) {
+    if (answer_ids.length > 0) {
         const { data: orows, error: oErr } = await supabase
-            .from('answeroptions')
+            .from('answer_options')
             .select('id, dat_info')
-            .in('id', answerIds)
+            .in('id', answer_ids)
             .eq('dat_info', 'correcta')
             .range(0, 9999);
 
@@ -122,7 +122,7 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
     );
 
     return {
-        clientId,
+        client_id,
         client: clientData,
         scores,
         overallCorrect,
@@ -131,10 +131,10 @@ export async function computeDatScore(clientId: number, attemptId: string = 'act
 }
 
 export function calculateDatResultSummary(
-  filteredArows: Array<{ questionid: number; answerid?: number | null; details?: string | null }>,
-  qToType: Map<number, DatType>,
-  typeTotalCount: Record<string, number>,
-  correctSet: Set<number>
+    filteredArows: Array<{ question_id: number; answer_id?: number | null; details?: string | null }>,
+    qToType: Map<number, DatType>,
+    typeTotalCount: Record<string, number>,
+    correctSet: Set<number>
 ) {
     const scores: Record<DatType, { correct: number; answered: number; total: number }> = {
         razonamiento_verbal: { correct: 0, answered: 0, total: typeTotalCount['razonamiento_verbal'] || 0 },
@@ -149,11 +149,11 @@ export function calculateDatResultSummary(
     let totalAnswered = 0;
 
     filteredArows.forEach(r => {
-        const type = qToType.get(r.questionid);
+        const type = qToType.get(r.question_id);
         if (type) {
             totalAnswered++;
             scores[type].answered += 1;
-            if (r.answerid && correctSet.has(Number(r.answerid))) {
+            if (r.answer_id && correctSet.has(Number(r.answer_id))) {
                 scores[type].correct += 1;
                 overallCorrect += 1;
             }
@@ -163,13 +163,13 @@ export function calculateDatResultSummary(
     return { scores, overallCorrect, totalAnswered };
 }
 
-export async function getCompletedDatCategories(clientId: number, attemptId: string = 'active'): Promise<DatType[]> {
-    const testId = await getDatTestId();
+export async function getCompletedDatCategories(client_id: number, attemptId: string = 'active'): Promise<DatType[]> {
+    const test_id = await getDattest_id();
 
     const { data: qrows } = await supabase
         .from('questions')
         .select('id, dat_type')
-        .eq('testid', testId)
+        .eq('test_id', test_id)
         .range(0, 9999);
 
     const qToType = new Map<number, DatType>();
@@ -178,10 +178,10 @@ export async function getCompletedDatCategories(clientId: number, attemptId: str
     });
 
     const { data: arows } = await supabase
-        .from('testsanswers')
-        .select('questionid, details')
-        .eq('clientid', clientId)
-        .eq('testid', testId)
+        .from('test_answers')
+        .select('question_id, details')
+        .eq('client_id', client_id)
+        .eq('test_id', test_id)
         .range(0, 9999);
 
     const filteredArows = (arows || []).filter(r => {
@@ -192,15 +192,15 @@ export async function getCompletedDatCategories(clientId: number, attemptId: str
 
     const completedTypes = new Set<DatType>();
     filteredArows.forEach(r => {
-        const type = qToType.get(r.questionid);
+        const type = qToType.get(r.question_id);
         if (type) completedTypes.add(type);
     });
 
     return Array.from(completedTypes);
 }
 
-export async function downloadDatReportPDF(clientId: number, attemptId: string = 'active'): Promise<void> {
-    const res = await computeDatScore(clientId, attemptId);
+export async function downloadDatReportPDF(client_id: number, attemptId: string = 'active'): Promise<void> {
+    const res = await computeDatScore(client_id, attemptId);
     const { drawPremiumHeader, drawClientCard, drawSectionHeading, drawFooter, PDF_COLORS, PDF_FONT_SIZE } = await import('@/infrastructure/utils/pdfUtils');
 
     const doc = new jsPDF();
@@ -253,7 +253,7 @@ export async function downloadDatReportPDF(clientId: number, attemptId: string =
     const completedCount = categories.filter(c => res.scores[c].answered > 0).length;
     const summaryRows = [
         ['Sub-tests completados', `${completedCount} de 6`],
-        ['Total de aciertos',     `${res.overallCorrect} de ${res.totalAnswered} respondidas`],
+        ['Total de aciertos', `${res.overallCorrect} de ${res.totalAnswered} respondidas`],
     ];
     autoTable(doc, {
         startY: y,
@@ -281,12 +281,12 @@ export async function downloadDatReportPDF(clientId: number, attemptId: string =
     const chartItems = categories.map((type, i) => {
         const isCompleted = res.scores[type].answered > 0;
         const correct = isCompleted ? res.scores[type].correct : 0;
-        const total   = res.scores[type].total;
+        const total = res.scores[type].total;
         return {
-            label:     DAT_LABELS[type],
-            value:     correct,
+            label: DAT_LABELS[type],
+            value: correct,
             labelText: `${correct}/${total}`,
-            color:     CHART_PALETTE[i % CHART_PALETTE.length] as [number, number, number],
+            color: CHART_PALETTE[i % CHART_PALETTE.length] as [number, number, number],
         };
     });
 
@@ -297,6 +297,6 @@ export async function downloadDatReportPDF(clientId: number, attemptId: string =
     );
 
     drawFooter(doc);
-    const filename = `DAT_Resultados_${res.client.name?.replace(/\s+/g, '_') ?? clientId}.pdf`;
+    const filename = `DAT_Resultados_${res.client.name?.replace(/\s+/g, '_') ?? client_id}.pdf`;
     doc.save(filename);
 }

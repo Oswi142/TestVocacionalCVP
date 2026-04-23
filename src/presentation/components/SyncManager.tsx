@@ -12,7 +12,7 @@ const SyncManager: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
 
     const checkPending = () => {
         const pendingTests = JSON.parse(localStorage.getItem('pending_submissions') || '[]');
-        const pendingInfo = JSON.parse(localStorage.getItem('pending_clientsinfo') || '[]');
+        const pendingInfo = JSON.parse(localStorage.getItem('pending_clients_info') || '[]');
         setHasPending(pendingTests.length > 0 || pendingInfo.length > 0);
     };
 
@@ -33,19 +33,19 @@ const SyncManager: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
 
         try {
             // Sync Intro Info
-            const pendingInfo = JSON.parse(localStorage.getItem('pending_clientsinfo') || '[]');
+            const pendingInfo = JSON.parse(localStorage.getItem('pending_clients_info') || '[]');
             const remainingInfo = [];
             for (const info of pendingInfo) {
-                const { userid, gender, birthday, birthplace, address, school, grade, hobbies } = info;
-                const { error } = await supabase.from('clientsinfo').upsert({
-                    userid, gender, birthday, birthplace, address, school, grade, hobbies
+                const { user_id, gender, birthday, birthplace, address, school, grade, hobbies } = info;
+                const { error } = await supabase.from('clients_info').upsert({
+                    user_id, gender, birthday, birthplace, address, school, grade, hobbies
                 });
                 if (error) {
-                    console.error('Error syncing clientsinfo', error);
+                    console.error('Error syncing clients_info', error);
                     remainingInfo.push(info);
                 }
             }
-            localStorage.setItem('pending_clientsinfo', JSON.stringify(remainingInfo));
+            localStorage.setItem('pending_clients_info', JSON.stringify(remainingInfo));
 
             // Sync Tests
             const pendingTests = JSON.parse(localStorage.getItem('pending_submissions') || '[]');

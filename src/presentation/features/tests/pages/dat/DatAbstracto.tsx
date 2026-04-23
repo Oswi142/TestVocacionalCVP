@@ -9,7 +9,7 @@ interface Question extends BaseQuestion { }
 
 const DatAbstracto: React.FC = () => {
   const {
-    answerOptions,
+    answer_options,
     currentSection,
     setCurrentSection,
     answers,
@@ -30,13 +30,13 @@ const DatAbstracto: React.FC = () => {
     onSnackbarClose,
   } = useTestLogic<Question>(5, 'dat_abstracto', {
     datType: 'razonamiento_abstracto',
-    minQuestionId: 618,
+    minquestion_id: 618,
     navigateOnSubmit: '/client',
   });
 
   const questions = groupedQuestions[currentSection] || [];
-  const getOptionsForQuestion = (questionId: number) =>
-    answerOptions.filter((opt) => opt.questionid === questionId);
+  const getOptionsForQuestion = (question_id: number) =>
+    answer_options.filter((opt) => opt.question_id === question_id);
 
   return (
     <TestLayout

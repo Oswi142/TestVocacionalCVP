@@ -9,7 +9,7 @@ interface Question extends BaseQuestion { }
 
 const DatOrtografia: React.FC = () => {
     const {
-        answerOptions,
+        answer_options,
         currentSection,
         setCurrentSection,
         answers,
@@ -35,8 +35,8 @@ const DatOrtografia: React.FC = () => {
     });
 
     const questions = groupedQuestions[currentSection] || [];
-    const getOptionsForQuestion = (questionId: number) =>
-        answerOptions.filter((opt) => opt.questionid === questionId);
+    const getOptionsForQuestion = (question_id: number) =>
+        answer_options.filter((opt) => opt.question_id === question_id);
 
     return (
         <TestLayout

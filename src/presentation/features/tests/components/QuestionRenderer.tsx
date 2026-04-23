@@ -18,7 +18,7 @@ interface Question {
 
 interface AnswerOption {
     id: number;
-    questionid: number;
+    question_id: number;
     answer: string;
 }
 
@@ -26,7 +26,7 @@ interface QuestionRendererProps {
     question: Question;
     options: AnswerOption[];
     currentAnswer: string;
-    onAnswerChange: (questionId: number, answerId: string) => void;
+    onAnswerChange: (question_id: number, answer_id: string) => void;
     rowOptions?: boolean;
 }
 
@@ -38,6 +38,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     rowOptions = false,
 }) => {
     const [previewOpen, setPreviewOpen] = useState(false);
+    const isOnline = navigator.onLine;
 
     const STORAGE_BUCKET = 'question_images';
     const getPublicImageUrl = (imagePath?: string | null) => {
@@ -47,11 +48,12 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
     };
 
     const imgUrl = getPublicImageUrl(question.image_path);
+    const requiresImage = !!question.image_path;
 
     return (
-        <Box mb={4}>
+        <Box mb={4} sx={{ opacity: (!isOnline && requiresImage) ? 0.8 : 1 }}>
             {/* Imagen si existe */}
-            {imgUrl && (
+            {requiresImage && isOnline && imgUrl && (
                 <Box
                     sx={{
                         mt: 1,
@@ -107,6 +109,31 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 </Box>
             )}
 
+            {/* Aviso si requiere imagen y está offline */}
+            {requiresImage && !isOnline && (
+                <Box
+                    sx={{
+                        p: 3,
+                        textAlign: 'center',
+                        backgroundColor: 'rgba(255, 111, 0, 0.05)',
+                        borderRadius: 4,
+                        border: '2px dashed rgba(255, 111, 0, 0.3)',
+                        mb: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1
+                    }}
+                >
+                    <Typography variant="h6" fontWeight={800} color="#E65100">
+                        Imagen no disponible
+                    </Typography>
+                    <Typography variant="body2" color="#64748b" fontWeight={500}>
+                        Esta pregunta requiere ver una imagen. Por favor, <strong>conéctate a Internet</strong> para poder visualizarla y responder.
+                    </Typography>
+                </Box>
+            )}
+
             {/* Texto de la pregunta */}
             {question.question && (
                 <Typography variant="body1" fontWeight={700} color="#1e293b" gutterBottom>
@@ -114,68 +141,70 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                 </Typography>
             )}
 
-            {/* Opciones o entrada de texto */}
-            {options.length > 0 ? (
-                <RadioGroup
-                    value={currentAnswer || ''}
-                    onChange={(e) => onAnswerChange(question.id, e.target.value)}
-                    row={rowOptions}
-                    sx={
-                        rowOptions
-                            ? { flexWrap: 'nowrap', width: '100%', justifyContent: 'space-between' }
-                            : {}
-                    }
-                >
-                    {options.map((opt) => (
-                        <FormControlLabel
-                            key={opt.id}
-                            value={String(opt.id)}
-                            control={<Radio color="primary" />}
-                            label={opt.answer}
-                            sx={rowOptions ? {
-                                mr: 0,
-                                flex: 1,
-                                justifyContent: 'center',
-                                borderRadius: 3,
-                                transition: 'background-color 0.2s ease',
-                                '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
-                            } : {
-                                borderRadius: 3,
-                                pr: 2,
-                                transition: 'background-color 0.2s ease',
-                                '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
+            {/* Opciones o entrada de texto - Solo se muestran si NO requiere imagen o si está online */}
+            {(!requiresImage || isOnline) && (
+                options.length > 0 ? (
+                    <RadioGroup
+                        value={currentAnswer || ''}
+                        onChange={(e) => onAnswerChange(question.id, e.target.value)}
+                        row={rowOptions}
+                        sx={
+                            rowOptions
+                                ? { flexWrap: 'nowrap', width: '100%', justifyContent: 'space-between' }
+                                : {}
+                        }
+                    >
+                        {options.map((opt) => (
+                            <FormControlLabel
+                                key={opt.id}
+                                value={String(opt.id)}
+                                control={<Radio color="primary" />}
+                                label={opt.answer}
+                                sx={rowOptions ? {
+                                    mr: 0,
+                                    flex: 1,
+                                    justifyContent: 'center',
+                                    borderRadius: 3,
+                                    transition: 'background-color 0.2s ease',
+                                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
+                                } : {
+                                    borderRadius: 3,
+                                    pr: 2,
+                                    transition: 'background-color 0.2s ease',
+                                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.04)' }
+                                }}
+                            />
+                        ))}
+                    </RadioGroup>
+                ) : (
+                    <>
+                        <TextField
+                            fullWidth
+                            variant="outlined"
+                            multiline
+                            minRows={1}
+                            maxRows={10}
+                            inputProps={{ maxLength: 250 }}
+                            value={currentAnswer || ''}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onAnswerChange(question.id, e.target.value)}
+                            placeholder="Escribe tu respuesta aquí..."
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 3,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+                                    transition: 'all 0.3s ease',
+                                    '&.Mui-focused': {
+                                        backgroundColor: '#ffffff',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                                    }
+                                }
                             }}
                         />
-                    ))}
-                </RadioGroup>
-            ) : (
-                <>
-                    <TextField
-                        fullWidth
-                        variant="outlined"
-                        multiline
-                        minRows={1}
-                        maxRows={10}
-                        inputProps={{ maxLength: 250 }}
-                        value={currentAnswer || ''}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onAnswerChange(question.id, e.target.value)}
-                        placeholder="Escribe tu respuesta aquí..."
-                        sx={{
-                            '& .MuiOutlinedInput-root': {
-                                borderRadius: 3,
-                                backgroundColor: 'rgba(255, 255, 255, 0.65)',
-                                transition: 'all 0.3s ease',
-                                '&.Mui-focused': {
-                                    backgroundColor: '#ffffff',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
-                                }
-                            }
-                        }}
-                    />
-                    <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block', textAlign: 'right' }}>
-                        {(currentAnswer || '').length}/250 caracteres
-                    </Typography>
-                </>
+                        <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block', textAlign: 'right' }}>
+                            {(currentAnswer || '').length}/250 caracteres
+                        </Typography>
+                    </>
+                )
             )}
 
             {/* Dialogo de Preview */}

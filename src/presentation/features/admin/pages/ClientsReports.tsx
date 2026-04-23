@@ -39,15 +39,15 @@ const AVATAR_PALETTE = [
 
 const avatarColor = (id: number) => AVATAR_PALETTE[id % AVATAR_PALETTE.length];
 
-type ClientView = { userid: number };
-type TestRow = { id: number; testname: string; category?: DatType };
+type ClientView = { user_id: number };
+type TestRow = { id: number; test_name: string; category?: DatType };
 
 const ClientsReports: React.FC = () => {
   const [clients, setClients] = useState<ClientView[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [tests, setTests] = useState<TestRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedClientId, setExpandedClientId] = useState<number | null>(null);
+  const [expandedclient_id, setExpandedclient_id] = useState<number | null>(null);
   const [clientTestsMap, setClientTestsMap] = useState<Record<number, TestRow[]>>({});
   const [loadingTestsForClient, setLoadingTestsForClient] = useState<Record<number, boolean>>({});
   const [search, setSearch] = useState('');
@@ -64,14 +64,14 @@ const ClientsReports: React.FC = () => {
     const fetchAll = async () => {
       const [userRes, testRes] = await Promise.all([
         supabase.from('users').select('id,name').eq('role', 'client').range(0, 9999),
-        supabase.from('tests').select('id, testname').range(0, 9999),
+        supabase.from('tests').select('id, test_name').range(0, 9999),
       ]);
       const userRowsRaw = userRes.error ? [] : (userRes.data || []);
       const testsRows = testRes.error ? [] : (testRes.data || []);
       const usersDedup = Array.from(new Map(userRowsRaw.map((u: any) => [u.id, u])).values());
       setUsers(usersDedup);
-      setClients(usersDedup.map((u: any) => ({ userid: u.id })));
-      setTests((testsRows as TestRow[]).filter(t => !((t.testname || '').toLowerCase().includes('entrevista'))));
+      setClients(usersDedup.map((u: any) => ({ user_id: u.id })));
+      setTests((testsRows as TestRow[]).filter(t => !((t.test_name || '').toLowerCase().includes('entrevista'))));
       setLoading(false);
     };
     fetchAll();
@@ -79,28 +79,28 @@ const ClientsReports: React.FC = () => {
 
   const filteredClients = useMemo(() => {
     const q = search.toLowerCase().trim();
-    
+
     // Enriquecer con nombres para filtrar y ordenar
     const enriched = clients.map(c => {
-        const u = users.find(user => user.id === c.userid);
-        return { ...c, name: u?.name || '' };
+      const u = users.find(user => user.id === c.user_id);
+      return { ...c, name: u?.name || '' };
     });
 
     let result = enriched;
     if (q) {
-        result = enriched.filter(c => c.name.toLowerCase().includes(q));
+      result = enriched.filter(c => c.name.toLowerCase().includes(q));
     }
 
     // Ordenamiento
     result.sort((a, b) => {
-        if (sortBy === 'date') {
-            return sortOrder === 'asc' ? a.userid - b.userid : b.userid - a.userid;
-        } else {
-            const nameA = a.name.toLowerCase();
-            const nameB = b.name.toLowerCase();
-            if (sortOrder === 'asc') return nameA.localeCompare(nameB);
-            return nameB.localeCompare(nameA);
-        }
+      if (sortBy === 'date') {
+        return sortOrder === 'asc' ? a.user_id - b.user_id : b.user_id - a.user_id;
+      } else {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        if (sortOrder === 'asc') return nameA.localeCompare(nameB);
+        return nameB.localeCompare(nameA);
+      }
     });
 
     return result;
@@ -117,8 +117,8 @@ const ClientsReports: React.FC = () => {
   const getClientInitials = (name: string) =>
     (name || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  const kindOfTest = (testname: string): 'chaside' | 'ippr' | 'maci' | 'dat' | 'other' => {
-    const t = (testname || '').toLowerCase();
+  const kindOfTest = (test_name: string): 'chaside' | 'ippr' | 'maci' | 'dat' | 'other' => {
+    const t = (test_name || '').toLowerCase();
     if (t.includes('chaside')) return 'chaside';
     if (t.includes('ipp')) return 'ippr';
     if (t.includes('maci')) return 'maci';
@@ -134,27 +134,27 @@ const ClientsReports: React.FC = () => {
   };
 
   const handleToggleClient = async (client: ClientView) => {
-    setExpandedClientId(prev => (prev === client.userid ? null : client.userid));
-    if (!clientTestsMap[client.userid]) {
+    setExpandedclient_id(prev => (prev === client.user_id ? null : client.user_id));
+    if (!clientTestsMap[client.user_id]) {
       try {
-        setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: true }));
+        setLoadingTestsForClient(prev => ({ ...prev, [client.user_id]: true }));
 
         // 1. Obtener todos los test IDs donde el usuario tiene respuestas (incluyendo históricos)
         const { data: allAnswersRaw } = await supabase
-          .from('testsanswers')
-          .select('testid, details')
-          .eq('clientid', client.userid);
+          .from('test_answers')
+          .select('test_id, details')
+          .eq('client_id', client.user_id);
 
         const answers = (allAnswersRaw || []) as any[];
-        const uniqTestIds = [...new Set(answers.map(a => a.testid))];
+        const uniqtest_ids = [...new Set(answers.map(a => a.test_id))];
 
         const testsForClient: any[] = [];
-        for (const id of uniqTestIds) {
+        for (const id of uniqtest_ids) {
           const baseTest = tests.find(t => t.id === id);
           if (!baseTest) continue;
 
           // Encontrar intentos únicos para este test
-          const testAnswers = answers.filter(a => a.testid === id);
+          const testAnswers = answers.filter(a => a.test_id === id);
           const attempts = new Set<string>();
           testAnswers.forEach(a => {
             const d = a.details || '';
@@ -169,11 +169,11 @@ const ClientsReports: React.FC = () => {
             return b.localeCompare(a); // Más recientes primero
           });
 
-          if (kindOfTest(baseTest.testname) === 'dat') {
-            const completedCats = await getCompletedDatCategories(client.userid, sortedAttempts[0]);
+          if (kindOfTest(baseTest.test_name) === 'dat') {
+            const completedCats = await getCompletedDatCategories(client.user_id, sortedAttempts[0]);
             testsForClient.push({
               ...baseTest,
-              testname: `DAT (${completedCats.length} de 6 completados)`,
+              test_name: `DAT (${completedCats.length} de 6 completados)`,
               attempts: sortedAttempts,
               selectedAttempt: sortedAttempts[0]
             });
@@ -185,9 +185,9 @@ const ClientsReports: React.FC = () => {
             });
           }
         }
-        setClientTestsMap(prev => ({ ...prev, [client.userid]: testsForClient }));
+        setClientTestsMap(prev => ({ ...prev, [client.user_id]: testsForClient }));
       } catch (e) { console.error('Error fetching tests for client:', e); }
-      finally { setLoadingTestsForClient(prev => ({ ...prev, [client.userid]: false })); }
+      finally { setLoadingTestsForClient(prev => ({ ...prev, [client.user_id]: false })); }
     }
   };
 
@@ -195,22 +195,22 @@ const ClientsReports: React.FC = () => {
     setSnackbar({ open: true, message, severity });
   };
 
-  const handleAttemptChange = (clientId: number, testId: number, attempt: string) => {
+  const handleAttemptChange = (client_id: number, test_id: number, attempt: string) => {
     setClientTestsMap(prev => {
-      const clientTests = prev[clientId] || [];
-      const updated = clientTests.map(t => t.id === testId ? { ...t, selectedAttempt: attempt } : t);
-      return { ...prev, [clientId]: updated };
+      const clientTests = prev[client_id] || [];
+      const updated = clientTests.map(t => t.id === test_id ? { ...t, selectedAttempt: attempt } : t);
+      return { ...prev, [client_id]: updated };
     });
   };
 
-  const handleDownload = async (clientId: number, test: TestRow) => {
+  const handleDownload = async (client_id: number, test: TestRow) => {
     try {
-      const type = kindOfTest(test.testname);
+      const type = kindOfTest(test.test_name);
       const attempt = (test as any).selectedAttempt || 'active';
-      if (type === 'chaside') { await downloadChasideReportPDF(clientId, attempt); return; }
-      if (type === 'ippr') { await downloadIpprReportPDF(clientId, attempt); return; }
-      if (type === 'dat') { await downloadDatReportPDF(clientId, attempt); return; }
-      if (type === 'maci') { await downloadMaciReportPDF(clientId, attempt); return; }
+      if (type === 'chaside') { await downloadChasideReportPDF(client_id, attempt); return; }
+      if (type === 'ippr') { await downloadIpprReportPDF(client_id, attempt); return; }
+      if (type === 'dat') { await downloadDatReportPDF(client_id, attempt); return; }
+      if (type === 'maci') { await downloadMaciReportPDF(client_id, attempt); return; }
       showToast('Reporte disponible próximamente para este test.', 'info');
     } catch (err: any) { console.error(err); showToast(`No se pudo generar el reporte: ${err?.message ?? 'Error desconocido'}`, 'error'); }
   };
@@ -334,14 +334,14 @@ const ClientsReports: React.FC = () => {
               </Box>
             ) : (
               paginatedClients.map((client) => {
-                const user = users.find(u => u.id === client.userid);
-                const isExpanded = expandedClientId === client.userid;
-                const testsForClient = clientTestsMap[client.userid] || [];
+                const user = users.find(u => u.id === client.user_id);
+                const isExpanded = expandedclient_id === client.user_id;
+                const testsForClient = clientTestsMap[client.user_id] || [];
                 return (
-                  <Paper key={client.userid} elevation={0} sx={{ borderRadius: '20px', backgroundColor: isExpanded ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)', transition: 'all 0.2s', '&:hover': { backgroundColor: 'rgba(255,255,255,0.85)', boxShadow: '0 4px 16px rgba(0,0,0,0.07)' } }}>
+                  <Paper key={client.user_id} elevation={0} sx={{ borderRadius: '20px', backgroundColor: isExpanded ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)', border: '1px solid rgba(255,255,255,0.7)', transition: 'all 0.2s', '&:hover': { backgroundColor: 'rgba(255,255,255,0.85)', boxShadow: '0 4px 16px rgba(0,0,0,0.07)' } }}>
                     <Box onClick={() => handleToggleClient(client)} sx={{ px: 3, py: 2, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}>
                       <Box display="flex" alignItems="center" gap={2}>
-                        <Avatar sx={{ background: avatarColor(client.userid), width: 44, height: 44, fontSize: '0.95rem', fontWeight: 800 }}>
+                        <Avatar sx={{ background: avatarColor(client.user_id), width: 44, height: 44, fontSize: '0.95rem', fontWeight: 800 }}>
                           {getClientInitials(user?.name || 'SC')}
                         </Avatar>
                         <Typography variant="subtitle1" fontWeight={700} color="#1e293b">{user?.name || 'Sin nombre'}</Typography>
@@ -353,7 +353,7 @@ const ClientsReports: React.FC = () => {
                     <Collapse in={isExpanded} unmountOnExit>
                       <Box sx={{ px: 3, pb: 3 }}>
                         <Divider sx={{ mb: 2 }} />
-                        {loadingTestsForClient[client.userid] ? (
+                        {loadingTestsForClient[client.user_id] ? (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
                             <CircularProgress size={20} thickness={5} sx={{ color: C.spinner }} />
                             <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>Cargando reportes...</Typography>
@@ -363,7 +363,7 @@ const ClientsReports: React.FC = () => {
                         ) : (
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                             {testsForClient.map((test: any) => {
-                              const kind = kindOfTest(test.testname);
+                              const kind = kindOfTest(test.test_name);
                               const isReady = kind === 'chaside' || kind === 'ippr' || kind === 'maci' || kind === 'dat';
                               const caption = (kind === 'maci' || kind === 'dat') ? 'Puntajes brutos registrados' : 'Perfil vocacional interpretado';
                               return (
@@ -373,12 +373,12 @@ const ClientsReports: React.FC = () => {
                                       <AssignmentIcon sx={{ fontSize: 18, color: C.dark }} />
                                     </Box>
                                     <Box>
-                                      <Typography variant="body2" fontWeight={700} color="#334155">{test.testname}</Typography>
+                                      <Typography variant="body2" fontWeight={700} color="#334155">{test.test_name}</Typography>
                                       {test.attempts && test.attempts.length > 1 ? (
                                         <FormControl size="small" variant="standard" sx={{ minWidth: 150 }}>
                                           <Select
                                             value={test.selectedAttempt}
-                                            onChange={(e) => handleAttemptChange(client.userid, test.id, e.target.value as string)}
+                                            onChange={(e) => handleAttemptChange(client.user_id, test.id, e.target.value as string)}
                                             sx={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}
                                           >
                                             {test.attempts.map((att: string) => (
@@ -397,7 +397,7 @@ const ClientsReports: React.FC = () => {
                                   </Box>
                                   <Tooltip title={isReady ? 'Descargar reporte' : 'En desarrollo'} arrow placement="left">
                                     <span>
-                                      <IconButton disabled={!isReady} onClick={() => handleDownload(client.userid, test)} size="small"
+                                      <IconButton disabled={!isReady} onClick={() => handleDownload(client.user_id, test)} size="small"
                                         sx={{ backgroundColor: isReady ? '#1e293b' : 'rgba(0,0,0,0.06)', color: isReady ? 'white' : 'rgba(0,0,0,0.25)', borderRadius: '10px', width: 34, height: 34, '&:hover': isReady ? { backgroundColor: '#0f172a', transform: 'translateY(-2px)' } : {}, transition: 'all 0.2s' }}>
                                         <GetAppIcon sx={{ fontSize: 16 }} />
                                       </IconButton>
