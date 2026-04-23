@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { downloadChasideReportPDF } from '@/domain/rules/chaside';
 import { downloadIpprReportPDF } from '@/domain/rules/ippr';
 import { downloadDatReportPDF, getCompletedDatCategories, DatType } from '@/domain/rules/dat';
+import { downloadMaciReportPDF } from '@/domain/rules/maciExcel';
 
 const C = {
   primary: '#f59e0b', dark: '#d97706',
@@ -209,6 +210,7 @@ const ClientsReports: React.FC = () => {
       if (type === 'chaside') { await downloadChasideReportPDF(clientId, attempt); return; }
       if (type === 'ippr') { await downloadIpprReportPDF(clientId, attempt); return; }
       if (type === 'dat') { await downloadDatReportPDF(clientId, attempt); return; }
+      if (type === 'maci') { await downloadMaciReportPDF(clientId, attempt); return; }
       showToast('Reporte disponible próximamente para este test.', 'info');
     } catch (err: any) { console.error(err); showToast(`No se pudo generar el reporte: ${err?.message ?? 'Error desconocido'}`, 'error'); }
   };

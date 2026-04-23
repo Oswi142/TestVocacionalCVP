@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { isYes, calculateChasideResultSummary, computeChasideScore, downloadChasideReportPDF } from '../../src/utils/chaside';
+import { isYes, calculateChasideResultSummary, computeChasideScore, downloadChasideReportPDF } from '../../src/domain/rules/chaside';
 
 vi.mock('@/infrastructure/config/supabaseClient', () => {
     const chainable = {

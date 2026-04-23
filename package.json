@@ -22,13 +22,15 @@
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
     "dayjs": "^1.11.13",
+    "hyperformula": "^3.2.0",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "react": "^19.0.0",
     "react-confetti": "^6.4.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.5.0",
-    "react-use": "^17.6.0"
+    "react-use": "^17.6.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

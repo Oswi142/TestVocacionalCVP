@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mapIpprAnswerTextToScore, calculateIpprResultSummary, computeIpprScore, downloadIpprReportPDF } from '../../src/utils/ippr';
+import { mapIpprAnswerTextToScore, calculateIpprResultSummary, computeIpprScore, downloadIpprReportPDF } from '../../src/domain/rules/ippr';
 
 vi.mock('@/infrastructure/config/supabaseClient', () => {
     const chainable = {

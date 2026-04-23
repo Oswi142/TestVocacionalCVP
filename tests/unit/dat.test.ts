@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { DAT_LABELS, calculateDatResultSummary, computeDatScore, downloadDatReportPDF, getCompletedDatCategories } from '@/domain/rules/dat';
+import { DAT_LABELS, calculateDatResultSummary, computeDatScore, downloadDatReportPDF, getCompletedDatCategories } from '../../src/domain/rules/dat';
 
 vi.mock('@/infrastructure/config/supabaseClient', () => {
     const chainable = {
