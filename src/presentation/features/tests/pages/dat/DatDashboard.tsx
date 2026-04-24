@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, useMediaQuery, useTheme, IconButton, CircularProgress, Dialog, DialogContent, DialogActions, Chip } from '@mui/material';
+import { Box, Button, Typography, useMediaQuery, useTheme, IconButton, CircularProgress, Dialog, DialogContent, DialogActions } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LockIcon from '@mui/icons-material/Lock';
@@ -14,20 +14,12 @@ const DatDashboard: React.FC = () => {
   const [loadingProgress, setLoadingProgress] = useState(true);
   const [completedDatTypes, setCompletedDatTypes] = useState<string[]>([]);
   const [showOfflineAlert, setShowOfflineAlert] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
-    // Listen to connection changes
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       const user = JSON.parse(storedUser);
@@ -45,8 +37,6 @@ const DatDashboard: React.FC = () => {
     window.addEventListener('popstate', handlePopState);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
       window.removeEventListener('popstate', handlePopState);
     };
   }, [navigate]);
@@ -142,12 +132,10 @@ const DatDashboard: React.FC = () => {
     setLoadingProgress(false);
 
     if (!realOnline) {
-      setIsOnline(false);
       setShowOfflineAlert(true);
       return;
     }
 
-    setIsOnline(true);
     navigate(path);
   };
 
