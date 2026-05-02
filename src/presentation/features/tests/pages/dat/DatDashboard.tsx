@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, useMediaQuery, useTheme, IconButton, CircularProgress, Dialog, DialogContent, DialogActions } from '@mui/material';
+import { Box, Button, Typography, useMediaQuery, useTheme, IconButton, CircularProgress, Dialog, DialogActions } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LockIcon from '@mui/icons-material/Lock';
-import WifiOffIcon from '@mui/icons-material/WifiOff';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { testService } from '@/infrastructure/services/testService';
 import logo from '@/assets/logo-cvp.png';
 
@@ -13,7 +13,7 @@ const DatDashboard: React.FC = () => {
   const [user_id, setuser_id] = useState<number | null>(null);
   const [loadingProgress, setLoadingProgress] = useState(true);
   const [completedDatTypes, setCompletedDatTypes] = useState<string[]>([]);
-  const [showOfflineAlert, setShowOfflineAlert] = useState(false);
+  const [selectedSubtest, setSelectedSubtest] = useState<{ path: string, label: string, time: number, storagePrefix: string } | null>(null);
 
   const navigate = useNavigate();
   const theme = useTheme();
@@ -111,33 +111,7 @@ const DatDashboard: React.FC = () => {
     '&:active': status === 'active' ? { transform: 'translateY(1px)' } : {}
   });
 
-  const handleTestClick = async (path: string) => {
-    setLoadingProgress(true); // Reutilizamos el spinner para dar feedback
-    
-    // Verificación de "Fuego": Intento de fetch ultra rápido
-    let realOnline = navigator.onLine;
-    if (realOnline) {
-      try {
-        // Hacemos un fetch a un recurso muy pequeño (o simplemente un ping)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 segundos máximo
-        await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', signal: controller.signal });
-        clearTimeout(timeoutId);
-        realOnline = true;
-      } catch (e) {
-        realOnline = false;
-      }
-    }
 
-    setLoadingProgress(false);
-
-    if (!realOnline) {
-      setShowOfflineAlert(true);
-      return;
-    }
-
-    navigate(path);
-  };
 
   return (
     <Box
@@ -256,12 +230,12 @@ const DatDashboard: React.FC = () => {
               <>
                 {(() => {
                   const subtests = [
-                    { type: 'razonamiento_verbal', label: 'Razonamiento Verbal', path: '/dat/verbal', gradient: 'linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)', shadow: 'rgba(127, 127, 213, 0.3)' },
-                    { type: 'razonamiento_numerico', label: 'Razonamiento Numérico', path: '/dat/numerico', gradient: 'linear-gradient(90deg, #ff758c, #ff7eb3)', shadow: 'rgba(255, 117, 140, 0.3)' },
-                    { type: 'razonamiento_abstracto', label: 'Razonamiento Abstracto', path: '/dat/abstracto', gradient: 'linear-gradient(90deg, #ff6a00, #ee0979)', shadow: 'rgba(255, 106, 0, 0.3)' },
-                    { type: 'razonamiento_mecanico', label: 'Razonamiento Mecánico', path: '/dat/mecanico', gradient: 'linear-gradient(90deg, #43cea2, #185a9d)', shadow: 'rgba(67, 206, 162, 0.3)' },
-                    { type: 'razonamiento_espacial', label: 'Relaciones Espaciales', path: '/dat/espaciales', gradient: 'linear-gradient(90deg, #00c6ff, #0072ff)', shadow: 'rgba(0, 198, 255, 0.3)' },
-                    { type: 'ortografia', label: 'Ortografía', path: '/dat/ortografia', gradient: 'linear-gradient(90deg, #f7971e, #ffd200)', shadow: 'rgba(247, 151, 30, 0.3)' },
+                    { type: 'razonamiento_verbal', label: 'Razonamiento Verbal', path: '/dat/verbal', time: 30, storagePrefix: 'dat_verbal', gradient: 'linear-gradient(90deg, #7F7FD5, #86A8E7, #91EAE4)', shadow: 'rgba(127, 127, 213, 0.3)' },
+                    { type: 'razonamiento_numerico', label: 'Razonamiento Numérico', path: '/dat/numerico', time: 30, storagePrefix: 'dat_numerico', gradient: 'linear-gradient(90deg, #ff758c, #ff7eb3)', shadow: 'rgba(255, 117, 140, 0.3)' },
+                    { type: 'razonamiento_abstracto', label: 'Razonamiento Abstracto', path: '/dat/abstracto', time: 25, storagePrefix: 'dat_abstracto', gradient: 'linear-gradient(90deg, #ff6a00, #ee0979)', shadow: 'rgba(255, 106, 0, 0.3)' },
+                    { type: 'razonamiento_mecanico', label: 'Razonamiento Mecánico', path: '/dat/mecanico', time: 30, storagePrefix: 'dat_mecanico', gradient: 'linear-gradient(90deg, #43cea2, #185a9d)', shadow: 'rgba(67, 206, 162, 0.3)' },
+                    { type: 'razonamiento_espacial', label: 'Relaciones Espaciales', path: '/dat/espaciales', time: 25, storagePrefix: 'dat_razonamiento_espacial', gradient: 'linear-gradient(90deg, #00c6ff, #0072ff)', shadow: 'rgba(0, 198, 255, 0.3)' },
+                    { type: 'ortografia', label: 'Ortografía', path: '/dat/ortografia', time: 10, storagePrefix: 'dat_ortografia', gradient: 'linear-gradient(90deg, #f7971e, #ffd200)', shadow: 'rgba(247, 151, 30, 0.3)' },
                   ];
 
                   return subtests.map((s, idx) => {
@@ -281,7 +255,11 @@ const DatDashboard: React.FC = () => {
                       <Button
                         key={s.type}
                         fullWidth
-                        onClick={() => handleTestClick(s.path)}
+                        onClick={() => {
+                          if (status === 'active') {
+                            setSelectedSubtest({ path: s.path, label: s.label, time: s.time, storagePrefix: s.storagePrefix });
+                          }
+                        }}
                         sx={buttonStyle(s.gradient, s.shadow, status)}
                       >
                         {status === 'locked' && <LockIcon sx={{ fontSize: '1.1rem' }} />}
@@ -297,30 +275,30 @@ const DatDashboard: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Alerta de Conexión Estilo Card Premium (Reducido) */}
+      {/* Alerta de tiempo máximo */}
       <Dialog
-        open={showOfflineAlert}
-        onClose={() => setShowOfflineAlert(false)}
+        open={!!selectedSubtest}
+        onClose={() => setSelectedSubtest(null)}
         PaperProps={{
           sx: {
             borderRadius: 6,
-            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
             border: '1px solid rgba(255, 255, 255, 0.5)',
             boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
-            maxWidth: 320,
+            maxWidth: 360,
             overflow: 'hidden'
           }
         }}
       >
-        <DialogContent sx={{ textAlign: 'center', pt: 4, pb: 1 }}>
+        <Box sx={{ textAlign: 'center', pt: 4, pb: 1, px: 3 }}>
           <Box
             sx={{
-              width: 56,
-              height: 56,
+              width: 64,
+              height: 64,
               borderRadius: '50%',
-              backgroundColor: 'white',
+              backgroundColor: '#eff6ff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -329,32 +307,70 @@ const DatDashboard: React.FC = () => {
               boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
             }}
           >
-            <WifiOffIcon sx={{ fontSize: 32, color: '#FF6F00' }} />
+            <AccessTimeIcon sx={{ fontSize: 36, color: '#3b82f6' }} />
           </Box>
           <Typography variant="h6" fontWeight={900} color="#1e293b" gutterBottom>
-            Conexión necesaria
+            Tienes {(() => {
+              if (!selectedSubtest) return '';
+              try {
+                const key = `${selectedSubtest.storagePrefix}_${user_id || 'anonymous'}`;
+                const stored = localStorage.getItem(key);
+                if (stored) {
+                  const data = JSON.parse(stored);
+                  if (data.timeLeftSeconds !== undefined && data.timeLeftSeconds !== null) {
+                    const m = Math.floor(data.timeLeftSeconds / 60);
+                    const s = data.timeLeftSeconds % 60;
+                    return `${m} min ${s} seg`;
+                  }
+                }
+              } catch (e) { }
+              return `${selectedSubtest.time} minutos`;
+            })()} disponibles
           </Typography>
-          <Typography variant="body2" color="#475569" fontWeight={500} sx={{ px: 1 }}>
-            Se necesita internet para continuar con este test.
+          <Typography variant="body2" color="#475569" fontWeight={500} sx={{ mb: 2 }}>
+            Este subtest tiene un cronómetro. Si el tiempo expira, tus respuestas se enviarán automáticamente aunque no hayas terminado.
+            <br /><br />
+            <strong style={{ color: '#d32f2f' }}>⚠️ Importante:</strong> El progreso se vincula a este dispositivo. Debes completarlo aquí mismo, si no perderás tu avance.
           </Typography>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 4, px: 4 }}>
+          <Typography variant="body2" color="#1d4ed8" fontWeight={700} sx={{ backgroundColor: '#eff6ff', py: 1, borderRadius: 2 }}>
+            ¿Deseas comenzar "{selectedSubtest?.label}" ahora?
+          </Typography>
+        </Box>
+        <DialogActions sx={{ justifyContent: 'center', pb: 4, px: 4, gap: 1 }}>
           <Button
             fullWidth
-            variant="contained"
-            onClick={() => setShowOfflineAlert(false)}
+            variant="outlined"
+            onClick={() => setSelectedSubtest(null)}
             sx={{
               borderRadius: 3,
               py: 1.5,
               fontWeight: 800,
-              backgroundColor: '#FF6F00',
               textTransform: 'none',
+              borderWidth: 2,
+              '&:hover': { borderWidth: 2 }
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => {
+              if (selectedSubtest) navigate(selectedSubtest.path);
+            }}
+            sx={{
+              borderRadius: 3,
+              py: 1.5,
+              fontWeight: 800,
+              backgroundColor: '#3b82f6',
+              textTransform: 'none',
+              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
               '&:hover': {
-                backgroundColor: '#E65100',
+                backgroundColor: '#2563eb',
               }
             }}
           >
-            Aceptar
+            Empezar
           </Button>
         </DialogActions>
       </Dialog>

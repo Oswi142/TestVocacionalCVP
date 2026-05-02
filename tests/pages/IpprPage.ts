@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
-import { runPaginatedTest } from './TestHelpers';
+import { runPaginatedTestFromJson } from './TestHelpers';
+import ipprAnswers from '../data/ippr_answers.json' with { type: 'json' };
 
 export default class IpprPage {
     readonly page: Page;
@@ -11,6 +12,6 @@ export default class IpprPage {
     }
 
     async fillOutTest() {
-        await runPaginatedTest(this.page, 'Respuesta automática IPPR Playwright', 100);
+        await runPaginatedTestFromJson(this.page, ipprAnswers.answers as number[], 'Respuesta IPPR', 100);
     }
 }

@@ -217,18 +217,7 @@ export const testService = {
                 { id: 4, type: null },
             ];
 
-            const datSubtests = [
-                'razonamiento_verbal',
-                'razonamiento_numerico',
-                'razonamiento_abstracto',
-                'razonamiento_mecanico',
-                'razonamiento_espacial',
-                'ortografia'
-            ];
-
-            console.log('Iniciando pre-descarga de tests para uso offline...');
-
-            const totalSteps = mainTests.length + datSubtests.length;
+            const totalSteps = mainTests.length;
             let completedSteps = 0;
 
             for (const test of mainTests) {
@@ -241,18 +230,6 @@ export const testService = {
                 completedSteps++;
                 if (onProgress) onProgress(Math.round((completedSteps / totalSteps) * 100));
             }
-
-            for (const type of datSubtests) {
-                const qs = await this.getQuestions(5, { datType: type });
-                // Only cache options for questions WITHOUT images
-                const questionsWithoutImages = qs.filter(q => !q.image_path);
-                if (questionsWithoutImages.length > 0) {
-                    await this.getanswer_options(questionsWithoutImages.map(q => q.id));
-                }
-                completedSteps++;
-                if (onProgress) onProgress(Math.round((completedSteps / totalSteps) * 100));
-            }
-
             console.log('Pre-descarga completada. El sistema solo ha guardado preguntas sin imágenes.');
         } catch (error) {
             console.error('Error durante la pre-descarga de tests:', error);

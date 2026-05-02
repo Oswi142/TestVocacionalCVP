@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
-import { runPaginatedTest } from './TestHelpers';
+import { runPaginatedTestFromJson } from './TestHelpers';
+import maciAnswers from '../data/maci_answers.json' with { type: 'json' };
 
 export default class MaciPage {
     readonly page: Page;
@@ -11,6 +12,8 @@ export default class MaciPage {
     }
 
     async fillOutTest() {
-        await runPaginatedTest(this.page, 'Respuesta automática MACI Playwright', 100);
+        // Use the first test case from the JSON (Respuestas Exactas Excel Origen)
+        const answers = maciAnswers.testCases[0].answers as boolean[];
+        await runPaginatedTestFromJson(this.page, answers, 'Respuesta MACI', 100);
     }
 }

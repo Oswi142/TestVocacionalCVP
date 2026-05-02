@@ -16,6 +16,7 @@ export const useTestLogic = <T extends BaseQuestion>(
     onLoadExtra?: (extraData: any) => void;
     customIsSectionComplete?: (section: number, answers: { [key: number]: string }, grouped: { [key: number]: T[] }, shouldDisplayFn: (id: number) => boolean) => boolean;
     conditionalVisibility?: Record<number, { parentId: number, expectedAnswer: string }>; // childId: { parentId, expectedAnswer }
+    timeLimitMinutes?: number;
   } = {}
 ) => {
   const {
@@ -24,6 +25,7 @@ export const useTestLogic = <T extends BaseQuestion>(
     questionsPerSection = null,
     navigateOnSubmit = '/client',
     conditionalVisibility,
+    timeLimitMinutes,
   } = options;
 
   const callbacksRef = useRef({
@@ -51,6 +53,7 @@ export const useTestLogic = <T extends BaseQuestion>(
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<string>('');
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number | null>(null);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -58,6 +61,11 @@ export const useTestLogic = <T extends BaseQuestion>(
     severity: 'success' as 'success' | 'error' | 'warning' | 'info',
   });
   const [dialogs, setDialogs] = useState({ confirm: false, exit: false, offlineBlock: false });
+
+  const timeLeftRef = useRef<number | null>(null);
+  useEffect(() => {
+    timeLeftRef.current = timeLeftSeconds;
+  }, [timeLeftSeconds]);
 
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'warning' | 'info' = 'success') => {
@@ -72,6 +80,7 @@ export const useTestLogic = <T extends BaseQuestion>(
         answers,
         currentSection,
         lastSaved: new Date().toLocaleString(),
+        timeLeftSeconds: timeLeftRef.current,
       };
       if (callbacksRef.current.onSaveExtra) {
         data.extra = callbacksRef.current.onSaveExtra(answers);
@@ -94,12 +103,20 @@ export const useTestLogic = <T extends BaseQuestion>(
           setAnswers(localData.answers || {});
           setCurrentSection(localData.currentSection || (sectionsSorted[0] ?? 1));
           setLastSaved(localData.lastSaved || '');
+          if (localData.timeLeftSeconds !== undefined && localData.timeLeftSeconds !== null) {
+            setTimeLeftSeconds(localData.timeLeftSeconds);
+          } else if (timeLimitMinutes) {
+            setTimeLeftSeconds(timeLimitMinutes * 60);
+          }
           if (callbacksRef.current.onLoadExtra && localData.extra) {
             callbacksRef.current.onLoadExtra(localData.extra);
           }
           showSnackbar('Respuestas cargadas', 'success');
         } else if (sectionsSorted.length > 0) {
           setCurrentSection(sectionsSorted[0]);
+          if (timeLimitMinutes) {
+            setTimeLeftSeconds(timeLimitMinutes * 60);
+          }
         }
       } catch (error) {
         console.error('Error loading data:', error);
@@ -243,9 +260,9 @@ export const useTestLogic = <T extends BaseQuestion>(
     };
   }, [setDialogs]);
 
-  const submitTest = async () => {
+  const submitTest = async (force: boolean = false) => {
     const unanswered = allQuestions.filter((q) => !answers[q.id] && shouldDisplayQuestion(q.id));
-    if (unanswered.length > 0) {
+    if (!force && unanswered.length > 0) {
       showSnackbar('Debes responder todas las preguntas visibles antes de finalizar.', 'error');
       return;
     }
@@ -274,7 +291,11 @@ export const useTestLogic = <T extends BaseQuestion>(
 
       localStorage.removeItem(STORAGE_KEY);
       setDialogs((prev) => ({ ...prev, confirm: false }));
-      showSnackbar('Respuestas enviadas correctamente', 'success');
+      if (force) {
+        showSnackbar('El tiempo se ha agotado. Tus respuestas fueron enviadas automáticamente.', 'warning');
+      } else {
+        showSnackbar('Respuestas enviadas correctamente', 'success');
+      }
       setTimeout(() => navigate(navigateOnSubmit, { replace: true, state: { showConfetti: true } }), 500);
     } catch (err: any) {
       showSnackbar('Hubo un problema al enviar tus respuestas. Por favor, intenta de nuevo o contacta con soporte.', 'error');
@@ -282,6 +303,35 @@ export const useTestLogic = <T extends BaseQuestion>(
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    if (timeLeftSeconds === null) return;
+    if (timeLeftSeconds <= 0) {
+      submitTest(true);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeLeftSeconds(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          clearInterval(interval);
+          submitTest(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timeLeftSeconds]);
+
+  // Guardado periódico solo para el tiempo (opcional, cada 10 seg)
+  useEffect(() => {
+    if (timeLeftSeconds !== null && timeLeftSeconds % 10 === 0) {
+      saveToLocal();
+    }
+  }, [timeLeftSeconds, saveToLocal]);
 
   const groupedQuestions = useMemo(() => {
     return allQuestions.reduce((acc: { [key: number]: T[] }, q) => {
@@ -323,6 +373,7 @@ export const useTestLogic = <T extends BaseQuestion>(
     loading,
     saving,
     lastSaved,
+    timeLeftSeconds,
     onExitClick: () => setDialogs((prev) => ({ ...prev, exit: true })),
     onSaveClick: handleManualSave,
     onConfirmExit: () => {

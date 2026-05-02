@@ -46,12 +46,40 @@ Hemos implementado **Data Driven Testing (DDT)** para asegurar la precisión de 
   ```
 
 ### Pruebas End-to-End (Playwright)
-Para automatizar el llenado de formularios y flujo de navegación de forma secuencial y visual:
-  ```bash
-  npm run test:secuencial
-  ```
+Todos los tests de Playwright requieren que el servidor de desarrollo esté corriendo en una terminal separada (`npm run dev`).
+
 > [!NOTE]
-> Este comando ejecuta los tests uno por uno abriendo el navegador (`headed`) para que puedas observar el proceso de autocompletado.
+> Agrega el flag `--headed` para ver el navegador en acción, o quítalo para correr en modo silencioso.
+
+- **Flujo completo del sistema (E2E):** Crea un cliente, completa los 6 tests vocacionales, verifica reportes y elimina el usuario.
+  ```bash
+  npx playwright test tests/e2e/e2eFullFlow.spec.ts --headed
+  ```
+
+- **Módulo de Login:** Prueba inicio de sesión válido (admin y cliente), credenciales inválidas y campos vacíos.
+  ```bash
+  npx playwright test tests/e2e/loginModuleTests.spec.ts --headed
+  ```
+
+- **Gestión de Usuarios (Admin CRUD):** Crea y elimina un usuario / Crea, edita y elimina un usuario.
+  ```bash
+  npx playwright test tests/e2e/adminUserManagementTests.spec.ts --headed
+  ```
+
+- **Control de Acceso (Rutas Protegidas):** Verifica que usuarios sin sesión, clientes y admins sean redirigidos correctamente.
+  ```bash
+  npx playwright test tests/e2e/accessControlTests.spec.ts --headed
+  ```
+
+- **Todos los tests unitarios (Vitest):**
+  ```bash
+  npx vitest run tests/unit/
+  ```
+
+- **Todos los tests E2E (Playwright):**
+  ```bash
+  npx playwright test --headed
+  ```
 
 
 ## 🏗️ Estructura de Calificación

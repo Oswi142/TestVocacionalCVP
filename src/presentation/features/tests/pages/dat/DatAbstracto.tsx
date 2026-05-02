@@ -28,10 +28,12 @@ const DatAbstracto: React.FC = () => {
     onConfirmSubmit,
     onSubmitClick,
     onSnackbarClose,
+    timeLeftSeconds,
   } = useTestLogic<Question>(5, 'dat_abstracto', {
     datType: 'razonamiento_abstracto',
     minquestion_id: 618,
     navigateOnSubmit: '/client',
+    timeLimitMinutes: 25,
   });
 
   const questions = groupedQuestions[currentSection] || [];
@@ -42,6 +44,7 @@ const DatAbstracto: React.FC = () => {
     <TestLayout
       title="Razonamiento Abstracto"
       currentSection={currentSection}
+      timeLeftSeconds={timeLeftSeconds}
       loading={loading}
       saving={saving}
       lastSaved={lastSaved}

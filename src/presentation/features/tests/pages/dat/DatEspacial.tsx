@@ -28,10 +28,12 @@ const DatEspacial: React.FC = () => {
         onConfirmSubmit,
         onSubmitClick,
         onSnackbarClose,
+        timeLeftSeconds,
     } = useTestLogic<Question>(5, 'dat_razonamiento_espacial', {
         datType: 'razonamiento_espacial',
         questionsPerSection: 10,
         navigateOnSubmit: '/dat',
+        timeLimitMinutes: 25,
     });
 
     const questions = groupedQuestions[currentSection] || [];
@@ -42,6 +44,7 @@ const DatEspacial: React.FC = () => {
         <TestLayout
             title="Relaciones Espaciales"
             currentSection={currentSection}
+            timeLeftSeconds={timeLeftSeconds}
             loading={loading}
             saving={saving}
             lastSaved={lastSaved}

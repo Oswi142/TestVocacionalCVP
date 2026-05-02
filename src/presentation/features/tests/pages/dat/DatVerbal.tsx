@@ -30,10 +30,12 @@ const DatVerbal: React.FC = () => {
     onConfirmSubmit,
     onSubmitClick,
     onSnackbarClose,
+    timeLeftSeconds,
   } = useTestLogic<Question>(5, 'dat_verbal', {
     datType: 'razonamiento_verbal',
     questionsPerSection: 10,
     navigateOnSubmit: '/dat',
+    timeLimitMinutes: 30,
   });
 
   const questions = groupedQuestions[currentSection] || [];
@@ -44,6 +46,7 @@ const DatVerbal: React.FC = () => {
     <TestLayout
       title="Razonamiento Verbal"
       currentSection={currentSection}
+      timeLeftSeconds={timeLeftSeconds}
       loading={loading}
       saving={saving}
       lastSaved={lastSaved}

@@ -1,5 +1,6 @@
 import { Page } from '@playwright/test';
-import { runPaginatedTest } from './TestHelpers';
+import { runPaginatedTestFromJson } from './TestHelpers';
+import chasideAnswers from '../data/chaside_answers.json' with { type: 'json' };
 
 export default class ChasidePage {
     readonly page: Page;
@@ -11,6 +12,6 @@ export default class ChasidePage {
     }
 
     async fillOutTest() {
-        await runPaginatedTest(this.page, 'Respuesta automática CHASIDE Playwright', 100);
+        await runPaginatedTestFromJson(this.page, chasideAnswers.answers as boolean[], 'Respuesta CHASIDE', 100);
     }
 }

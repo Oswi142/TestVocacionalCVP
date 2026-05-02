@@ -367,7 +367,7 @@ const ClientsReports: React.FC = () => {
                               const isReady = kind === 'chaside' || kind === 'ippr' || kind === 'maci' || kind === 'dat';
                               const caption = (kind === 'maci' || kind === 'dat') ? 'Puntajes brutos registrados' : 'Perfil vocacional interpretado';
                               return (
-                                <Box key={test.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: '14px', backgroundColor: C.bg, border: `1px solid ${C.border}`, transition: 'all 0.2s', '&:hover': { backgroundColor: C.bgHover, borderColor: C.borderHover } }}>
+                                <Box key={test.id} data-testid={`report-row-${kind}`} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: '14px', backgroundColor: C.bg, border: `1px solid ${C.border}`, transition: 'all 0.2s', '&:hover': { backgroundColor: C.bgHover, borderColor: C.borderHover } }}>
                                   <Box display="flex" alignItems="center" gap={1.5}>
                                     <Box sx={{ p: 0.8, borderRadius: '10px', backgroundColor: 'rgba(245,158,11,0.12)', display: 'flex' }}>
                                       <AssignmentIcon sx={{ fontSize: 18, color: C.dark }} />
@@ -397,7 +397,7 @@ const ClientsReports: React.FC = () => {
                                   </Box>
                                   <Tooltip title={isReady ? 'Descargar reporte' : 'En desarrollo'} arrow placement="left">
                                     <span>
-                                      <IconButton disabled={!isReady} onClick={() => handleDownload(client.user_id, test)} size="small"
+                                      <IconButton data-testid={`download-btn-${kind}`} disabled={!isReady} onClick={() => handleDownload(client.user_id, test)} size="small"
                                         sx={{ backgroundColor: isReady ? '#1e293b' : 'rgba(0,0,0,0.06)', color: isReady ? 'white' : 'rgba(0,0,0,0.25)', borderRadius: '10px', width: 34, height: 34, '&:hover': isReady ? { backgroundColor: '#0f172a', transform: 'translateY(-2px)' } : {}, transition: 'all 0.2s' }}>
                                         <GetAppIcon sx={{ fontSize: 16 }} />
                                       </IconButton>

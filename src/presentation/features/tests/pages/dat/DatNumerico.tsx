@@ -30,10 +30,12 @@ const DatNumerico: React.FC = () => {
     onConfirmSubmit,
     onSubmitClick,
     onSnackbarClose,
+    timeLeftSeconds,
   } = useTestLogic<Question>(5, 'dat_numerico', {
     datType: 'razonamiento_numerico',
     questionsPerSection: 10,
     navigateOnSubmit: '/dat',
+    timeLimitMinutes: 30,
   });
 
   const questions = groupedQuestions[currentSection] || [];
@@ -44,6 +46,7 @@ const DatNumerico: React.FC = () => {
     <TestLayout
       title="Razonamiento Numérico"
       currentSection={currentSection}
+      timeLeftSeconds={timeLeftSeconds}
       loading={loading}
       saving={saving}
       lastSaved={lastSaved}

@@ -24,6 +24,7 @@ interface TestLayoutProps {
     loading: boolean;
     saving: boolean;
     lastSaved: string;
+    timeLeftSeconds?: number | null;
     groupedQuestions: { [key: number]: any[] };
     isSectionComplete: (section: number) => boolean;
     onSectionChange: (section: number) => void;
@@ -45,6 +46,7 @@ const TestLayout: React.FC<TestLayoutProps> = ({
     loading,
     saving,
     lastSaved,
+    timeLeftSeconds,
     groupedQuestions,
     isSectionComplete,
     onSectionChange,
@@ -71,6 +73,13 @@ const TestLayout: React.FC<TestLayoutProps> = ({
             container.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [currentSection]);
+
+    const formatTime = (seconds: number | null | undefined) => {
+        if (seconds == null) return '';
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    };
 
     if (loading) {
         return (
@@ -100,6 +109,38 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                 overflow: 'hidden',
             }}
         >
+            {timeLeftSeconds !== undefined && timeLeftSeconds !== null && (
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        top: { xs: 12, sm: 24 },
+                        right: { xs: 12, sm: 24 },
+                        zIndex: 9999,
+                        backgroundColor: timeLeftSeconds <= 60 ? '#fee2e2' : 'rgba(255,255,255,0.95)',
+                        backdropFilter: 'blur(8px)',
+                        border: `3px solid ${timeLeftSeconds <= 60 ? '#ef4444' : '#cbd5e1'}`,
+                        borderRadius: '24px',
+                        px: 3,
+                        py: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.5,
+                        boxShadow: timeLeftSeconds <= 60 
+                            ? '0 0 20px rgba(239, 68, 68, 0.4)' 
+                            : '0 8px 32px rgba(0, 0, 0, 0.15)',
+                        animation: timeLeftSeconds <= 60 ? 'pulse 1s infinite' : 'none',
+                        '@keyframes pulse': {
+                            '0%': { transform: 'scale(1)' },
+                            '50%': { transform: 'scale(1.05)' },
+                            '100%': { transform: 'scale(1)' },
+                        }
+                    }}
+                >
+                    <Typography variant="h5" fontWeight={900} color={timeLeftSeconds <= 60 ? '#b91c1c' : '#334155'} sx={{ letterSpacing: '1px' }}>
+                        ⏱️ {formatTime(timeLeftSeconds)}
+                    </Typography>
+                </Box>
+            )}
             <Box
                 sx={{
                     width: '100%',
@@ -141,12 +182,16 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                             Guardar
                         </Button>
                     </Box>
-                    <Typography variant="h5" color="#1e293b" fontWeight={800}>
-                        Test: {title}
-                    </Typography>
-                    <Typography variant="subtitle1" color="#64748b" fontWeight={600}>
-                        Sección {currentSection}
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box>
+                            <Typography variant="h5" color="#1e293b" fontWeight={800}>
+                                Test: {title}
+                            </Typography>
+                            <Typography variant="subtitle1" color="#64748b" fontWeight={600}>
+                                Sección {currentSection}
+                            </Typography>
+                        </Box>
+                    </Box>
                     {lastSaved && (
                         <Typography
                             variant="caption"
@@ -187,6 +232,7 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                             return (
                                 <Button
                                     key={section}
+                                    data-testid={`section-btn-${section}`}
                                     onClick={() => onSectionChange(section)}
                                     sx={{
                                         minWidth: 40,

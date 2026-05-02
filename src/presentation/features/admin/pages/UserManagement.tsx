@@ -995,14 +995,16 @@ const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobi
                   />
                 </TableCell>
                 <TableCell align="right">
-                  <Tooltip title="Gestionar Tests" arrow>
-                    <IconButton
-                      sx={{ color: '#0891b2', '&:hover': { backgroundColor: 'rgba(8, 145, 178, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
-                      onClick={() => onProgress(user)}
-                    >
-                      <ListAltIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  {user.role === 'client' && (
+                    <Tooltip title="Ver Avance" arrow>
+                      <IconButton
+                        sx={{ color: '#0891b2', '&:hover': { backgroundColor: 'rgba(8, 145, 178, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
+                        onClick={() => onProgress(user)}
+                      >
+                        <ListAltIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   <IconButton
                     sx={{ color: '#1976d2', '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
                     onClick={() => onEdit(user)}

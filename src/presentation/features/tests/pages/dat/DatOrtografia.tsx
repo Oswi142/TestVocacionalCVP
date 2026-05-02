@@ -28,10 +28,12 @@ const DatOrtografia: React.FC = () => {
         onConfirmSubmit,
         onSubmitClick,
         onSnackbarClose,
+        timeLeftSeconds,
     } = useTestLogic<Question>(5, 'dat_ortografia', {
         datType: 'ortografia',
         questionsPerSection: 10,
         navigateOnSubmit: '/dat',
+        timeLimitMinutes: 10,
     });
 
     const questions = groupedQuestions[currentSection] || [];
@@ -42,6 +44,7 @@ const DatOrtografia: React.FC = () => {
         <TestLayout
             title="Ortografía"
             currentSection={currentSection}
+            timeLeftSeconds={timeLeftSeconds}
             loading={loading}
             saving={saving}
             lastSaved={lastSaved}

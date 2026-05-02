@@ -1,0 +1,65 @@
+{
+  "sections": {
+    "1": {
+      "text": [
+        "Tengo una excelente relación con mi padre. Es trabajador y siempre me apoya en mis decisiones.",
+        "Mi relación con mi madre es muy cercana. Ella es mi principal fuente de apoyo y consejo.",
+        "Me llevo bien con mis hermanos. Nos apoyamos mutuamente aunque a veces tengamos discusiones.",
+        "Tengo poco contacto con mi abuelo paterno pues vive en otra ciudad, pero la relación es cordial.",
+        "Mi abuelo materno falleció cuando era pequeño, no llegué a conocerlo bien.",
+        "Mi abuela paterna es muy cariñosa y siempre está pendiente de la familia.",
+        "Tengo una relación cercana con mi abuela materna. Comparte muchos valores con nosotros.",
+        "Tengo un grupo de amigos del colegio muy importantes para mí y un tutor que me ha orientado mucho."
+      ]
+    },
+    "2": {
+      "radio": [0, 0, 1, 0],
+      "text": [
+        "Aproximadamente 75 sobre 100",
+        "78 sobre 100",
+        "Matemáticas, Biología, Física",
+        "Historia, Arte, Literatura",
+        "Educación Física, Computación, Matemáticas",
+        "Química, Inglés, Historia",
+        "Ganar el primer lugar en la olimpiada de matemáticas y ser elegido delegado del curso.",
+        "La pandemia afectó mucho mi aprendizaje durante primero de secundaria.",
+        "Muy buena. Tengo amigos de confianza y me llevo bien con la mayoría.",
+        "Buena en general. Hay profesores con quienes tengo mayor afinidad, especialmente los de ciencias.",
+        "Siempre tuve claro que quiero obtener un título universitario para tener más oportunidades.",
+        "Totalmente por interés. Me apasionan las ciencias y quiero formarme en ese campo.",
+        "Ingeniería de Sistemas, Medicina, Ingeniería Civil",
+        "Derecho, Ciencias Sociales, Arte",
+        "Me gustaría estudiar en la Universidad Mayor de San Simón (UMSS) en Cochabamba.",
+        "Ingeniería de Sistemas, Medicina, Ingeniería en Telecomunicaciones",
+        "Sí, aunque mis padres me apoyan. Planeo postular a becas académicas también.",
+        "Si trabajara, me gustaría hacerlo en el área de tecnología o en un laboratorio de ciencias.",
+        "Mi familia me apoya mucho. Mis padres siempre me alentaron a estudiar lo que me gusta."
+      ]
+    },
+    "3": {
+      "radio": [0, 1, 1, 2, 0, 2, 0, 0, 1, 1, 0, 0]
+    },
+    "4": {
+      "text": [
+        "Me veo cursando el tercer año de una carrera universitaria en tecnología o salud, con buenas calificaciones.",
+        "Me veo como profesional graduado, trabajando en una empresa importante y quizás con una maestría.",
+        "Ganar la olimpiada de matemáticas regional, liderar el equipo de robótica y ser el mejor en ciencias.",
+        "Reprobar un examen importante por falta de preparación me enseñó a ser más constante y organizado.",
+        "Leo libros de ciencia y tecnología, programo pequeños proyectos, juego fútbol y veo documentales.",
+        "Responsable, curioso y perseverante",
+        "Perfeccionista, impaciente y a veces introvertido",
+        "Sí, soy parte del equipo de robótica y participé en el club de matemáticas durante tres años.",
+        "Sí, ayudé a mi padre en su trabajo y realicé algunas tutorías a compañeros menores."
+      ]
+    },
+    "5": {
+      "radio": [0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1]
+    },
+    "6": {
+      "radio": [0, 0, 0, 0, 1]
+    },
+    "7": {
+      "radio": [1, 1, 1, 1]
+    }
+  }
+}

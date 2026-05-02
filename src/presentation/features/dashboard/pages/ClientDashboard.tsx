@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Box, Button, Typography, useMediaQuery, useTheme, CircularProgress, Fade, Snackbar, LinearProgress, Alert } from '@mui/material';
+import { Box, Button, Typography, useMediaQuery, useTheme, CircularProgress, Fade, Snackbar, LinearProgress, Alert, Dialog, DialogContent, DialogActions } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LockIcon from '@mui/icons-material/Lock';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { useAuth } from '@/application/useCases/useAuth';
 import { testService } from '@/infrastructure/services/testService';
 import LogoHeader from '@/presentation/components/LogoHeader';
@@ -26,6 +27,7 @@ const ClientDashboard: React.FC = () => {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [hasDownloaded, setHasDownloaded] = useState(() => localStorage.getItem('tests_downloaded') === 'true');
+  const [showOfflineAlert, setShowOfflineAlert] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -187,6 +189,31 @@ const ClientDashboard: React.FC = () => {
     }
   };
 
+  const handleTestClick = async (testId: number, path: string) => {
+    if (testId === 5) {
+      setLoadingProgress(true);
+      let realOnline = navigator.onLine;
+      if (realOnline) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors', signal: controller.signal });
+          clearTimeout(timeoutId);
+          realOnline = true;
+        } catch (e) {
+          realOnline = false;
+        }
+      }
+      setLoadingProgress(false);
+
+      if (!realOnline) {
+        setShowOfflineAlert(true);
+        return;
+      }
+    }
+    navigate(path);
+  };
+
   return (
     <Box sx={{ position: 'relative', width: '100vw', height: '100dvh', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center', px: `${sizes.outerPad}px` }}>
       {showConfetti && (
@@ -286,6 +313,7 @@ const ClientDashboard: React.FC = () => {
                       </Typography>
                       <Button
                         fullWidth
+                        data-testid="test-btn-introduccion"
                         onClick={() => navigate('/introduccion')}
                         sx={buttonStyle('linear-gradient(90deg, #91e257ff, #ff823aff)', 'rgba(144, 142, 75, 0.79)', 'active')}
                       >
@@ -378,7 +406,8 @@ const ClientDashboard: React.FC = () => {
                             <Button
                               key={t.id}
                               fullWidth
-                              onClick={() => navigate(t.path)}
+                              data-testid={`test-btn-${t.path.replace('/', '')}`}
+                              onClick={() => handleTestClick(t.id, t.path)}
                               sx={buttonStyle(t.gradient, t.shadow, status)}
                             >
                               {status === 'locked' && <LockIcon sx={{ fontSize: '1.1rem' }} />}
@@ -514,6 +543,67 @@ const ClientDashboard: React.FC = () => {
           Descarga finalizada. ¡Pruebas listas para uso offline!
         </Alert>
       </Snackbar>
+
+      <Dialog
+        open={showOfflineAlert}
+        onClose={() => setShowOfflineAlert(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 6,
+            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.5)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+            maxWidth: 320,
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogContent sx={{ textAlign: 'center', pt: 4, pb: 1 }}>
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto',
+              mb: 2,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+            }}
+          >
+            <WifiOffIcon sx={{ fontSize: 32, color: '#FF6F00' }} />
+          </Box>
+          <Typography variant="h6" fontWeight={900} color="#1e293b" gutterBottom>
+            Conexión necesaria
+          </Typography>
+          <Typography variant="body2" color="#475569" fontWeight={500} sx={{ px: 1 }}>
+            Se necesita internet para continuar con el test DAT.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 4, px: 4 }}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => setShowOfflineAlert(false)}
+            sx={{
+              borderRadius: 3,
+              py: 1.5,
+              fontWeight: 800,
+              backgroundColor: '#FF6F00',
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: '#E65100',
+              }
+            }}
+          >
+            Aceptar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

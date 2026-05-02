@@ -165,7 +165,7 @@ const ClientsAnswers: React.FC = () => {
           const oRow = ans.answer_id != null ? oMap.get(ans.answer_id) : undefined;
           let qText = qRow?.question || '';
           if (!qText.trim()) qText = 'Pregunta Visual (Referente a la imagen del documento)';
-          const aText = oRow?.answer ?? ans.details ?? 'Sin respuesta';
+          const aText = oRow?.answer ?? ans.details ?? (ans.answer_id == null ? 'No respondió' : 'Sin respuesta');
 
           tableData.push([{
             content: `${n}. ${qText}`,
@@ -454,8 +454,17 @@ const ClientsAnswers: React.FC = () => {
                           <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic', py: 1 }}>Este usuario aún no ha enviado respuestas.</Typography>
                         ) : (
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                            {testsForClient.map((test: any) => (
-                              <Box key={test.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: '14px', backgroundColor: C.bg, border: `1px solid ${C.border}`, transition: 'all 0.2s', '&:hover': { backgroundColor: C.bgHover, borderColor: C.borderHover } }}>
+                            {testsForClient.map((test: any) => {
+                              const baseName = (test.test_name || '').toLowerCase();
+                              const testIdStr = baseName.includes('introducci') ? 'introduccion' :
+                                                baseName.includes('entrevista') ? 'entrevista' :
+                                                baseName.includes('ipp') ? 'ippr' :
+                                                baseName.includes('chaside') ? 'chaside' :
+                                                baseName.includes('maci') ? 'maci' :
+                                                baseName.includes('dat') ? 'dat' : 'other';
+                              
+                              return (
+                              <Box key={test.id} data-testid={`answer-row-${testIdStr}`} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: '14px', backgroundColor: C.bg, border: `1px solid ${C.border}`, transition: 'all 0.2s', '&:hover': { backgroundColor: C.bgHover, borderColor: C.borderHover } }}>
                                 <Box display="flex" alignItems="center" gap={1.5}>
                                   <Box sx={{ p: 0.8, borderRadius: '10px', backgroundColor: 'rgba(16,185,129,0.12)', display: 'flex' }}>
                                     <AssignmentIcon sx={{ fontSize: 18, color: C.dark }} />
@@ -465,12 +474,13 @@ const ClientsAnswers: React.FC = () => {
                                   </Box>
                                 </Box>
                                 <Tooltip title="Descargar respaldo PDF" arrow placement="left">
-                                  <IconButton onClick={() => downloadPDF(client.user_id, test.id, test.category, test.selectedAttempt)} size="small" sx={{ backgroundColor: '#1e293b', color: 'white', borderRadius: '10px', width: 34, height: 34, '&:hover': { backgroundColor: '#0f172a', transform: 'translateY(-2px)' }, transition: 'all 0.2s' }}>
+                                  <IconButton data-testid={`download-btn-${testIdStr}`} onClick={() => downloadPDF(client.user_id, test.id, test.category, test.selectedAttempt)} size="small" sx={{ backgroundColor: '#1e293b', color: 'white', borderRadius: '10px', width: 34, height: 34, '&:hover': { backgroundColor: '#0f172a', transform: 'translateY(-2px)' }, transition: 'all 0.2s' }}>
                                     <GetAppIcon sx={{ fontSize: 16 }} />
                                   </IconButton>
                                 </Tooltip>
                               </Box>
-                            ))}
+                              );
+                            })}
                           </Box>
                         )}
                       </Box>

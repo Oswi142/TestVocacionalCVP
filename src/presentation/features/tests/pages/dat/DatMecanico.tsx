@@ -30,10 +30,12 @@ const DatMecanico: React.FC = () => {
     onConfirmSubmit,
     onSubmitClick,
     onSnackbarClose,
+    timeLeftSeconds,
   } = useTestLogic<Question>(5, 'dat_mecanico', {
     datType: 'razonamiento_mecanico',
     questionsPerSection: 10,
     navigateOnSubmit: '/dat',
+    timeLimitMinutes: 30,
   });
 
   const questions = groupedQuestions[currentSection] || [];
@@ -44,6 +46,7 @@ const DatMecanico: React.FC = () => {
     <TestLayout
       title="Razonamiento Mecánico"
       currentSection={currentSection}
+      timeLeftSeconds={timeLeftSeconds}
       loading={loading}
       saving={saving}
       lastSaved={lastSaved}
