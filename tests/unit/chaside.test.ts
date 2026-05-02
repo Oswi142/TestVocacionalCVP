@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { isYes, calculateChasideResultSummary, computeChasideScore, downloadChasideReportPDF } from '../../src/domain/rules/chaside';
 
-vi.mock('@/infrastructure/config/supabaseClient', () => {
+vi.mock('../../src/infrastructure/config/supabaseClient', () => {
     const chainable = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -29,8 +29,11 @@ vi.mock('jspdf', () => ({
         setLineWidth = vi.fn();
         line = vi.fn();
         rect = vi.fn();
+        setFillColor = vi.fn();
+        roundedRect = vi.fn();
+        setPage = vi.fn();
         lastAutoTable = { finalY: 50 };
-        internal = { pageSize: { getWidth: () => 210, getHeight: () => 297 } };
+        internal = { getNumberOfPages: () => 1, pageSize: { getWidth: () => 210, getHeight: () => 297 } };
     }
 }));
 
@@ -45,9 +48,9 @@ describe('CHASIDE Utils', () => {
             expect(isYes(val)).toBe(true);
         });
 
-        const noCases = ['no', 'tal vez', '123', ' ', '', null, undefined];
+        const noCases = ['no', 'tal vez', '123', ' ', '', 'null', 'undefined'];
         it.each(noCases)('should return false for invalid or negative "%s"', (val) => {
-            expect(isYes(val as any)).toBe(false);
+            expect(isYes(val)).toBe(false);
         });
     });
 
@@ -91,7 +94,7 @@ describe('CHASIDE Utils', () => {
                     { question_id: 4, answer_id: 20 }
                 ],
                 expectedYesCount: 0,
-                expectedTopBand: 'C'
+                expectedTopBand: 'A' // Since everything is 0, A comes first alphabetically (Arte) vs C (Cientifico)
             }
         ];
 

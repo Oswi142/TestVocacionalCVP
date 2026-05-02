@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DAT_LABELS, calculateDatResultSummary, computeDatScore, downloadDatReportPDF, getCompletedDatCategories } from '../../src/domain/rules/dat';
 
-vi.mock('@/infrastructure/config/supabaseClient', () => {
+vi.mock('../../src/infrastructure/config/supabaseClient', () => {
     const chainable = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -29,8 +29,11 @@ vi.mock('jspdf', () => ({
         setLineWidth = vi.fn();
         line = vi.fn();
         rect = vi.fn();
+        setFillColor = vi.fn();
+        roundedRect = vi.fn();
+        setPage = vi.fn();
         lastAutoTable = { finalY: 50 };
-        internal = { pageSize: { getWidth: () => 210, getHeight: () => 297 } };
+        internal = { getNumberOfPages: () => 1, pageSize: { getWidth: () => 210, getHeight: () => 297 } };
     }
 }));
 

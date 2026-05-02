@@ -13,5 +13,8 @@ export default defineConfig({
   test: {
     globals: true,
     include: ['tests/unit/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+    coverage: {
+      exclude: ['src/assets/**']
+    }
   }
 })
