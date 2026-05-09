@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { computeMaciWithExcel, downloadMaciReportPDF } from '../../src/domain/rules/maciExcel';
 
-// Mock Supabase
 vi.mock('../../src/infrastructure/config/supabaseClient', () => {
     const chainable = {
         from: vi.fn().mockReturnThis(),
@@ -19,14 +18,12 @@ vi.mock('../../src/infrastructure/config/supabaseClient', () => {
     return { supabase: { from: vi.fn(() => chainable) } };
 });
 
-// Mock fetch for the excel file
 global.fetch = vi.fn(() =>
     Promise.resolve({
         arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
     })
 ) as any;
 
-// Mock XLSX
 vi.mock('xlsx', () => ({
     read: vi.fn(() => ({
         SheetNames: ['DATOS Y RESPUESTAS', 'RESULTADOS'],
@@ -41,15 +38,14 @@ vi.mock('xlsx', () => ({
     }
 }));
 
-// Mock Hyperformula
 vi.mock('hyperformula', () => ({
     HyperFormula: {
         buildFromSheets: vi.fn(() => ({
             setCellContents: vi.fn(),
             getCellValue: vi.fn(({ col }) => {
-                if (col === 13) return 20; // PD
-                if (col === 14) return 60; // TB
-                if (col === 46) return 85; // TB FINAL
+                if (col === 13) return 20;
+                if (col === 14) return 60;
+                if (col === 46) return 85;
                 return 0;
             }),
             destroy: vi.fn()
@@ -57,7 +53,6 @@ vi.mock('hyperformula', () => ({
     }
 }));
 
-// Mock jsPDF
 vi.mock('jspdf', () => ({
     default: class {
         setFont = vi.fn();
@@ -93,18 +88,12 @@ describe('MACI Excel Scoring Engine', () => {
         it('should fetch user data, process hyperformula, and return base rates', async () => {
             const result = await computeMaciWithExcel(1, 'active');
 
-            // Verify client info
             expect(result.client.name).toBe('Test');
             
-            // Verify scale values (based on our mock of HyperFormula)
             expect(result.rawScores['1']).toBe(20);
             expect(result.baseRates['2A']).toBe(60);
             expect(result.finalRates['X']).toBe(85);
 
-            // Verify validity checks
-            // Transparencia (X) raw score = 20 < 150 -> warning
-            // Deseabilidad (Y) raw score = 20 -> no warning (>20)
-            // Alteracion (Z) raw score = 20 > 15 -> warning
             expect(result.validity.protocoloValido).toBe(false);
             expect(result.validity.warnings.length).toBeGreaterThan(0);
         });
@@ -112,7 +101,6 @@ describe('MACI Excel Scoring Engine', () => {
 
     describe('downloadMaciReportPDF', () => {
         it('should generate PDF report without errors', async () => {
-            // Since we mocked jsPDF and all dependencies, this should just execute the rendering logic
             await expect(downloadMaciReportPDF(1, 'active')).resolves.not.toThrow();
         });
     });

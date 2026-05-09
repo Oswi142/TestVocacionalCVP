@@ -81,6 +81,15 @@ Todos los tests de Playwright requieren que el servidor de desarrollo esté corr
   npx playwright test --headed
   ```
 
+- **Reporte Visual Avanzado (Allure):**
+  ```bash
+  # 1. Generar el reporte después de correr los tests
+  npm run allure:generate
+  
+  # 2. Abrir el reporte en el navegador
+  npm run allure:open
+  ```
+
 
 ## 🏗️ Estructura de Calificación
 La lógica de negocio está desacoplada de la base de datos para facilitar el testing:

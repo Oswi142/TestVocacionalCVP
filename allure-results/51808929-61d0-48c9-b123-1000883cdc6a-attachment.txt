@@ -1,0 +1,8 @@
+--- Iniciando Sesión como Admin (Test 2) ---
+--- Fase 1: Creación de Usuario ---
+Usuario creado exitosamente: UsuarioPrueba XVNTFQ
+--- Fase 2: Edición de Usuario ---
+Usuario editado exitosamente a: UsuarioPrueba Editado XVNTFQ
+--- Fase 3: Eliminación de Usuario ---
+Usuario eliminado exitosamente: UsuarioPrueba Editado XVNTFQ
+--- TEST DE EDICIÓN COMPLETADO CON ÉXITO ---

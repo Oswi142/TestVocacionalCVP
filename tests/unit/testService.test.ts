@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { testService } from '../../src/infrastructure/services/testService';
 
-// Variables para vi.hoisted
 const mocks = vi.hoisted(() => ({
     mockFrom: vi.fn(),
     mockSelect: vi.fn(),
@@ -16,7 +15,6 @@ const mocks = vi.hoisted(() => ({
     mockQuery: {} as any
 }));
 
-// Configuración de encadenamiento
 mocks.mockQuery.select = mocks.mockSelect;
 mocks.mockQuery.eq = mocks.mockEq;
 mocks.mockQuery.gte = mocks.mockGte;
@@ -79,34 +77,24 @@ describe('TestService', () => {
     });
 
     it('should handle detailed progress coverage (all branches)', async () => {
-        // Branch: Online success
         mocks.mockThen.mockImplementationOnce((r: any) => r({ data: [{ test_id: 1, question_id: 101 }], error: null }));
         mocks.mockSingle.mockResolvedValue({ data: { user_id: 1 }, error: null });
         await testService.getDetailedProgress(1);
 
-        // Branch: Database error -> Cache recovery (Lines 164-171)
         localStorage.setItem('cache_progress_1', JSON.stringify({ hasCompletedIntro: true, completedMaintest_ids: [2] }));
         mocks.mockThen.mockImplementationOnce((r: any) => r({ data: null, error: new Error('DB Crash') }));
         const res = await testService.getDetailedProgress(1);
         expect(res.completedMaintest_ids).toContain(2);
-
-        // Branch: Pending Intro (Line 177)
         localStorage.setItem('pending_clients_info', JSON.stringify([{ user_id: 1 }]));
         const res2 = await testService.getDetailedProgress(1);
         expect(res2.hasCompletedIntro).toBe(true);
     });
 
     it('should handle prefetch coverage (success/error)', async () => {
-        // Success
         mocks.mockThen.mockImplementation((r: any) => r({ data: [{ id: 1 }], error: null }));
         await testService.prefetchAllTests();
-
-        // Offline error
         mockNavigator.onLine = false;
         await expect(testService.prefetchAllTests()).rejects.toThrow();
-
-        // Generic error catch (Lines 235-236)
-        // LIMPIAMOS CACHE para que no se recupere automáticamente
         localStorageMock.clear(); 
         mockNavigator.onLine = true;
         mocks.mockThen.mockImplementationOnce((r: any) => r({ data: null, error: new Error('Network') }));
