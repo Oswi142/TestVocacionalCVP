@@ -42,14 +42,10 @@ test('Unsuccessful login, empty fields', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     
-    // We try to click the login button without filling anything
     await page.getByTestId('login-button').click();
     
-    // Since fields have the 'required' attribute, HTML5 validation prevents submission
-    // We should remain on the login page and not see any custom error alert
     await expect(page).toHaveURL('http://localhost:5173/');
     
-    // We can also verify that the username input is focused due to HTML5 validation
     const usernameInput = page.getByTestId('username-input');
     await expect(usernameInput).toBeFocused();
 });

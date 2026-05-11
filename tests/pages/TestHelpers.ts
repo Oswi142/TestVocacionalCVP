@@ -36,13 +36,6 @@ async function fillVisibleInputs(page: Page, textFillValue: string): Promise<boo
     return allFilled;
 }
 
-/**
- * Centered logic for running any test that has pagination (sections 1, 2, 3...)
- * and a final submit button with CheckIcon.
- * 
- * Works for IPPR, CHASIDE, MACI, and individual DAT modules.
- * Only advances to the next section if allFilled is true — no section skipping.
- */
 export async function runPaginatedTest(page: Page, textFillValue: string, loopMax = 100): Promise<void> {
     await page.waitForSelector('div[role="radiogroup"], input[type="text"], textarea', { timeout: 15000 });
     let isFinished = false;
@@ -75,9 +68,6 @@ export async function runPaginatedTest(page: Page, textFillValue: string, loopMa
                 try {
                     await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
                     await confirmButton.click();
-                    
-                    // CRITICAL FIX: Wait for the app to NATURALLY redirect after saving to Supabase.
-                    // This ensures the next test (like MACI) will be fully unlocked.
                     await page.waitForURL(/\/(client|dat)/, { timeout: 20000 });
                     isFinished = true;
                     break;
@@ -92,22 +82,12 @@ export async function runPaginatedTest(page: Page, textFillValue: string, loopMa
                     await sectionButton.click();
                     await page.waitForTimeout(300);
                 } else {
-                    // Try to scroll tabs or find next section button better if needed
                     if (loopCount > 20) break; 
                 }
             } catch (e) { }
         }
     }
 }
-
-/**
- * JSON-driven version of runPaginatedTest.
- * Uses an array of answers to pick specific radio buttons instead of always selecting the first.
- * - boolean true  → picks radio at index 0 (e.g. Sí / Verdadero)
- * - boolean false → picks radio at index 1 (e.g. No / Falso)
- * - number N      → picks radio at index N (for multi-option tests like DAT/IPPR)
- * If the answer array runs out, it cycles back to index 0.
- */
 export async function runPaginatedTestFromJson(
     page: Page,
     answers: (boolean | number)[],
@@ -119,7 +99,7 @@ export async function runPaginatedTestFromJson(
     let isFinished = false;
     let loopCount = 0;
     let currentSectionIdx = 1;
-    let globalAnswerIdx = 0; // Tracks which answer in the JSON we are on
+    let globalAnswerIdx = 0;
 
     while (!isFinished && loopCount < loopMax) {
         loopCount++;
@@ -127,8 +107,6 @@ export async function runPaginatedTestFromJson(
         if (loopCount % 5 === 0) {
             console.log(`[E2E JSON] Revisando sección ${currentSectionIdx} (Loop: ${loopCount}, Respuesta: ${globalAnswerIdx}/${answers.length})`);
         }
-
-        // Fill text inputs with the default text value
         const textInputs = await page.locator('input[type="text"]:not([disabled]), textarea:not([disabled])').all();
         for (const input of textInputs) {
             try {
@@ -138,8 +116,6 @@ export async function runPaginatedTestFromJson(
                 }
             } catch (e) { }
         }
-
-        // Fill radio groups using the JSON answers array
         const groups = await page.locator('div[role="radiogroup"]').all();
         for (const group of groups) {
             try {
@@ -148,7 +124,6 @@ export async function runPaginatedTestFromJson(
                     if (!isChecked) {
                         const radios = await group.locator('input[type="radio"]').all();
                         if (radios.length > 0) {
-                            // Determine which radio to pick from the answers array
                             const answer = answers[globalAnswerIdx % answers.length];
                             let radioIndex = 0;
                             if (typeof answer === 'boolean') {
@@ -158,15 +133,12 @@ export async function runPaginatedTestFromJson(
                             }
                             await radios[radioIndex].check({ force: true });
                             globalAnswerIdx++;
-                            // CRITICAL: Wait a bit to let React process the state update
                             await page.waitForTimeout(100);
                         }
                     }
                 }
             } catch (e) { }
         }
-
-        // Verify all visible inputs are filled
         let allFilled = true;
         for (const input of await page.locator('input[type="text"]:not([disabled]), textarea:not([disabled])').all()) {
             try {
@@ -196,7 +168,6 @@ export async function runPaginatedTestFromJson(
             try {
                 await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
                 await confirmButton.click();
-                // Wait specifically for the dashboard or client path to ensure submission finishes
                 await page.waitForURL(url => url.pathname === '/client' || url.pathname === '/dat', { timeout: 20000 });
                 isFinished = true;
                 break;
@@ -209,11 +180,10 @@ export async function runPaginatedTestFromJson(
             try {
                 if (await sectionButton.isVisible()) {
                     await sectionButton.click();
-                    // CRITICAL: Wait for the new section to fully render to avoid skipping sections
                     try {
                         await page.getByText(`Sección ${currentSectionIdx}`, { exact: true }).waitFor({ state: 'visible', timeout: 3000 });
                     } catch (e) {
-                        await page.waitForTimeout(1000); // Fallback wait
+                        await page.waitForTimeout(1000);
                     }
                 } else {
                     if (loopCount > 20) break;

@@ -2,6 +2,7 @@ import React from 'react';
 import { useTestLogic } from '@/application/useCases/useTestLogic';
 import TestLayout from '@/presentation/features/tests/components/TestLayout';
 import QuestionRenderer from '@/presentation/features/tests/components/QuestionRenderer';
+import SectionInstructions from '@/presentation/features/tests/components/SectionInstructions';
 
 import { Question as BaseQuestion } from '@/domain/entities/test';
 
@@ -61,6 +62,7 @@ const DatAbstracto: React.FC = () => {
       onConfirmExit={onConfirmExit}
       onConfirmSubmit={onConfirmSubmit}
     >
+      <SectionInstructions instructions="Identifica el patrón lógico en la serie de figuras y selecciona la opción que continúa la secuencia correctamente." />
       {questions.map((q) => (
         <QuestionRenderer
           key={q.id}

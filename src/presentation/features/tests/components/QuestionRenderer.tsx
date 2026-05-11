@@ -186,7 +186,13 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
                             maxRows={10}
                             inputProps={{ maxLength: 250 }}
                             value={currentAnswer || ''}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onAnswerChange(question.id, e.target.value)}
+                            error={!!currentAnswer && currentAnswer.trim().length === 0}
+                            helperText={!!currentAnswer && currentAnswer.trim().length === 0 ? "La respuesta no puede contener solo espacios" : ""}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                const val = e.target.value;
+                                if (val.startsWith(' ')) return; // Bloquear si empieza con espacio
+                                onAnswerChange(question.id, val);
+                            }}
                             placeholder="Escribe tu respuesta aquí..."
                             sx={{
                                 '& .MuiOutlinedInput-root': {

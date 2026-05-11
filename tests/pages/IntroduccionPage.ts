@@ -11,11 +11,9 @@ export default class IntroduccionPage {
     }
 
     async fillOutForm() {
-        // Wait for form to be ready
         await this.page.waitForSelector('input:not([type="hidden"]), div[role="combobox"]', { timeout: 10000 });
-        await this.page.waitForTimeout(1000); // Small buffer for animations
+        await this.page.waitForTimeout(1000);
 
-        // 1. Género dropdown (from JSON)
         const generoSelect = this.page.locator('div[role="combobox"]').first();
         if (await generoSelect.isVisible()) {
             await generoSelect.click();
@@ -23,7 +21,6 @@ export default class IntroduccionPage {
             await this.page.locator(`li[role="option"]:has-text("${introAnswers.genero}")`).click();
         }
 
-        // 2. Date picker (day from JSON)
         const calendarIcon = this.page.locator('svg[data-testid="CalendarIcon"]').first();
         if (await calendarIcon.isVisible()) {
             await calendarIcon.click();
@@ -37,13 +34,10 @@ export default class IntroduccionPage {
             await this.page.keyboard.press('Escape');
         }
 
-        // 3. Fill remaining text inputs using JSON field mapping
         const inputs = this.page.locator('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):visible, textarea:visible');
         await this.page.waitForTimeout(500);
         const count = await inputs.count();
 
-        // Generic text fields (address, hobbies) have identical placeholder "Tu respuesta..."
-        // Fill them sequentially by position: first→address, second→hobbies
         const genericFallbacks = [introAnswers.address, introAnswers.hobbies];
         let genericIdx = 0;
 
@@ -66,7 +60,6 @@ export default class IntroduccionPage {
             } else if (allIds.includes('secundaria') || allIds.includes('6to') || allIds.includes('curso')) {
                 typeval = introAnswers.curso;
             } else {
-                // Unrecognized field: fill sequentially (address first, hobbies second)
                 const val = await input.inputValue();
                 if (!val || val.trim() === '') {
                     typeval = genericFallbacks[genericIdx % genericFallbacks.length];

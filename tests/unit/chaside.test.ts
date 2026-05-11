@@ -94,7 +94,7 @@ describe('CHASIDE Utils', () => {
                     { question_id: 4, answer_id: 20 }
                 ],
                 expectedYesCount: 0,
-                expectedTopBand: 'A' // Since everything is 0, A comes first alphabetically (Arte) vs C (Cientifico)
+                expectedTopBand: 'A'
             }
         ];
 

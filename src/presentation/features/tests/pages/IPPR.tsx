@@ -2,6 +2,7 @@ import React from 'react';
 import { useTestLogic } from '@/application/useCases/useTestLogic';
 import TestLayout from '@/presentation/features/tests/components/TestLayout';
 import QuestionRenderer from '@/presentation/features/tests/components/QuestionRenderer';
+import SectionInstructions from '@/presentation/features/tests/components/SectionInstructions';
 
 import { Question as BaseQuestion } from '@/domain/entities/test';
 
@@ -54,6 +55,7 @@ const IPPR: React.FC = () => {
       onConfirmExit={onConfirmExit}
       onConfirmSubmit={onConfirmSubmit}
     >
+      <SectionInstructions instructions="Indica tu nivel de preferencia o interés por cada una de las actividades profesionales presentadas." />
       {questions.map((q) => (
         <QuestionRenderer
           key={q.id}

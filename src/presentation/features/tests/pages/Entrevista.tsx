@@ -5,7 +5,8 @@ import { useAuth } from '@/application/useCases/useAuth';
 import { Question } from '@/domain/entities/test';
 import TestLayout from '@/presentation/features/tests/components/TestLayout';
 import QuestionRenderer from '@/presentation/features/tests/components/QuestionRenderer';
-import { Alert, Box } from '@mui/material';
+import SectionInstructions from '@/presentation/features/tests/components/SectionInstructions';
+import { Box } from '@mui/material';
 
 const Entrevista: React.FC = () => {
   const { user } = useAuth();
@@ -104,6 +105,7 @@ const Entrevista: React.FC = () => {
   };
 
   const sectionAlerts: Record<number, string> = {
+    1: "Proporciona información sobre tu composición familiar y datos personales básicos.",
     2: "Profundizar en la relación y ocupación de cada uno de sus familiares y otras personas significativas.",
     3: "Responde con sinceridad a las siguientes preguntas relacionadas con tu etapa escolar.",
     4: "Indica cuánto piensas que ha influido cada factor en tu elección vocacional.",
@@ -134,9 +136,7 @@ const Entrevista: React.FC = () => {
       onConfirmSubmit={handleSubmit}
     >
       {sectionAlerts[currentSection] && (
-        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-          {sectionAlerts[currentSection]}
-        </Alert>
+        <SectionInstructions instructions={sectionAlerts[currentSection]} />
       )}
 
       <Box>

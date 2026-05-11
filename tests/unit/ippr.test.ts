@@ -97,7 +97,7 @@ describe('IPPR Utils', () => {
                 ],
                 expectedAnswered: 3,
                 expectedTotalScore: 6,
-                expectedTopSection: '3' // It seems the sorting algorithm puts section 3 first when tied, due to alphabetical or ID sorting
+                expectedTopSection: '3'
             }
         ];
 

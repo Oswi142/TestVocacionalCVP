@@ -3,6 +3,7 @@ import { Typography, Box } from '@mui/material';
 import { useTestLogic } from '@/application/useCases/useTestLogic';
 import TestLayout from '@/presentation/features/tests/components/TestLayout';
 import QuestionRenderer from '@/presentation/features/tests/components/QuestionRenderer';
+import SectionInstructions from '@/presentation/features/tests/components/SectionInstructions';
 
 import { Question as BaseQuestion } from '@/domain/entities/test';
 
@@ -57,6 +58,7 @@ const Chaside: React.FC = () => {
       onConfirmExit={onConfirmExit}
       onConfirmSubmit={onConfirmSubmit}
     >
+      <SectionInstructions instructions="Responde con sinceridad para identificar tus intereses y aptitudes vocacionales según tus preferencias." />
       {['interest', 'aptitude'].map((type) => {
         const questionsOfType = questions.filter((q) => q.cha_type === type);
         if (questionsOfType.length === 0) return null;

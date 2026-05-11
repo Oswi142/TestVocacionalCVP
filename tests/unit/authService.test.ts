@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { login } from '../../src/infrastructure/services/authService';
 import bcrypt from 'bcryptjs';
 
-// Usamos vi.hoisted para asegurar que estas variables existan antes que el mock
 const mocks = vi.hoisted(() => ({
     mockFrom: vi.fn(),
     mockSelect: vi.fn(),
@@ -11,7 +10,6 @@ const mocks = vi.hoisted(() => ({
     mockQuery: {} as any
 }));
 
-// Configuramos el encadenamiento (chaining) dentro del hoisted
 mocks.mockQuery.select = mocks.mockSelect;
 mocks.mockQuery.ilike = mocks.mockIlike;
 mocks.mockQuery.limit = mocks.mockLimit;
@@ -21,7 +19,6 @@ mocks.mockIlike.mockReturnValue(mocks.mockQuery);
 mocks.mockLimit.mockReturnValue(mocks.mockQuery);
 mocks.mockFrom.mockReturnValue(mocks.mockQuery);
 
-// Ahora el mock usa las variables de vi.hoisted
 vi.mock('../../src/infrastructure/config/supabaseClient', () => ({
     supabase: {
         from: mocks.mockFrom

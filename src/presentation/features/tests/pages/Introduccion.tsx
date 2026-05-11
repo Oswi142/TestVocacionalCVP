@@ -4,6 +4,7 @@ import { useTestLogic } from '@/application/useCases/useTestLogic';
 import { useAuth } from '@/application/useCases/useAuth';
 import { Question } from '@/domain/entities/test';
 import TestLayout from '@/presentation/features/tests/components/TestLayout';
+import SectionInstructions from '@/presentation/features/tests/components/SectionInstructions';
 import { Box, Typography, TextField, MenuItem, Select, FormControl, Autocomplete } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -85,12 +86,23 @@ const Introduccion: React.FC = () => {
         showSnackbar,
     } = useTestLogic<Question>(0, 'introduccion', testLogicOptions);
     const handleAnswerChange = (id: number, value: string) => {
+        if (value.startsWith(' ')) return;
         setAnswers(prev => ({ ...prev, [id]: value }));
+    };
+
+    const handleSchoolChange = (value: string) => {
+        if (value.startsWith(' ')) return;
+        setSchoolName(value);
     };
 
     const handleSubmit = async () => {
         if (!isSectionComplete(1)) {
             showSnackbar('Por favor completa todos los campos requeridos.', 'error');
+            return;
+        }
+
+        if (schoolName.trim().length === 0) {
+            showSnackbar('El nombre del colegio no puede estar vacío o contener solo espacios.', 'error');
             return;
         }
 
@@ -121,7 +133,7 @@ const Introduccion: React.FC = () => {
                 birthday: mapped.birthday,
                 birthplace: mapped.birthplace,
                 address: mapped.address,
-                school: schoolName,
+                school: schoolName.trim(),
                 grade: mapped.grade,
                 hobbies: mapped.hobbies,
             });
@@ -145,6 +157,9 @@ const Introduccion: React.FC = () => {
     const renderCustomInput = (q: Question) => {
         const qText = q.question || '';
         const lowQ = qText.toLowerCase();
+
+        const currentVal = answers[q.id] || '';
+        const isOnlySpaces = currentVal.length > 0 && currentVal.trim().length === 0;
 
         if (lowQ.includes('sexo')) {
             return (
@@ -212,7 +227,8 @@ const Introduccion: React.FC = () => {
                             fullWidth
                             variant="outlined"
                             placeholder="Tu departamento o ciudad..."
-                            helperText="Selecciona tu lugar de nacimiento"
+                            error={isOnlySpaces}
+                            helperText={isOnlySpaces ? "No puede contener solo espacios" : "Selecciona tu lugar de nacimiento"}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: 3,
@@ -223,7 +239,7 @@ const Introduccion: React.FC = () => {
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                                     }
                                 },
-                                '& .MuiFormHelperText-root': { color: 'text.secondary', fontWeight: 500, mt: 1 }
+                                '& .MuiFormHelperText-root': { color: isOnlySpaces ? 'error.main' : 'text.secondary', fontWeight: 500, mt: 1 }
                             }}
                         />
                     )}
@@ -232,19 +248,21 @@ const Introduccion: React.FC = () => {
         }
 
         if (lowQ.includes('colegio')) {
+            const isSchoolOnlySpaces = schoolName.length > 0 && schoolName.trim().length === 0;
             return (
                 <Autocomplete
                     freeSolo
                     options={COLEGIOS_RECOMENDADOS}
                     value={schoolName}
-                    onInputChange={(_: any, newValue: string) => setSchoolName(newValue)}
+                    onInputChange={(_: any, newValue: string) => handleSchoolChange(newValue)}
                     renderInput={(params: any) => (
                         <TextField
                             {...params}
                             fullWidth
                             variant="outlined"
                             placeholder="Nombre de tu colegio..."
-                            helperText="Busca tu colegio o registralo tú mism@"
+                            error={isSchoolOnlySpaces}
+                            helperText={isSchoolOnlySpaces ? "No puede contener solo espacios" : "Busca tu colegio o registralo tú mism@"}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: 3,
@@ -255,7 +273,7 @@ const Introduccion: React.FC = () => {
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                                     }
                                 },
-                                '& .MuiFormHelperText-root': { color: 'text.secondary', fontWeight: 500, mt: 1 }
+                                '& .MuiFormHelperText-root': { color: isSchoolOnlySpaces ? 'error.main' : 'text.secondary', fontWeight: 500, mt: 1 }
                             }}
                         />
                     )}
@@ -276,7 +294,8 @@ const Introduccion: React.FC = () => {
                             fullWidth
                             variant="outlined"
                             placeholder="Ej. 6to de secundaria"
-                            helperText="Selecciona o escribe tu curso actual"
+                            error={isOnlySpaces}
+                            helperText={isOnlySpaces ? "No puede contener solo espacios" : "Selecciona o escribe tu curso actual"}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     borderRadius: 3,
@@ -287,7 +306,7 @@ const Introduccion: React.FC = () => {
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                                     }
                                 },
-                                '& .MuiFormHelperText-root': { color: 'text.secondary', fontWeight: 500, mt: 1 }
+                                '& .MuiFormHelperText-root': { color: isOnlySpaces ? 'error.main' : 'text.secondary', fontWeight: 500, mt: 1 }
                             }}
                         />
                     )}
@@ -301,6 +320,8 @@ const Introduccion: React.FC = () => {
                 variant="outlined"
                 placeholder="Tu respuesta..."
                 value={answers[q.id] || ''}
+                error={isOnlySpaces}
+                helperText={isOnlySpaces ? "No puede contener solo espacios" : ""}
                 onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                 sx={{
                     '& .MuiOutlinedInput-root': {
@@ -339,12 +360,7 @@ const Introduccion: React.FC = () => {
         >
             <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
                 <Box sx={{ p: { xs: 1, sm: 2 } }}>
-                    <Typography variant="h5" fontWeight="bold" sx={{ mb: 2, textAlign: 'center' }}>
-                        Primero, para conocerte mejor...
-                    </Typography>
-                    <Typography variant="body1" sx={{ mb: 4, textAlign: 'center', color: 'text.secondary' }}>
-                        Por favor completa tus datos personales antes de continuar con la evaluación.
-                    </Typography>
+                    <SectionInstructions instructions="Por favor completa tus datos personales antes de continuar con la evaluación para conocerte mejor." />
 
                     {(groupedQuestions[1] || [] as Question[]).map((q: Question) => (
                         <Box key={q.id} mb={3}>

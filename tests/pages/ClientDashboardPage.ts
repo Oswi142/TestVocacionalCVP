@@ -13,14 +13,12 @@ export default class ClientDashboardPage {
         const testIdStr = testName.toLowerCase() === 'introducción' ? 'introduccion' : testName.toLowerCase();
         const btn = this.page.locator(`button[data-testid="test-btn-${testIdStr}"]`);
         
-        // Wait for the button to be visible and enabled (not containing a LockIcon)
         await expect(btn).toBeVisible({ timeout: 20000 });
         await expect(btn.locator('svg[data-testid="LockIcon"]')).toHaveCount(0, { timeout: 20000 });
         
         await btn.scrollIntoViewIfNeeded();
         await btn.click();
         
-        // Give it a moment to start navigating
         await this.page.waitForTimeout(1000);
     }
 

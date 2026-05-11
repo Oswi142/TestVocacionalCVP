@@ -12,7 +12,6 @@ export default class MaciPage {
     }
 
     async fillOutTest() {
-        // Use the first test case from the JSON (Respuestas Exactas Excel Origen)
         const answers = maciAnswers.testCases[0].answers as boolean[];
         await runPaginatedTestFromJson(this.page, answers, 'Respuesta MACI', 100);
     }

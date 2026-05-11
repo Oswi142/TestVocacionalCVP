@@ -10,22 +10,17 @@ export default class AdminAnswersPage {
     }
 
     async verifyClientAnswers(clientName: string, expectedTestKinds: string[]) {
-        // Search for client
         await this.page.fill('input[placeholder="Buscar cliente..."]', clientName);
         await this.page.waitForTimeout(2000);
 
-        // Expand client row
         const clientRow = this.page.locator('h6, p, span, .MuiTypography-root', { hasText: clientName }).first();
         await clientRow.scrollIntoViewIfNeeded();
         await clientRow.click();
         
-        // Wait for the collapse animation/loading results
         await this.page.waitForTimeout(2000);
 
-        // Verify tests and download buttons
         for (const kind of expectedTestKinds) {
             console.log(`Verificando respuesta de: ${kind}`);
-            // Find the row that contains the test name and the download button
             const testRow = this.page.locator(`[data-testid="answer-row-${kind}"]`);
             
             await testRow.scrollIntoViewIfNeeded();

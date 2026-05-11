@@ -2,6 +2,7 @@ import React from 'react';
 import { useTestLogic } from '@/application/useCases/useTestLogic';
 import TestLayout from '@/presentation/features/tests/components/TestLayout';
 import QuestionRenderer from '@/presentation/features/tests/components/QuestionRenderer';
+import SectionInstructions from '@/presentation/features/tests/components/SectionInstructions';
 
 import { Question as BaseQuestion } from '@/domain/entities/test';
 
@@ -61,6 +62,7 @@ const DatEspacial: React.FC = () => {
             onConfirmExit={onConfirmExit}
             onConfirmSubmit={onConfirmSubmit}
         >
+            <SectionInstructions instructions="Visualiza cómo se vería la figura desplegada si fuera plegada o rotada en el espacio y selecciona la opción correcta." />
             {questions.map((q) => (
                 <QuestionRenderer
                     key={q.id}

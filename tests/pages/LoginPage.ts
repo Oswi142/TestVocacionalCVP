@@ -18,7 +18,6 @@ export default class LoginPage {
     }
 
     async login(username: string, password: string) {
-        // Wait and ensure focus
         await this.usernameField.waitFor({ state: 'visible', timeout: 15000 });
         await this.usernameField.click();
         await this.usernameField.fill(username);

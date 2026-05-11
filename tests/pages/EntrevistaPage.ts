@@ -21,8 +21,6 @@ export default class EntrevistaPage {
         let isFinished = false;
         let loopCount = 0;
         let currentSectionIdx = 1;
-
-        // Per-section indices so each answer maps to the right question
         const textIdx: Record<number, number> = {};
         const radioIdx: Record<number, number> = {};
 
@@ -37,7 +35,6 @@ export default class EntrevistaPage {
             if (textIdx[currentSectionIdx] === undefined) textIdx[currentSectionIdx] = 0;
             if (radioIdx[currentSectionIdx] === undefined) radioIdx[currentSectionIdx] = 0;
 
-            // 1. Fill radio groups using the section-specific radio array
             const groups = await this.page.locator('div[role="radiogroup"]').all();
             for (const group of groups) {
                 if (await group.isVisible()) {
@@ -59,7 +56,6 @@ export default class EntrevistaPage {
                 }
             }
 
-            // 2. Fill text inputs with the section-specific ordered text answers
             const textInputs = await this.page.locator('input[type="text"], textarea').all();
             for (const input of textInputs) {
                 try {
@@ -78,7 +74,6 @@ export default class EntrevistaPage {
                 } catch (e) { }
             }
 
-            // 3. Gate: verify all visible inputs are filled
             let allFilled = true;
             for (const input of await this.page.locator('input[type="text"], textarea').all()) {
                 try {
@@ -102,7 +97,6 @@ export default class EntrevistaPage {
                 continue;
             }
 
-            // 4. Try submit or advance to next section
             const submitButton = this.page.locator('button:has(svg[data-testid="CheckIcon"])').first();
             let canSubmit = false;
             try {

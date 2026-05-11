@@ -2,6 +2,7 @@ import React from 'react';
 import { useTestLogic } from '@/application/useCases/useTestLogic';
 import TestLayout from '@/presentation/features/tests/components/TestLayout';
 import QuestionRenderer from '@/presentation/features/tests/components/QuestionRenderer';
+import SectionInstructions from '@/presentation/features/tests/components/SectionInstructions';
 
 import { Question as BaseQuestion } from '@/domain/entities/test';
 
@@ -63,6 +64,7 @@ const DatVerbal: React.FC = () => {
       onConfirmExit={onConfirmExit}
       onConfirmSubmit={onConfirmSubmit}
     >
+      <SectionInstructions instructions="Selecciona el par de palabras que mejor complete la frase presentada." />
       {questions.map((q) => (
         <QuestionRenderer
           key={q.id}

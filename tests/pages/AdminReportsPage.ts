@@ -10,22 +10,17 @@ export default class AdminReportsPage {
     }
 
     async verifyClientResults(clientName: string, expectedTestKinds: string[]) {
-        // Search for client
         await this.page.fill('input[placeholder="Buscar cliente..."]', clientName);
-        await this.page.waitForTimeout(2000); // Give time for debounced search
+        await this.page.waitForTimeout(2000);
 
-        // Expand client row - Use a more reliable selector for MUI Typography
         const clientRow = this.page.locator('h6, p, span, .MuiTypography-root', { hasText: clientName }).first();
         await clientRow.scrollIntoViewIfNeeded();
         await clientRow.click();
         
-        // Wait for the collapse animation to finish
         await this.page.waitForTimeout(1500);
 
-        // Verify tests and download buttons
         for (const kind of expectedTestKinds) {
             console.log(`Verificando presencia de reporte: ${kind}`);
-            // Find the specific container by test id
             const testRow = this.page.locator(`[data-testid="report-row-${kind}"]`); 
             
             await testRow.scrollIntoViewIfNeeded();
