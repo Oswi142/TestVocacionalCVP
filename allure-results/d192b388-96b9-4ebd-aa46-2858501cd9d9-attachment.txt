@@ -1,0 +1,55 @@
+--- Iniciando Fase 1: Creación de Cliente por Admin ---
+Cliente creado: auto.client.amafhn
+--- Iniciando Fase 2: Llenado de pruebas por el Cliente ---
+Llenando Introducción...
+Introducción completada.
+Llenando Entrevista...
+Entrevista completado.
+Llenando IPPR...
+[E2E JSON] Revisando sección 5 (Loop: 5, Respuesta: 48/180)
+[E2E JSON] Revisando sección 10 (Loop: 10, Respuesta: 108/180)
+[E2E JSON] Revisando sección 15 (Loop: 15, Respuesta: 168/180)
+IPPR completado.
+Llenando CHASIDE...
+[E2E JSON] Revisando sección 5 (Loop: 5, Respuesta: 56/105)
+CHASIDE completado.
+Llenando MACI...
+[E2E JSON] Revisando sección 5 (Loop: 5, Respuesta: 64/160)
+[E2E JSON] Revisando sección 10 (Loop: 10, Respuesta: 144/160)
+MACI completado.
+Llenando DAT (Subtests)...
+
+--- Iniciando: Razonamiento Verbal ---
+--- Completado: Razonamiento Verbal ---
+
+--- Iniciando: Razonamiento Numérico ---
+[E2E JSON] Revisando sección 5 (Loop: 5, Respuesta: 38/40)
+--- Completado: Razonamiento Numérico ---
+
+--- Iniciando: Razonamiento Abstracto ---
+--- Completado: Razonamiento Abstracto ---
+
+--- Iniciando: Razonamiento Mecánico ---
+[E2E JSON] Revisando sección 5 (Loop: 5, Respuesta: 40/40)
+--- Completado: Razonamiento Mecánico ---
+
+--- Iniciando: Relaciones Espaciales ---
+[E2E JSON] Revisando sección 5 (Loop: 5, Respuesta: 40/40)
+--- Completado: Relaciones Espaciales ---
+
+--- Iniciando: Ortografía ---
+--- Completado: Ortografía ---
+Pruebas completadas y cierre de sesión de cliente exitoso.
+--- Iniciando Fase 3: Verificación de Reportes por Admin ---
+Verificando sección de Reportes...
+Verificando presencia de reporte: ippr
+Verificando presencia de reporte: chaside
+Verificando presencia de reporte: maci
+Verificando presencia de reporte: dat
+Verificando sección de Respuestas...
+Verificando respuesta de: entrevista
+Verificando respuesta de: ippr
+Verificando respuesta de: chaside
+Verificando respuesta de: maci
+Verificando respuesta de: dat
+--- E2E FLOW FINALIZADO CON ÉXITO ---

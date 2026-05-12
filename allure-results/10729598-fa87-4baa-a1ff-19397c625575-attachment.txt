@@ -1,0 +1,8 @@
+--- Iniciando Sesión como Admin (Test 2) ---
+--- Fase 1: Creación de Usuario ---
+Usuario creado exitosamente: UsuarioPrueba ILUUTK
+--- Fase 2: Edición de Usuario ---
+Usuario editado exitosamente a: UsuarioPrueba Editado ILUUTK
+--- Fase 3: Eliminación de Usuario ---
+Usuario eliminado exitosamente: UsuarioPrueba Editado ILUUTK
+--- TEST DE EDICIÓN COMPLETADO CON ÉXITO ---

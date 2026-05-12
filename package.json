@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:secuencial": "playwright test tests/e2e/fillIntroduccionTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillEntrevistaTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillIpprTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillChasideTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillMaciTest.spec.ts --headed --reporter=list && playwright test tests/e2e/fillDatTest.spec.ts --headed --reporter=list",
+    "test:secuencial": "playwright test tests/automation/fillIntroduccionTest.spec.ts --headed --reporter=list && playwright test tests/automation/fillEntrevistaTest.spec.ts --headed --reporter=list && playwright test tests/automation/fillIpprTest.spec.ts --headed --reporter=list && playwright test tests/automation/fillChasideTest.spec.ts --headed --reporter=list && playwright test tests/automation/fillMaciTest.spec.ts --headed --reporter=list && playwright test tests/automation/fillDatTest.spec.ts --headed --reporter=list",
     "test": "vitest",
     "allure:generate": "allure generate allure-results --clean -o allure-report",
     "allure:open": "allure open allure-report",

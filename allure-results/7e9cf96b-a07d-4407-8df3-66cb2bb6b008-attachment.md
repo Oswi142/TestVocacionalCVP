@@ -1,0 +1,81 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: adminUserManagementTests.spec.ts >> Admin User Management (CRUD) >> Should execute user creation and deletion
+- Location: tests\automation\adminUserManagementTests.spec.ts:25:5
+
+# Error details
+
+```
+Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/
+Call log:
+  - navigating to "http://localhost:5173/", waiting until "load"
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e6]:
+    - heading "No se puede acceder a este sitio" [level=1] [ref=e7]
+    - paragraph [ref=e8]:
+      - strong [ref=e9]: localhost
+      - text: rechazó la conexión.
+    - generic [ref=e10]:
+      - paragraph [ref=e11]: "Intenta:"
+      - list [ref=e12]:
+        - listitem [ref=e13]: Comprobar la conexión.
+        - listitem [ref=e14]:
+          - link "Comprobar el proxy y el firewall" [ref=e15] [cursor=pointer]:
+            - /url: "#buttons"
+          - text: .
+    - generic [ref=e16]: ERR_CONNECTION_REFUSED
+  - generic [ref=e17]:
+    - button "Volver a cargar" [ref=e19] [cursor=pointer]
+    - button "Detalles" [ref=e20] [cursor=pointer]
+```
+
+# Test source
+
+```ts
+  1  | import { Page, Locator } from '@playwright/test';
+  2  | 
+  3  | export default class LoginPage {
+  4  |     readonly page: Page;
+  5  |     readonly usernameField: Locator;
+  6  |     readonly passwordField: Locator;
+  7  |     readonly loginButton: Locator;
+  8  | 
+  9  |     constructor(page: Page) {
+  10 |         this.page = page;
+  11 |         this.usernameField = page.getByTestId('username-input');
+  12 |         this.passwordField = page.getByTestId('password-input');
+  13 |         this.loginButton = page.getByTestId('login-button');
+  14 |     }
+  15 | 
+  16 |     async goto() {
+> 17 |         await this.page.goto('http://localhost:5173');
+     |                         ^ Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5173/
+  18 |     }
+  19 | 
+  20 |     async login(username: string, password: string) {
+  21 |         await this.usernameField.waitFor({ state: 'visible', timeout: 15000 });
+  22 |         await this.usernameField.click();
+  23 |         await this.usernameField.fill(username);
+  24 |         
+  25 |         await this.passwordField.waitFor({ state: 'visible', timeout: 10000 });
+  26 |         await this.passwordField.click();
+  27 |         await this.passwordField.fill(password);
+  28 |         
+  29 |         await this.loginButton.waitFor({ state: 'visible', timeout: 10000 });
+  30 |         await this.loginButton.click();
+  31 |     }
+  32 | }
+  33 | 
+```
