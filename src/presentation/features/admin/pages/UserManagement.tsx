@@ -341,10 +341,13 @@ const UserManagement: React.FC = () => {
 
   const filteredUsers = useMemo(() => {
     const s = search.toLowerCase().trim();
-    let result = users.filter((user: any) =>
-      user.name.toLowerCase().includes(s) ||
-      user.username.toLowerCase().includes(s)
-    );
+    let result = users.filter((user: any) => {
+      // El usuario 104 es Superadmin: solo visible para sí mismo
+      if (user.id === 104 && loggedUser.id !== 104) return false;
+
+      return user.name.toLowerCase().includes(s) ||
+             user.username.toLowerCase().includes(s)
+    });
 
     result.sort((a, b) => {
       if (sortBy === 'date') {
@@ -985,12 +988,13 @@ const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobi
                 <TableCell sx={{ color: '#334155', wordBreak: 'break-word' }}>{user.username}</TableCell>
                 <TableCell>
                   <Chip
-                    label={user.role === 'admin' ? 'Administrador' : 'Cliente'}
+                    label={user.id === 104 ? 'Superadmin' : (user.role === 'admin' ? 'Administrador' : 'Cliente')}
                     size="small"
                     sx={{
                       fontWeight: 600,
-                      backgroundColor: user.role === 'admin' ? '#dcfce7' : '#e0f2fe',
-                      color: user.role === 'admin' ? '#166534' : '#075985'
+                      backgroundColor: user.id === 104 ? '#fef3c7' : (user.role === 'admin' ? '#dcfce7' : '#e0f2fe'),
+                      color: user.id === 104 ? '#92400e' : (user.role === 'admin' ? '#166534' : '#075985'),
+                      border: user.id === 104 ? '1px solid #f59e0b' : 'none'
                     }}
                   />
                 </TableCell>
@@ -1008,6 +1012,7 @@ const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobi
                   <IconButton
                     sx={{ color: '#1976d2', '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.1)', transform: 'scale(1.1)' }, transition: 'all 0.2s' }}
                     onClick={() => onEdit(user)}
+                    disabled={user.id === 104}
                   >
                     <EditIcon fontSize="small" />
                   </IconButton>
@@ -1018,8 +1023,8 @@ const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobi
                       transition: 'all 0.2s'
                     }}
                     onClick={() => onDelete(user)}
-                    disabled={user.id === loggeduser_id}
-                    title={user.id === loggeduser_id ? "No puedes eliminar tu propio usuario" : "Eliminar"}>
+                    disabled={user.id === loggeduser_id || user.id === 104}
+                    title={user.id === 104 ? "Superadmin no puede ser eliminado" : (user.id === loggeduser_id ? "No puedes eliminar tu propio usuario" : "Eliminar")}>
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </TableCell>

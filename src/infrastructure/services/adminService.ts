@@ -93,6 +93,9 @@ export const adminService = {
     },
 
     async deleteUser(user_id: number) {
+        if (user_id === 104) {
+            throw new Error('No se puede eliminar al usuario Superadmin.');
+        }
         // 1. Borrar respuestas de tests
         const { error: errAnswers } = await supabase.from('test_answers').delete().eq('client_id', user_id);
         if (errAnswers) throw errAnswers;
