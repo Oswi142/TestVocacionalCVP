@@ -17,6 +17,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckIcon from '@mui/icons-material/Check';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import SaveIcon from '@mui/icons-material/Save';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
 
 interface TestLayoutProps {
     title: string;
@@ -473,7 +474,7 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                     PaperProps={{
                         sx: {
                             borderRadius: 4,
-                            backgroundColor: 'rgba(253, 237, 237, 0.95)',
+                            backgroundColor: 'rgba(224, 242, 254, 0.85)',
                             backdropFilter: 'blur(16px)',
                             WebkitBackdropFilter: 'blur(16px)',
                             boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
@@ -489,29 +490,31 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                     }}
                 >
                     <Box sx={{ textAlign: 'center', p: 4 }}>
-                        <WarningAmberIcon sx={{ fontSize: 48, color: '#d32f2f', mb: 1 }} />
-                        <DialogTitle sx={{ fontWeight: '800', color: '#c62828', p: 0, pb: 1, fontSize: '1.25rem' }}>
-                            Sin conexión
+                        <CloudDoneIcon sx={{ fontSize: 48, color: '#0284c7', mb: 1 }} />
+                        <DialogTitle sx={{ fontWeight: '800', color: '#0369a1', p: 0, pb: 1, fontSize: '1.25rem' }}>
+                            Guardado localmente
                         </DialogTitle>
                         <DialogContent sx={{ p: 0, pb: 3 }}>
-                            <DialogContentText sx={{ color: '#c62828', fontWeight: 500 }}>
-                                No tienes conexión a internet. Tus respuestas están guardadas temporalmente, inténtalo de nuevo cuando tengas conexión por favor.
+                            <DialogContentText sx={{ color: '#075985', fontWeight: 500 }}>
+                                ¡Respuestas completadas offline! Tus respuestas se han guardado localmente de forma segura en este dispositivo. Están listas para ser enviadas en cuanto recuperes la conexión a internet.
                             </DialogContentText>
                         </DialogContent>
                         <DialogActions sx={{ justifyContent: 'center', p: 0 }}>
                             <Button
                                 onClick={() => setDialogs((prev) => ({ ...prev, offlineBlock: false }))}
                                 variant="contained"
-                                color="error"
+                                color="info"
                                 sx={{
                                     borderRadius: 3,
                                     textTransform: 'none',
                                     fontWeight: 700,
-                                    boxShadow: '0 4px 12px rgba(211, 47, 47, 0.3)',
+                                    backgroundColor: '#0284c7',
+                                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
                                     transition: 'all 0.2s',
                                     '&:hover': {
+                                        backgroundColor: '#0369a1',
                                         transform: 'translateY(-2px)',
-                                        boxShadow: '0 6px 16px rgba(211, 47, 47, 0.4)',
+                                        boxShadow: '0 6px 16px rgba(2, 132, 199, 0.4)',
                                     }
                                 }}
                             >

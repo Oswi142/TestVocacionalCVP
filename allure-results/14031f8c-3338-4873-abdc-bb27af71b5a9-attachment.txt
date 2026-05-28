@@ -1,0 +1,6 @@
+--- Iniciando Sesión como Admin ---
+--- Fase 1: Creación de Usuario ---
+Usuario creado exitosamente: UsuarioPrueba XQTRXU
+--- Fase 2: Eliminación de Usuario ---
+Usuario eliminado exitosamente: UsuarioPrueba XQTRXU
+--- TEST COMPLETADO CON ÉXITO ---

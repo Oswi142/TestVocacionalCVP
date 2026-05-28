@@ -290,6 +290,24 @@ export const useTestLogic = <T extends BaseQuestion>(
       await testService.submitAnswers(visiblePayload);
 
       localStorage.removeItem(STORAGE_KEY);
+
+      try {
+        const cacheKey = `cache_questions_${test_id}_all`;
+        const cachedQuestionsRaw = localStorage.getItem(cacheKey);
+        if (cachedQuestionsRaw) {
+          const cachedQuestions = JSON.parse(cachedQuestionsRaw);
+          const qIds = cachedQuestions.map((q: any) => String(q.id));
+          const existingOptionsRaw = localStorage.getItem('cache_all_options');
+          if (existingOptionsRaw) {
+            const existingOptions = JSON.parse(existingOptionsRaw);
+            const remainingOptions = existingOptions.filter((opt: any) => !qIds.includes(String(opt.question_id)));
+            localStorage.setItem('cache_all_options', JSON.stringify(remainingOptions));
+          }
+        }
+        localStorage.removeItem(cacheKey);
+      } catch (e) {
+        console.error('Error clearing test questions/options cache:', e);
+      }
       setDialogs((prev) => ({ ...prev, confirm: false }));
       if (force) {
         showSnackbar('El tiempo se ha agotado. Tus respuestas fueron enviadas automáticamente.', 'warning');

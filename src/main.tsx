@@ -6,8 +6,6 @@ import './index.css';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import theme from '@/infrastructure/config/theme';
 
-import { processPendingSubmissions } from '@/infrastructure/utils/offlineSync';
-
 const rootElement = document.getElementById('root')!;
 const root = ReactDOM.createRoot(rootElement);
 
@@ -31,6 +29,3 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   });
 }
 
-// Reintentar envíos pendientes al cargar o al volver a estar online
-window.addEventListener('online', processPendingSubmissions);
-window.addEventListener('load', processPendingSubmissions);

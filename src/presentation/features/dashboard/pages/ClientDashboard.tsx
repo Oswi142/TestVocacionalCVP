@@ -28,6 +28,7 @@ const ClientDashboard: React.FC = () => {
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [hasDownloaded, setHasDownloaded] = useState(() => localStorage.getItem('tests_downloaded') === 'true');
   const [showOfflineAlert, setShowOfflineAlert] = useState(false);
+  const [showNotDownloadedAlert, setShowNotDownloadedAlert] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -209,6 +210,15 @@ const ClientDashboard: React.FC = () => {
       if (!realOnline) {
         setShowOfflineAlert(true);
         return;
+      }
+    } else {
+      if (!navigator.onLine) {
+        const cacheKey = `cache_questions_${testId}_all`;
+        const hasCache = !!localStorage.getItem(cacheKey);
+        if (!hasCache) {
+          setShowNotDownloadedAlert(true);
+          return;
+        }
       }
     }
     navigate(path);
@@ -543,6 +553,67 @@ const ClientDashboard: React.FC = () => {
           Descarga finalizada. ¡Pruebas listas para uso offline!
         </Alert>
       </Snackbar>
+
+      <Dialog
+        open={showNotDownloadedAlert}
+        onClose={() => setShowNotDownloadedAlert(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 6,
+            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.5)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+            maxWidth: 320,
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogContent sx={{ textAlign: 'center', pt: 4, pb: 1 }}>
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              backgroundColor: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto',
+              mb: 2,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+            }}
+          >
+            <CloudDownloadIcon sx={{ fontSize: 32, color: '#1976d2' }} />
+          </Box>
+          <Typography variant="h6" fontWeight={900} color="#1e293b" gutterBottom>
+            Pruebas no descargadas
+          </Typography>
+          <Typography variant="body2" color="#475569" fontWeight={500} sx={{ px: 1 }}>
+            No puedes realizar esta prueba sin conexión porque no la has descargado previamente. Puedes descargar las pruebas en el apartado "Cuenta" cuando tengas conexión a internet.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 4, px: 4 }}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => setShowNotDownloadedAlert(false)}
+            sx={{
+              borderRadius: 3,
+              py: 1.5,
+              fontWeight: 800,
+              backgroundColor: '#1976d2',
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: '#1565c0',
+              }
+            }}
+          >
+            Aceptar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={showOfflineAlert}

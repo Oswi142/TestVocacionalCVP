@@ -43,6 +43,10 @@ export default class AdminUsersPage {
         await row.scrollIntoViewIfNeeded();
         await row.locator('button:has(svg[data-testid="DeleteIcon"])').click();
 
+        const confirmInput = this.page.locator('input[placeholder="Escribe ELIMINAR aquí"]');
+        await confirmInput.waitFor({ state: 'visible' });
+        await confirmInput.fill('ELIMINAR');
+
         const confirmBtn = this.page.locator('button', { hasText: "Eliminar" }).filter({ hasNotText: "usuario" }).first();
         await confirmBtn.waitFor({ state: 'visible' });
         await confirmBtn.click();

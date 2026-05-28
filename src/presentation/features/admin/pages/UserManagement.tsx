@@ -71,6 +71,7 @@ const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [actionOverlay, setActionOverlay] = useState({ open: false, message: '', submessage: '' });
   const [hasRelatedData, setHasRelatedData] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(0);
@@ -392,6 +393,7 @@ const UserManagement: React.FC = () => {
 
   const confirmDelete = useCallback(async (user: any) => {
     setUserToDelete(user);
+    setDeleteConfirmText('');
     try {
       const hasData = await adminService.checkUserDependencies(user.id);
       setHasRelatedData(hasData);
@@ -860,6 +862,39 @@ const UserManagement: React.FC = () => {
                 </Typography>
               </Box>
             )}
+            <Box sx={{ mt: 3, px: 2 }}>
+              <Typography variant="body2" sx={{ color: '#5f2120', fontWeight: 600, mb: 1, textAlign: 'left' }}>
+                Para confirmar, escribe <strong>ELIMINAR</strong> en el siguiente campo:
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Escribe ELIMINAR aquí"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                variant="outlined"
+                error={deleteConfirmText.length > 0 && deleteConfirmText !== 'ELIMINAR'}
+                inputProps={{
+                  style: { textAlign: 'center', fontWeight: 'bold', letterSpacing: '1px' }
+                }}
+                sx={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  borderRadius: '12px',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    '& fieldset': {
+                      borderColor: 'rgba(211, 47, 47, 0.3)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#d32f2f',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#d32f2f',
+                    },
+                  }
+                }}
+              />
+            </Box>
           </DialogContent>
           <DialogActions sx={{ justifyContent: 'center', p: 0, gap: 1 }}>
             <Button
@@ -877,6 +912,7 @@ const UserManagement: React.FC = () => {
               onClick={handleDeleteUser}
               variant="contained"
               color="error"
+              disabled={deleteConfirmText !== 'ELIMINAR'}
               sx={{
                 borderRadius: 3, textTransform: 'none', fontWeight: 700,
                 boxShadow: '0 4px 12px rgba(211,47,47,0.3)',
