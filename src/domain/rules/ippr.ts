@@ -180,14 +180,11 @@ export async function downloadIpprReportPDF(client_id: number, attemptId: string
   const doc = new jsPDF();
   const now = new Date().toLocaleDateString('es-ES');
 
-  // Header
   let y = drawPremiumHeader(doc, 'IPP-R — Informe de Resultados', 'Inventario de Preferencias Profesionales', now);
 
-  // Client info card
   const { buildClientCardFields } = await import('@/infrastructure/utils/pdfUtils');
   y = drawClientCard(doc, y, buildClientCardFields(res.client));
 
-  // Scores table
   y = drawSectionHeading(doc, y, 'Puntajes por Campo Profesional');
 
   const body = (Object.keys(SECTION_LABELS) as unknown as SectionId[]).map((s) => ([
@@ -211,7 +208,6 @@ export async function downloadIpprReportPDF(client_id: number, attemptId: string
 
   y = (doc as any).lastAutoTable.finalY + 8;
 
-  // Top 5 ranking — always starts on a new page
   doc.addPage();
   y = drawSectionHeading(doc, y - y + 20, 'Ranking de Afinidad (Top 5)');
 
@@ -237,7 +233,6 @@ export async function downloadIpprReportPDF(client_id: number, attemptId: string
 
   y = (doc as any).lastAutoTable.finalY + 8;
 
-  // Bar chart — all 15 sections
   const { drawHorizontalBarChart, CHART_PALETTE } = await import('@/infrastructure/utils/pdfUtils');
   y = drawSectionHeading(doc, y, 'Gráfico de Afinidad — Todas las Áreas (0–36)');
   const sortedForChart = [...res.ranking].sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
