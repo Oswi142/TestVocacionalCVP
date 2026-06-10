@@ -35,8 +35,8 @@ interface TestLayoutProps {
     onSubmitClick: () => void;
     onSnackbarClose: () => void;
     snackbar: { open: boolean; message: string; severity: 'success' | 'error' | 'warning' | 'info' };
-    dialogs: { confirm: boolean; exit: boolean; offlineBlock: boolean; offlineDisconnect?: boolean };
-    setDialogs: React.Dispatch<React.SetStateAction<{ confirm: boolean; exit: boolean; offlineBlock: boolean; offlineDisconnect?: boolean }>>;
+    dialogs: { confirm: boolean; exit: boolean; offlineBlock: boolean; offlineDisconnect: boolean };
+    setDialogs: React.Dispatch<React.SetStateAction<{ confirm: boolean; exit: boolean; offlineBlock: boolean; offlineDisconnect: boolean }>>;
     onConfirmExit: () => void;
     onConfirmSubmit: () => void;
     children: React.ReactNode;
