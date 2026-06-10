@@ -60,7 +60,8 @@ export const useTestLogic = <T extends BaseQuestion>(
     message: '',
     severity: 'success' as 'success' | 'error' | 'warning' | 'info',
   });
-  const [dialogs, setDialogs] = useState({ confirm: false, exit: false, offlineBlock: false });
+  const [dialogs, setDialogs] = useState({ confirm: false, exit: false, offlineBlock: false, offlineDisconnect: false });
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const timeLeftRef = useRef<number | null>(null);
   useEffect(() => {
@@ -93,6 +94,32 @@ export const useTestLogic = <T extends BaseQuestion>(
       return false;
     }
   }, [answers, currentSection, STORAGE_KEY]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setDialogs((prev) => ({ ...prev, offlineDisconnect: false }));
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      saveToLocal();
+      if (test_id === 5) {
+        setDialogs((prev) => ({ ...prev, offlineDisconnect: true }));
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    if (!navigator.onLine && test_id === 5) {
+      setDialogs((prev) => ({ ...prev, offlineDisconnect: true }));
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [saveToLocal, test_id]);
 
   const loadFromLocal = useCallback(
     (sectionsSorted: number[]) => {
@@ -212,7 +239,6 @@ export const useTestLogic = <T extends BaseQuestion>(
       const question_ids = finalQuestions.map((q) => q.id);
       if (question_ids.length > 0) {
         const allOpts = await testService.getanswer_options(question_ids);
-        // Ensure all numeric IDs are actually numbers to avoid comparison issues
         const normalizedOpts = allOpts.map(opt => ({
           ...opt,
           id: Number(opt.id),
@@ -324,6 +350,7 @@ export const useTestLogic = <T extends BaseQuestion>(
 
   useEffect(() => {
     if (timeLeftSeconds === null) return;
+    if (!isOnline) return;
     if (timeLeftSeconds <= 0) {
       submitTest(true);
       return;
@@ -342,9 +369,8 @@ export const useTestLogic = <T extends BaseQuestion>(
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [timeLeftSeconds]);
+  }, [timeLeftSeconds, isOnline]);
 
-  // Guardado periódico solo para el tiempo (opcional, cada 10 seg)
   useEffect(() => {
     if (timeLeftSeconds !== null && timeLeftSeconds % 10 === 0) {
       saveToLocal();

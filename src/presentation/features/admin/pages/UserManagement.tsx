@@ -65,6 +65,7 @@ const UserManagement: React.FC = () => {
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any | null>(null);
   const [showPasswordCreate, setShowPasswordCreate] = useState(true);
+  const [showPasswordEdit, setShowPasswordEdit] = useState(false);
   const [search, setSearch] = useState('');
   const [openProgressDialog, setOpenProgressDialog] = useState(false);
   const [selectedUserForProgress, setSelectedUserForProgress] = useState<any | null>(null);
@@ -305,6 +306,14 @@ const UserManagement: React.FC = () => {
         .eq('id', editingUser.id);
       if (error) throw error;
 
+      await generateCredentialsPDF(
+        name,
+        first_last_name,
+        second_last_name,
+        username.trim(),
+        password ? password : '******** (Sin cambios)'
+      );
+
       handleCloseEditDialog();
       fetchUsers();
       showToast('Usuario actualizado', 'success');
@@ -388,6 +397,7 @@ const UserManagement: React.FC = () => {
     setUsername(user.username);
     setRole(user.role);
     setPassword('');
+    setShowPasswordEdit(false);
     setOpenEditDialog(true);
   }, []);
 
@@ -414,6 +424,7 @@ const UserManagement: React.FC = () => {
     setRole('client');
     setEditingUser(null);
     setShowPasswordCreate(true);
+    setShowPasswordEdit(false);
   };
 
   const handleCloseCreateDialog = () => {
@@ -436,7 +447,8 @@ const UserManagement: React.FC = () => {
       first_last_name === (editingUser.first_last_name || '') &&
       second_last_name === (editingUser.second_last_name || '') &&
       username === editingUser.username &&
-      role === editingUser.role);
+      role === editingUser.role &&
+      !password);
 
   return (
     <Box
@@ -807,6 +819,57 @@ const UserManagement: React.FC = () => {
               <MenuItem value="admin">Administrador</MenuItem>
             </Select>
           </FormControl>
+          <Box sx={{ mt: 2, pt: 2, borderTop: '1px dashed rgba(0,0,0,0.1)' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#475569', mb: 1 }}>
+              Seguridad / Contraseña
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <TextField
+                label="Nueva Contraseña"
+                type={showPasswordEdit ? 'text' : 'password'}
+                fullWidth
+                value={password}
+                onChange={(e) => {
+                  if (e.target.value.length <= 12) setPassword(e.target.value);
+                }}
+                margin="none"
+                variant="filled"
+                sx={{ '& .MuiFilledInput-root': { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: '12px' } }}
+                helperText={password ? `Máx. 12 caracteres ${password.length}/12` : 'Dejar en blanco para mantener la contraseña actual'}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowPasswordEdit(!showPasswordEdit)} edge="end">
+                        {showPasswordEdit ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => {
+                  setPassword(generateRandomPassword());
+                  setShowPasswordEdit(true);
+                }}
+                sx={{
+                  height: '48px',
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  borderColor: '#1976d2',
+                  color: '#1976d2',
+                  '&:hover': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                    borderColor: '#115293',
+                  }
+                }}
+              >
+                Generar Nueva Contraseña
+              </Button>
+            </Box>
+          </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 1 }}>
           <Button onClick={handleCloseEditDialog} sx={{ fontWeight: 700, color: '#64748b' }}>Cancelar</Button>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Button,
@@ -34,8 +35,8 @@ interface TestLayoutProps {
     onSubmitClick: () => void;
     onSnackbarClose: () => void;
     snackbar: { open: boolean; message: string; severity: 'success' | 'error' | 'warning' | 'info' };
-    dialogs: { confirm: boolean; exit: boolean; offlineBlock: boolean };
-    setDialogs: React.Dispatch<React.SetStateAction<{ confirm: boolean; exit: boolean; offlineBlock: boolean }>>;
+    dialogs: { confirm: boolean; exit: boolean; offlineBlock: boolean; offlineDisconnect?: boolean };
+    setDialogs: React.Dispatch<React.SetStateAction<{ confirm: boolean; exit: boolean; offlineBlock: boolean; offlineDisconnect?: boolean }>>;
     onConfirmExit: () => void;
     onConfirmSubmit: () => void;
     children: React.ReactNode;
@@ -62,6 +63,7 @@ const TestLayout: React.FC<TestLayoutProps> = ({
     onConfirmSubmit,
     children,
 }) => {
+    const navigate = useNavigate();
     const availableSections = Object.keys(groupedQuestions)
         .map(Number)
         .sort((a, b) => a - b);
@@ -519,6 +521,65 @@ const TestLayout: React.FC<TestLayoutProps> = ({
                                 }}
                             >
                                 Aceptar
+                            </Button>
+                        </DialogActions>
+                    </Box>
+                </Dialog>
+
+                <Dialog
+                    open={!!dialogs.offlineDisconnect}
+                    PaperProps={{
+                        sx: {
+                            borderRadius: 4,
+                            backgroundColor: 'rgba(255, 243, 224, 0.9)',
+                            backdropFilter: 'blur(16px)',
+                            WebkitBackdropFilter: 'blur(16px)',
+                            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.12)',
+                            border: '1px solid rgba(255, 224, 178, 0.5)',
+                            overflow: 'hidden',
+                            maxWidth: '400px',
+                            width: '100%'
+                        }
+                    }}
+                    sx={{
+                        '& .MuiBackdrop-root': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            backdropFilter: 'blur(4px)',
+                        }
+                    }}
+                >
+                    <Box sx={{ textAlign: 'center', p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5 }}>
+                        <WarningAmberIcon sx={{ fontSize: 56, color: '#f57c00' }} />
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 800, color: '#e65100', mb: 1 }}>
+                                Conexión Perdida
+                            </Typography>
+                            <DialogContentText sx={{ color: '#ef6c00', fontWeight: 500, fontSize: '0.95rem', px: 1 }}>
+                                Para continuar con este test debes estar conectado a internet. El cronómetro se ha pausado y tus respuestas se guardaron localmente.
+                            </DialogContentText>
+                        </Box>
+                        <DialogActions sx={{ justifyContent: 'center', p: 0, width: '100%' }}>
+                            <Button
+                                onClick={() => navigate('/client', { replace: true })}
+                                variant="contained"
+                                sx={{
+                                    borderRadius: 3,
+                                    textTransform: 'none',
+                                    fontWeight: 700,
+                                    backgroundColor: '#e65100',
+                                    color: '#fff',
+                                    boxShadow: '0 4px 12px rgba(230, 81, 0, 0.3)',
+                                    transition: 'all 0.2s',
+                                    px: 4,
+                                    py: 1.2,
+                                    '&:hover': {
+                                        backgroundColor: '#bf360c',
+                                        transform: 'translateY(-2px)',
+                                        boxShadow: '0 6px 16px rgba(230, 81, 0, 0.4)',
+                                    }
+                                }}
+                            >
+                                Ir al Dashboard
                             </Button>
                         </DialogActions>
                     </Box>
