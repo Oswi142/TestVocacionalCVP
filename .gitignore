@@ -29,3 +29,11 @@ dist-ssr
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Test coverage
+/coverage/
+
+# Allure reports and results
+/allure-results/
+/allure-report/
+
