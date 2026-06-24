@@ -56,6 +56,11 @@ Todos los tests de Playwright requieren que el servidor de desarrollo esté corr
   npx playwright test tests/automation/fullFlow.spec.ts --headed
   ```
 
+- **Flujo completo sin eliminación de usuario (E2E):** Igual al anterior, pero conserva al usuario y sus respuestas creadas al final para poder revisar los reportes y las respuestas manualmente en el sistema.
+  ```bash
+  npx playwright test tests/automation/fullFlowNoUserDelete.spec.ts --headed
+  ```
+
 - **Módulo de Login:** Prueba inicio de sesión válido (admin y cliente), credenciales inválidas y campos vacíos.
   ```bash
   npx playwright test tests/automation/loginModuleTests.spec.ts --headed

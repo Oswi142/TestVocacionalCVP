@@ -298,7 +298,7 @@ const ClientDashboard: React.FC = () => {
 
                 {!allFinished && (
                   <Typography variant={sizes.subtitleVariant} gutterBottom sx={{ mb: isMobile ? 1.2 : 2 }}>
-                    Es hora de iniciar a realizar los tests! 😄
+                    Es hora de realizar los tests! 😄
                   </Typography>
                 )}
 

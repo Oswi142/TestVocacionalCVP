@@ -527,9 +527,9 @@ const UserManagement: React.FC = () => {
           </Box>
           <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500, mb: 2 }}>Administración centralizada de accesos, roles y perfiles del sistema.</Typography>
 
-          <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              <FormControl variant="standard" sx={{ minWidth: 140 }}>
+          <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: 2, width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'nowrap', width: isMobile ? '100%' : 'auto' }}>
+              <FormControl variant="standard" sx={{ minWidth: isMobile ? 0 : 140, flex: isMobile ? 1 : 'none' }}>
                 <InputLabel sx={{ fontSize: '0.75rem', fontWeight: 700, ml: 1 }}>Ordenar por</InputLabel>
                 <Select
                   value={sortBy}
@@ -552,7 +552,7 @@ const UserManagement: React.FC = () => {
                 </Select>
               </FormControl>
 
-              <FormControl variant="standard" sx={{ minWidth: 120 }}>
+              <FormControl variant="standard" sx={{ minWidth: isMobile ? 0 : 120, flex: isMobile ? 1 : 'none' }}>
                 <InputLabel sx={{ fontSize: '0.75rem', fontWeight: 700, ml: 1 }}>Sentido</InputLabel>
                 <Select
                   value={sortOrder}
@@ -677,7 +677,7 @@ const UserManagement: React.FC = () => {
                 : ''
             }
           />
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 1 }}>
             <TextField
               label="Primer Apellido"
               fullWidth
@@ -783,7 +783,7 @@ const UserManagement: React.FC = () => {
                 : ''
             }
           />
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 1 }}>
             <TextField
               label="Primer Apellido"
               fullWidth
@@ -1048,6 +1048,115 @@ const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobi
     );
   }
 
+  if (isMobile) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, overflowY: 'auto', flex: 1 }}>
+        {users.length > 0 ? (
+          users.map((user: any) => (
+            <Box
+              key={user.id}
+              sx={{
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                borderRadius: '16px',
+                p: 2,
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.05)',
+                border: '1px solid rgba(0, 0, 0, 0.05)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1.5,
+                transition: 'all 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.08)'
+                }
+              }}
+            >
+              {/* Top Row: Name and Role Chip */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }}>
+                    {user.name} {user.first_last_name} {user.second_last_name}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
+                    @{user.username}
+                  </Typography>
+                </Box>
+                <Chip
+                  label={user.id === 104 ? 'Superadmin' : (user.role === 'admin' ? 'Administrador' : 'Cliente')}
+                  size="small"
+                  sx={{
+                    fontWeight: 600,
+                    backgroundColor: user.id === 104 ? '#fef3c7' : (user.role === 'admin' ? '#dcfce7' : '#e0f2fe'),
+                    color: user.id === 104 ? '#92400e' : (user.role === 'admin' ? '#166534' : '#075985'),
+                    border: user.id === 104 ? '1px solid #f59e0b' : 'none'
+                  }}
+                />
+              </Box>
+
+              {/* Creator details */}
+              {user.created_by_name && (
+                <Typography variant="caption" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                  Creado por: {user.created_by_name}
+                </Typography>
+              )}
+
+              {/* Actions row at the bottom */}
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1, borderTop: '1px solid rgba(0, 0, 0, 0.03)' }}>
+                {user.role === 'client' && (
+                  <IconButton
+                    sx={{
+                      color: '#0891b2',
+                      backgroundColor: 'rgba(8, 145, 178, 0.06)',
+                      borderRadius: '10px',
+                      p: 1,
+                      '&:hover': { backgroundColor: 'rgba(8, 145, 178, 0.12)' }
+                    }}
+                    onClick={() => onProgress(user)}
+                  >
+                    <ListAltIcon fontSize="small" />
+                  </IconButton>
+                )}
+                <IconButton
+                  sx={{
+                    color: '#1976d2',
+                    backgroundColor: 'rgba(25, 118, 210, 0.06)',
+                    borderRadius: '10px',
+                    p: 1,
+                    '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.12)' }
+                  }}
+                  onClick={() => onEdit(user)}
+                  disabled={user.id === 104}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+                <IconButton
+                  sx={{
+                    color: '#d32f2f',
+                    backgroundColor: 'rgba(211, 47, 47, 0.06)',
+                    borderRadius: '10px',
+                    p: 1,
+                    '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.12)' }
+                  }}
+                  onClick={() => onDelete(user)}
+                  disabled={user.id === loggeduser_id || user.id === 104}
+                  title={user.id === 104 ? "Superadmin no puede ser eliminado" : (user.id === loggeduser_id ? "No puedes eliminar tu propio usuario" : "Eliminar")}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+          ))
+        ) : (
+          <Box sx={{ py: 6, textAlign: 'center' }}>
+            <Typography variant="body1" sx={{ color: '#64748b', fontWeight: 600 }}>
+              No se encontraron usuarios
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
   return (
     <TableContainer sx={{
       flex: 1,
@@ -1059,7 +1168,7 @@ const UserTable: React.FC<UserTableProps> = React.memo(({ users, loading, isMobi
         zIndex: 2
       }
     }}>
-      <Table stickyHeader sx={{ minWidth: isMobile ? '600px' : '100%' }}>
+      <Table stickyHeader sx={{ minWidth: '100%' }}>
         <TableHead>
           <TableRow>
             <TableCell sx={{ width: '35%' }}>Nombre</TableCell>
