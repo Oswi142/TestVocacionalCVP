@@ -45,6 +45,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PeopleIcon from '@mui/icons-material/People';
 import jsPDF from 'jspdf';
 import logoCvp from '@/assets/logo-cvp.png';
+import { PDF_COLORS } from '@/infrastructure/utils/pdfUtils';
 import UserProgressDialog from '@/presentation/features/admin/components/UserProgressDialog';
 import ActionOverlay from '@/presentation/components/ActionOverlay';
 
@@ -157,78 +158,236 @@ const UserManagement: React.FC = () => {
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
 
-    doc.setFillColor(30, 41, 59);
-    doc.rect(0, 0, pw, 35, 'F');
-
+    // Cargar logo de forma asíncrona para detectar su aspecto natural
+    let logoImageElement: HTMLImageElement | null = null;
+    let logoLoaded = false;
     try {
-      doc.addImage(logoCvp, 'PNG', (pw / 2) - 15, 3, 30, 30);
+      logoImageElement = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(e);
+        img.src = logoCvp;
+      });
+      logoLoaded = true;
     } catch (e) {
       console.warn("Logo load error", e);
     }
 
-    const contentYStart = 45;
+    // 1. Cabecera principal en Slate 900
+    doc.setFillColor(...PDF_COLORS.headerBg);
+    doc.rect(0, 0, pw, 36, 'F');
 
+    // Cargar logo centrado manteniendo su aspecto natural
+    if (logoLoaded && logoImageElement) {
+      const targetHeight = 25;
+      const aspect = logoImageElement.naturalWidth / logoImageElement.naturalHeight;
+      const targetWidth = targetHeight * aspect;
+      const logoX = (pw / 2) - (targetWidth / 2);
+      const logoY = 5.5; // Centrado vertical en la cabecera de 36mm
+      try {
+        doc.addImage(logoImageElement, 'PNG', logoX, logoY, targetWidth, targetHeight);
+      } catch (e) {
+        console.warn("Logo addImage error", e);
+      }
+    } else {
+      // Fallback si falla la carga asíncrona
+      try {
+        doc.addImage(logoCvp, 'PNG', (pw / 2) - 13, 5.5, 26, 26);
+      } catch (e) {
+        console.warn("Fallback logo error", e);
+      }
+    }
+
+    // Línea de acento verde bajo la cabecera
+    doc.setFillColor(...PDF_COLORS.accentGreen);
+    doc.rect(0, 36, pw, 1.5, 'F');
+
+    // Título principal
+    const titleY = 47;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(30, 41, 59);
-    doc.text('CREDENCIALES DE ACCESO', pw / 2, contentYStart, { align: 'center' });
+    doc.setFontSize(13);
+    doc.setTextColor(...PDF_COLORS.bodyText);
+    doc.text('CREDENCIALES DE ACCESO', pw / 2, titleY, { align: 'center' });
 
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.8);
-    doc.line(pw / 2 - 15, contentYStart + 4, pw / 2 + 15, contentYStart + 4);
+    // Subtítulo
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...PDF_COLORS.mutedText);
+    doc.text('Club Vida Plena — Test Vocacional', pw / 2, titleY + 5.5, { align: 'center' });
 
+    // Pequeño divisor decorativo
+    doc.setFillColor(...PDF_COLORS.accentGreen);
+    doc.rect((pw / 2) - 6, titleY + 8, 12, 0.6, 'F');
+
+    // 2. Intentar cargar el código QR de acceso rápido (desde api.qrserver.com)
+    let qrLoaded = false;
+    const loginUrl = 'https://test-vocacional-cvp.vercel.app/';
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(loginUrl)}&margin=10&color=15-23-42`;
+    let qrImageElement: HTMLImageElement | null = null;
+
+    try {
+      const loadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(e);
+        img.src = qrUrl;
+      });
+
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout loading QR code')), 2500)
+      );
+
+      qrImageElement = await Promise.race([loadPromise, timeoutPromise]);
+      qrLoaded = true;
+    } catch (e) {
+      console.warn("QR code load error or offline", e);
+    }
+
+    // 3. Tarjeta de Acceso recortable
     const cardX = 12;
-    const cardY = contentYStart + 12;
-    const cardW = pw - 24;
-    const cardH = 50;
+    const cardY = 64;
+    const cardW = pw - 24; // 124mm
+    const cardH = 68;
+    const cardHeaderH = 8;
 
-    doc.setDrawColor(241, 245, 249);
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX, cardY, cardW, cardH, 4, 4, 'FD');
+    // Rellenar fondo de la tarjeta (Slate 50)
+    doc.setFillColor(...PDF_COLORS.lightBg);
+    doc.roundedRect(cardX, cardY, cardW, cardH, 4, 4, 'F');
 
-    const rowHeight = 11;
-    const startDataY = cardY + 11;
+    // Rellenar cabecera interna de la tarjeta (Verde CVP)
+    doc.setFillColor(...PDF_COLORS.accentGreen);
+    doc.roundedRect(cardX, cardY, cardW, cardHeaderH, 4, 4, 'F');
+    // Tapar esquinas inferiores redondeadas del banner
+    doc.rect(cardX, cardY + cardHeaderH - 3, cardW, 3, 'F');
 
-    const drawRow = (label: string, value: string, y: number, isLast = false) => {
+    // Texto de la cabecera interna de la tarjeta
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text('TARJETA DE ACCESO', cardX + 6, cardY + 5.5);
+
+    // Texto URL en la cabecera de la tarjeta
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(220, 235, 225);
+    const displayUrl = loginUrl.replace(/^https?:\/\//, '');
+    doc.text(displayUrl, cardX + cardW - 6, cardY + 5.5, { align: 'right' });
+
+    // Dibujar contorno recortable punteado
+    doc.setDrawColor(...PDF_COLORS.divider);
+    doc.setLineWidth(0.4);
+    doc.setLineDashPattern([2, 2], 0);
+    doc.roundedRect(cardX, cardY, cardW, cardH, 4, 4, 'D');
+    doc.setLineDashPattern([], 0); // restablecer a continuo
+
+    // Calcular columnas para los datos e insertar QR
+    const leftMargin = cardX + 6;
+    const textWidth = qrLoaded ? (cardW - 44) : (cardW - 12);
+
+    if (qrLoaded && qrImageElement) {
+      const qrX = cardX + cardW - 32;
+      const qrY = cardY + cardHeaderH + 6;
+      const qrSize = 26;
+
+      // Contenedor blanco para el QR
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(...PDF_COLORS.divider);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(qrX - 2, qrY - 2, qrSize + 4, qrSize + 4, 1.5, 1.5, 'FD');
+
+      // Dibujar QR
+      doc.addImage(qrImageElement, 'PNG', qrX, qrY, qrSize, qrSize);
+
+      // Texto debajo del QR
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
+      doc.setTextColor(...PDF_COLORS.mutedText);
+      doc.text('ACCESO RÁPIDO QR', qrX + qrSize / 2, qrY + qrSize + 5, { align: 'center' });
+    }
+
+    // Dibujar campos dentro de la tarjeta
+    const startDataY = cardY + cardHeaderH + 6;
+    const rowHeight = 12.5;
+
+    const drawCardRow = (label: string, value: string, yPosition: number, isLast = false) => {
+      // Etiqueta del campo
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.5);
-      doc.setTextColor(100, 116, 139);
-      doc.text(label.toUpperCase(), cardX + 8, y);
+      doc.setFontSize(7.5);
+      doc.setTextColor(...PDF_COLORS.mutedText);
+      doc.text(label.toUpperCase(), leftMargin, yPosition);
 
+      // Valor del campo
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(15, 23, 42);
-      doc.text(value, cardX + 8, y + 5);
+      if (label.toLowerCase().includes('contrase')) {
+        doc.setFontSize(10.5);
+        doc.setTextColor(...PDF_COLORS.accentAmber); // Color ámbar destacado para contraseña
+      } else if (label.toLowerCase().includes('usuario')) {
+        doc.setFontSize(10.5);
+        doc.setTextColor(...PDF_COLORS.headerBg); // Slate 900
+      } else {
+        doc.setFontSize(9.5);
+        doc.setTextColor(...PDF_COLORS.bodyText); // Slate 800
+      }
+      doc.text(value, leftMargin, yPosition + 4.8);
 
+      // Línea divisora
       if (!isLast) {
         doc.setDrawColor(235, 240, 245);
         doc.setLineWidth(0.2);
-        doc.line(cardX + 8, y + 8, cardX + cardW - 8, y + 8);
+        doc.line(leftMargin, yPosition + 7.5, leftMargin + textWidth, yPosition + 7.5);
       }
     };
 
-    drawRow('Nombre Completo', `${n} ${f} ${s}`.trim(), startDataY);
-    drawRow('Usuario', user, startDataY + rowHeight + 3);
-    drawRow('Contraseña', pass, startDataY + (rowHeight + 3) * 2, true);
+    drawCardRow('Participante', `${n} ${f} ${s}`.trim(), startDataY);
+    drawCardRow('Usuario', user, startDataY + rowHeight);
+    drawCardRow('Contraseña', pass, startDataY + rowHeight * 2);
+    drawCardRow('Enlace de Acceso', loginUrl, startDataY + rowHeight * 3, true);
 
-    const infoY = cardY + cardH + 10;
+    // 4. Caja de Advertencia y Seguridad
+    const warnX = cardX;
+    const warnY = cardY + cardH + 7;
+    const warnW = cardW;
+    const warnH = 21;
+
+    // Fondo y borde amarillo/ámbar de alerta
     doc.setFillColor(254, 252, 232);
-    doc.setDrawColor(251, 191, 36);
-    doc.roundedRect(cardX, infoY, cardW, 18, 2, 2, 'FD');
+    doc.setDrawColor(245, 158, 11);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(warnX, warnY, warnW, warnH, 2, 2, 'FD');
 
+    // Barra de color sólido en el lateral izquierdo
+    doc.setFillColor(245, 158, 11);
+    doc.roundedRect(warnX, warnY, 3, warnH, 2, 2, 'F');
+    // Tapar esquinas de la barra lateral para que sea recta a la derecha
+    doc.rect(warnX + 1.5, warnY, 1.5, warnH, 'F');
+
+    // Texto de advertencia
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(146, 64, 14);
-    doc.text('¡SEGURIDAD!', pw / 2, infoY + 6, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setTextColor(180, 83, 9); // Amber 800
+    doc.text('¡IMPORTANTE — SEGURIDAD!', warnX + 6, warnY + 5.5);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.text('Guarde estos datos en un lugar seguro y no los comparta.', pw / 2, infoY + 12, { align: 'center' });
+    doc.setFontSize(7.5);
+    doc.setTextColor(120, 53, 4); // Amber 900
+    doc.text('Guarde esta tarjeta en un lugar seguro y no comparta sus datos de acceso.', warnX + 6, warnY + 10.5);
+    doc.text('Ningún tutor o administrador le solicitará su contraseña por ningún medio.', warnX + 6, warnY + 15);
 
-    doc.setFontSize(8);
-    doc.setTextColor(148, 163, 184);
-    doc.text('© 2026 Club Vida Plena', pw / 2, ph - 10, { align: 'center' });
+    // 5. Pie de página
+    doc.setDrawColor(...PDF_COLORS.divider);
+    doc.setLineWidth(0.2);
+    doc.line(cardX, ph - 16, cardX + cardW, ph - 16);
 
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...PDF_COLORS.mutedText);
+    doc.text('© 2026 Club Vida Plena | Todos los derechos reservados', pw / 2, ph - 11, { align: 'center' });
+
+    doc.setFontSize(6.5);
+    doc.text('Contacto y soporte: info@clubvidaplena.org', pw / 2, ph - 7, { align: 'center' });
+
+    // Guardar archivo
     doc.save(`Credenciales_${user}.pdf`);
   };
 
